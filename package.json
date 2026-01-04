@@ -1,0 +1,307 @@
+{
+  "name": "qt-vsc-extension",
+  "displayName": "Qt C++ Tools",
+  "description": "Build, run and manage Qt C++ projects in VS Code",
+  "version": "0.0.1",
+  "publisher": "akhilpawar",
+  "author": {
+    "name": "Akhil Pawar"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/akhilpawar/Qt-VSC-Extension"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "qt",
+    "qt5",
+    "qt6",
+    "c++",
+    "cpp",
+    "qmake",
+    "cmake",
+    "build"
+  ],
+  "activationEvents": [
+    "workspaceContains:**/*.pro",
+    "workspaceContains:**/CMakeLists.txt",
+    "onLanguage:cpp",
+    "onView:qt-projects"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "qt.buildProject",
+        "title": "Qt: Build Project",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "qt.cleanProject",
+        "title": "Qt: Clean Project",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "qt.rebuildProject",
+        "title": "Qt: Rebuild Project",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "qt.runProject",
+        "title": "Qt: Run Project",
+        "icon": "$(run)"
+      },
+      {
+        "command": "qt.configureQt",
+        "title": "Qt: Configure Qt Installation Path"
+      },
+      {
+        "command": "qt.selectQtVersion",
+        "title": "Qt: Select Qt Version"
+      },
+      {
+        "command": "qt.createQMakeProject",
+        "title": "Qt: Create New QMake Project"
+      },
+      {
+        "command": "qt.createCMakeProject",
+        "title": "Qt: Create New CMake Project"
+      },
+      {
+        "command": "qt.refreshProjects",
+        "title": "Qt: Refresh Projects",
+        "icon": "$(refresh)"
+      }
+    ],
+    "taskDefinitions": [
+      {
+        "type": "qt",
+        "required": [
+          "task"
+        ],
+        "properties": {
+          "task": {
+            "type": "string",
+            "description": "Qt task to execute",
+            "enum": [
+              "build",
+              "clean",
+              "rebuild",
+              "run"
+            ]
+          },
+          "file": {
+            "type": "string",
+            "description": "Qt project file (.pro or CMakeLists.txt)"
+          },
+          "buildType": {
+            "type": "string",
+            "description": "Build configuration",
+            "enum": [
+              "debug",
+              "release"
+            ]
+          }
+        }
+      }
+    ],
+    "configuration": {
+      "title": "Qt C++ Tools",
+      "properties": {
+        "qt.qmakePath": {
+          "type": "string",
+          "default": "",
+          "description": "Full path to qmake executable. Leave empty for auto-detection."
+        },
+        "qt.qtInstallPath": {
+          "type": "string",
+          "default": "",
+          "description": "Qt installation directory (e.g., C:\\Qt\\6.5.0\\msvc2019_64). Leave empty for auto-detection."
+        },
+        "qt.autoDetect": {
+          "type": "string",
+          "enum": [
+            "on",
+            "off"
+          ],
+          "default": "on",
+          "description": "Automatically detect Qt projects in workspace"
+        },
+        "qt.buildDirectory": {
+          "type": "string",
+          "default": "${workspaceFolder}/build",
+          "description": "Directory for build output"
+        },
+        "qt.defaultBuildType": {
+          "type": "string",
+          "enum": [
+            "debug",
+            "release"
+          ],
+          "default": "debug",
+          "description": "Default build configuration"
+        },
+        "qt.makeCommand": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "nmake",
+            "mingw32-make",
+            "jom",
+            "make"
+          ],
+          "default": "auto",
+          "description": "Make command to use for building. 'auto' will detect from Qt installation."
+        },
+        "qt.additionalQMakeArguments": {
+          "type": "string",
+          "default": "",
+          "description": "Additional arguments to pass to qmake"
+        },
+        "qt.additionalCMakeArguments": {
+          "type": "string",
+          "default": "",
+          "description": "Additional arguments to pass to cmake"
+        },
+        "qt.showBuildOutput": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show build output in terminal"
+        },
+        "qt.clearOutputBeforeBuild": {
+          "type": "boolean",
+          "default": true,
+          "description": "Clear output terminal before building"
+        }
+      }
+    },
+    "problemMatchers": [
+      {
+        "name": "qt-qmake",
+        "owner": "qt",
+        "fileLocation": [
+          "relative",
+          "${workspaceFolder}"
+        ],
+        "pattern": {
+          "regexp": "^(.*):(\\d+):\\s+(warning|error):\\s+(.*)$",
+          "file": 1,
+          "line": 2,
+          "severity": 3,
+          "message": 4
+        }
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "qt-explorer",
+          "title": "Qt Projects",
+          "icon": "$(tools)"
+        }
+      ]
+    },
+    "views": {
+      "qt-explorer": [
+        {
+          "id": "qt-projects",
+          "name": "Qt Projects",
+          "when": "workspaceFolderCount > 0"
+        }
+      ]
+    },
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "qt.buildProject",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.cleanProject",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.rebuildProject",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.runProject",
+          "when": "workspaceFolderCount > 0"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "qt.buildProject",
+          "when": "view == qt-projects",
+          "group": "navigation@1"
+        },
+        {
+          "command": "qt.cleanProject",
+          "when": "view == qt-projects",
+          "group": "navigation@2"
+        },
+        {
+          "command": "qt.rebuildProject",
+          "when": "view == qt-projects",
+          "group": "navigation@3"
+        },
+        {
+          "command": "qt.runProject",
+          "when": "view == qt-projects",
+          "group": "navigation@4"
+        },
+        {
+          "command": "qt.refreshProjects",
+          "when": "view == qt-projects",
+          "group": "navigation@5"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "qt.buildProject",
+          "when": "view == qt-projects && viewItem == qtProject",
+          "group": "inline@1"
+        },
+        {
+          "command": "qt.cleanProject",
+          "when": "view == qt-projects && viewItem == qtProject",
+          "group": "inline@2"
+        },
+        {
+          "command": "qt.rebuildProject",
+          "when": "view == qt-projects && viewItem == qtProject",
+          "group": "inline@3"
+        },
+        {
+          "command": "qt.runProject",
+          "when": "view == qt-projects && viewItem == qtProject",
+          "group": "inline@4"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "lint": "eslint src --ext ts",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^18.19.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.3",
+    "@vscode/vsce": "^2.22.0"
+  }
+}

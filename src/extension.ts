@@ -23,6 +23,7 @@ import { QtBuildTracker } from './qtBuildTracker';
 import { QtCreatorImporter } from './qtCreatorImporter';
 import { QtCodeActionProvider } from './qtCodeActionProvider';
 import { sourceDisplayName } from './packageManagerDetector';
+import { QmlSupport } from './qmlSupport';
 
 let taskProvider: vscode.Disposable | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -56,6 +57,10 @@ export function activate(context: vscode.ExtensionContext): void {
     // Register tree data provider
     const treeDisposable = vscode.window.registerTreeDataProvider('qt-projects', treeProvider);
     context.subscriptions.push(treeDisposable);
+    
+    // Initialize QML support
+    const qmlSupport = new QmlSupport(qtConfigManager, outputChannel);
+    context.subscriptions.push(qmlSupport);
     
     // Initialize Qt Designer integration
     const qtDesigner = new QtDesignerIntegration(qtConfigManager, outputChannel);
@@ -139,6 +144,43 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         vscode.commands.registerCommand('qt.installQt', async () => {
             await showInstallQtInstructions();
+        })
+    );
+    
+    // QML commands
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.formatQml', async () => {
+            await qmlSupport.formatQml();
+        })
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.lintQml', async () => {
+            await qmlSupport.lintQml();
+        })
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.previewQml', async () => {
+            await qmlSupport.previewQml();
+        })
+    );
+    
+    // Auto-format / auto-lint QML on save
+    context.subscriptions.push(
+        vscode.workspace.onDidSaveTextDocument(async (document) => {
+            if (document.languageId !== 'qml') {
+                return;
+            }
+            const config = vscode.workspace.getConfiguration('qt');
+            
+            if (config.get<boolean>('qmlFormatOnSave')) {
+                await qmlSupport.formatQml(document.uri.fsPath);
+            }
+            
+            if (config.get<boolean>('qmlLintOnSave') ?? true) {
+                await qmlSupport.lintQml(document.uri.fsPath);
+            }
         })
     );
     

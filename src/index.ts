@@ -15,3 +15,4 @@ export * from './qtCreatorImporter';
 export * from './qtCodeActionProvider';
 export * from './platformUtils';
 export * from './packageManagerDetector';
+export * from './qmlSupport';

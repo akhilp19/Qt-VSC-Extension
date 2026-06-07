@@ -2,7 +2,7 @@
   "name": "qt-vsc-extension",
   "displayName": "Qt C++ Tools",
   "description": "Build, run and manage Qt C++ projects in VS Code",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "publisher": "akhilp19",
   "author": {
     "name": "Akhil Pawar"
@@ -27,12 +27,15 @@
     "cpp",
     "qmake",
     "cmake",
-    "build"
+    "build",
+    "qml",
+    "qtquick"
   ],
   "activationEvents": [
     "workspaceContains:**/*.pro",
     "workspaceContains:**/CMakeLists.txt",
     "onLanguage:cpp",
+    "onLanguage:qml",
     "onView:qt-projects"
   ],
   "main": "./out/extension.js",
@@ -118,6 +121,21 @@
         "command": "qt.installQt",
         "title": "Qt: Install Qt",
         "icon": "$(cloud-download)"
+      },
+      {
+        "command": "qt.formatQml",
+        "title": "Qt: Format QML File",
+        "icon": "$(wand)"
+      },
+      {
+        "command": "qt.lintQml",
+        "title": "Qt: Lint QML File",
+        "icon": "$(check)"
+      },
+      {
+        "command": "qt.previewQml",
+        "title": "Qt: Preview QML File",
+        "icon": "$(play)"
       }
     ],
     "taskDefinitions": [
@@ -279,6 +297,26 @@
           "type": "boolean",
           "default": true,
           "description": "Show package manager source badge (e.g., [Homebrew]) next to Qt versions in the picker."
+        },
+        "qt.qmlFormatOnSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically format QML files on save using qmlformat."
+        },
+        "qt.qmlLintOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically lint QML files on save using qmllint and show diagnostics in the Problems panel."
+        },
+        "qt.qmlPreviewImportPath": {
+          "type": "string",
+          "default": "",
+          "description": "Additional QML2_IMPORT_PATH for QML preview (qmlscene)."
+        },
+        "qt.qmlPreviewArgs": {
+          "type": "string",
+          "default": "",
+          "description": "Additional command-line arguments to pass to qmlscene when previewing QML files."
         }
       }
     },
@@ -317,10 +355,29 @@
         }
       ]
     },
+    "languages": [
+      {
+        "id": "qml",
+        "aliases": ["QML", "qml"],
+        "extensions": [".qml", ".qmltypes"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "qml",
+        "scopeName": "source.qml",
+        "path": "./syntaxes/qml.tmLanguage.json"
+      }
+    ],
     "snippets": [
       {
         "language": "cpp",
         "path": "./snippets/qt-snippets.json"
+      },
+      {
+        "language": "qml",
+        "path": "./snippets/qml-snippets.json"
       }
     ],
     "menus": {
@@ -360,6 +417,18 @@
         {
           "command": "qt.installQt",
           "when": "true"
+        },
+        {
+          "command": "qt.formatQml",
+          "when": "editorLangId == qml"
+        },
+        {
+          "command": "qt.lintQml",
+          "when": "editorLangId == qml"
+        },
+        {
+          "command": "qt.previewQml",
+          "when": "editorLangId == qml"
         }
       ],
       "view/title": [
@@ -426,6 +495,21 @@
           "command": "qt.runRcc",
           "when": "resourceExtname == .qrc",
           "group": "2_qt@2"
+        },
+        {
+          "command": "qt.formatQml",
+          "when": "resourceExtname == .qml",
+          "group": "2_qt@1"
+        },
+        {
+          "command": "qt.lintQml",
+          "when": "resourceExtname == .qml",
+          "group": "2_qt@2"
+        },
+        {
+          "command": "qt.previewQml",
+          "when": "resourceExtname == .qml",
+          "group": "2_qt@3"
         }
       ]
     }

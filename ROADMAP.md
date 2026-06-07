@@ -229,25 +229,43 @@
 
 ---
 
-## 🚧 Version 1.2.0 — Qt Quick / QML Support
+## ✅ Version 1.2.0 (Current — Shipped) — Qt Quick / QML Support
 
 **Theme:** First-class QML development inside VS Code.
 
 ### QML Language Support
-- [ ] **Syntax highlighting** for `.qml` and `.qmltypes` files (TextMate grammar)
-- [ ] **QML formatter** integration (`qmlformat` or `qmlfmt`)
-- [ ] **QML linting** via `qmllint` with inline diagnostics in Problems panel
-- [ ] **QML type inference** — resolve custom QML types defined in C++ (`QML_ELEMENT`, `QML_SINGLETON`)
+- [x] **Syntax highlighting** for `.qml` and `.qmltypes` files via `syntaxes/qml.tmLanguage.json` (TextMate grammar)
+  - QML keywords (`import`, `property`, `signal`, `function`, `readonly`, etc.)
+  - JavaScript keywords inside QML
+  - QtQuick built-in types (`Item`, `Rectangle`, `Text`, `Button`, etc.)
+  - Property bindings, signal handlers (`onClicked:`), comments, strings, numbers
+- [x] **QML formatter** integration — `Qt: Format QML File` command runs `qmlformat -i`
+- [x] **QML linting** via `qmllint` with inline diagnostics in the Problems panel
+  - Parses `file:line:column: severity: message` output format
+  - Auto-lint on save (controlled by `qt.qmlLintOnSave`)
+  - Diagnostic collection with Error/Warning/Info severity mapping
+- [ ] **QML type inference** — resolve custom QML types defined in C++ (`QML_ELEMENT`, `QML_SINGLETON`) *(future)*
 
 ### QML Preview
-- [ ] **Live QML Preview** command — launch `qmlscene` or custom previewer with the current `.qml` file
-- [ ] **Hot reload** on save (watch `.qml` and auto-relaunch preview)
-- [ ] **Preview settings** — override `QML2_IMPORT_PATH`, screen size, DPI
+- [x] **QML Preview** command — `Qt: Preview QML File` launches `qmlscene` with the current `.qml` file
+  - Finds `qmlscene` in Qt bin directory or PATH
+  - Sets `QML2_IMPORT_PATH` from active Qt installation
+  - Supports additional args via `qt.qmlPreviewArgs` setting
+  - Supports additional import paths via `qt.qmlPreviewImportPath` setting
+- [ ] **Hot reload** on save *(future — currently manual relaunch)*
+
+### QML Snippets
+- [x] **16 QML snippets** registered for `.qml` files:
+  - `qapp` → full Window application, `qitem` → Item, `qrect` → Rectangle
+  - `qtext` → Text, `qbutton` → Button, `qlistview` → ListView
+  - `qmousearea` → MouseArea, `qsignal` → signal, `qfunction` → function
+  - `qproperty` → property, `qimport` → import, `qconnections` → Connections
+  - `qcolumn` → Column, `qrow` → Row, `qstate` → State, `qtimer` → Timer
 
 ### QML-C++ Bridge
-- [ ] **Go to Definition** from QML `id:` or property binding to C++ `Q_PROPERTY`
-- [ ] **Find Usages** of C++ `Q_INVOKABLE` methods in `.qml` files
-- [ ] **Autocomplete** QML properties and methods exposed from C++ context
+- [ ] **Go to Definition** from QML `id:` or property binding to C++ `Q_PROPERTY` *(future)*
+- [ ] **Find Usages** of C++ `Q_INVOKABLE` methods in `.qml` files *(future)*
+- [ ] **Autocomplete** QML properties and methods exposed from C++ context *(future)*
 
 ---
 

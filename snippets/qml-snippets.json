@@ -1,0 +1,217 @@
+{
+  "QML Application": {
+    "prefix": "qapp",
+    "body": [
+      "import QtQuick",
+      "import QtQuick.Controls",
+      "import QtQuick.Window",
+      "",
+      "Window {",
+      "    id: ${1:root}",
+      "    width: ${2:640}",
+      "    height: ${3:480}",
+      "    visible: true",
+      "    title: qsTr(\"${4:Hello World}\")",
+      "",
+      "    ${5:// Your content here}",
+      "}",
+      ""
+    ],
+    "description": "QML Application with Window"
+  },
+  "QML Item": {
+    "prefix": "qitem",
+    "body": [
+      "Item {",
+      "    id: ${1:item}",
+      "    anchors.fill: parent",
+      "    ${2:// content}",
+      "}",
+      ""
+    ],
+    "description": "QML Item with anchors"
+  },
+  "QML Rectangle": {
+    "prefix": "qrect",
+    "body": [
+      "Rectangle {",
+      "    id: ${1:rect}",
+      "    color: \"${2:white}\"",
+      "    anchors.fill: parent",
+      "    ${3:// content}",
+      "}",
+      ""
+    ],
+    "description": "QML Rectangle"
+  },
+  "QML Text": {
+    "prefix": "qtext",
+    "body": [
+      "Text {",
+      "    id: ${1:text}",
+      "    text: qsTr(\"${2:Hello World}\")",
+      "    anchors.centerIn: parent",
+      "    font.pixelSize: ${3:24}",
+      "}",
+      ""
+    ],
+    "description": "QML Text element"
+  },
+  "QML Button": {
+    "prefix": "qbutton",
+    "body": [
+      "Button {",
+      "    id: ${1:button}",
+      "    text: qsTr(\"${2:Click Me}\")",
+      "    anchors.centerIn: parent",
+      "    onClicked: {",
+      "        ${3:console.log(\"Button clicked\")}",
+      "    }",
+      "}",
+      ""
+    ],
+    "description": "QML Button with onClicked"
+  },
+  "QML ListView": {
+    "prefix": "qlistview",
+    "body": [
+      "ListView {",
+      "    id: ${1:listView}",
+      "    anchors.fill: parent",
+      "    model: ${2:[\"Item 1\", \"Item 2\", \"Item 3\"]}",
+      "    delegate: Item {",
+      "        width: parent.width",
+      "        height: ${3:40}",
+      "        Text {",
+      "            text: modelData",
+      "            anchors.verticalCenter: parent.verticalCenter",
+      "            anchors.left: parent.left",
+      "            anchors.leftMargin: ${4:16}",
+      "        }",
+      "    }",
+      "}",
+      ""
+    ],
+    "description": "QML ListView with model and delegate"
+  },
+  "QML MouseArea": {
+    "prefix": "qmousearea",
+    "body": [
+      "MouseArea {",
+      "    id: ${1:mouseArea}",
+      "    anchors.fill: parent",
+      "    onClicked: {",
+      "        ${2:console.log(\"Clicked at \" + mouse.x + \", \" + mouse.y)}",
+      "    }",
+      "}",
+      ""
+    ],
+    "description": "QML MouseArea with onClicked"
+  },
+  "QML Signal": {
+    "prefix": "qsignal",
+    "body": [
+      "signal ${1:mySignal}(${2:string message})",
+      ""
+    ],
+    "description": "QML signal declaration"
+  },
+  "QML Function": {
+    "prefix": "qfunction",
+    "body": [
+      "function ${1:myFunction}(${2:arg}) {",
+      "    ${3:// function body}",
+      "}",
+      ""
+    ],
+    "description": "QML function declaration"
+  },
+  "QML Property": {
+    "prefix": "qproperty",
+    "body": [
+      "property ${1:int} ${2:myProperty}: ${3:0}",
+      ""
+    ],
+    "description": "QML property declaration"
+  },
+  "QML Import": {
+    "prefix": "qimport",
+    "body": [
+      "import ${1:QtQuick} ${2:2.15}",
+      ""
+    ],
+    "description": "QML import statement"
+  },
+  "QML Connections": {
+    "prefix": "qconnections",
+    "body": [
+      "Connections {",
+      "    target: ${1:targetObject}",
+      "    function on${2:SignalName}() {",
+      "        ${3:// handle signal}",
+      "    }",
+      "}",
+      ""
+    ],
+    "description": "QML Connections component"
+  },
+  "QML Column Layout": {
+    "prefix": "qcolumn",
+    "body": [
+      "Column {",
+      "    id: ${1:column}",
+      "    anchors.fill: parent",
+      "    spacing: ${2:8}",
+      "    ${3:// children}",
+      "}",
+      ""
+    ],
+    "description": "QML Column layout"
+  },
+  "QML Row Layout": {
+    "prefix": "qrow",
+    "body": [
+      "Row {",
+      "    id: ${1:row}",
+      "    anchors.fill: parent",
+      "    spacing: ${2:8}",
+      "    ${3:// children}",
+      "}",
+      ""
+    ],
+    "description": "QML Row layout"
+  },
+  "QML State": {
+    "prefix": "qstate",
+    "body": [
+      "states: [",
+      "    State {",
+      "        name: \"${1:stateName}\"",
+      "        when: ${2:condition}",
+      "        PropertyChanges {",
+      "            target: ${3:targetObject}",
+      "            ${4:property}: ${5:value}",
+      "        }",
+      "    }",
+      "]",
+      ""
+    ],
+    "description": "QML State with PropertyChanges"
+  },
+  "QML Timer": {
+    "prefix": "qtimer",
+    "body": [
+      "Timer {",
+      "    id: ${1:timer}",
+      "    interval: ${2:1000}",
+      "    running: ${3:true}",
+      "    repeat: ${4:true}",
+      "    onTriggered: {",
+      "        ${5:// timer tick}",
+      "    }",
+      "}",
+      ""
+    ],
+    "description": "QML Timer"
+  }
+}

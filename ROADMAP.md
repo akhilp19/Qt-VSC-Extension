@@ -193,7 +193,7 @@
 
 ---
 
-## ✅ Version 1.1.0 (Current — Shipped) — Package Manager Integration
+## ✅ Version 1.1.0 (Released) — Package Manager Integration
 
 **Theme:** Support Qt installed via Homebrew, apt, pacman, vcpkg, Conan, and aqtinstall.
 
@@ -229,7 +229,7 @@
 
 ---
 
-## ✅ Version 1.2.0 (Current — Shipped) — Qt Quick / QML Support
+## ✅ Version 1.2.0 (Released) — Qt Quick / QML Support
 
 **Theme:** First-class QML development inside VS Code.
 
@@ -262,14 +262,49 @@
   - `qproperty` → property, `qimport` → import, `qconnections` → Connections
   - `qcolumn` → Column, `qrow` → Row, `qstate` → State, `qtimer` → Timer
 
-### QML-C++ Bridge
-- [ ] **Go to Definition** from QML `id:` or property binding to C++ `Q_PROPERTY` *(future)*
-- [ ] **Find Usages** of C++ `Q_INVOKABLE` methods in `.qml` files *(future)*
-- [ ] **Autocomplete** QML properties and methods exposed from C++ context *(future)*
+---
+
+## ✅ Version 1.3.0 (Current — Shipped) — QML-C++ Bridge
+
+**Theme:** Bridge QML and C++ codebases for seamless navigation.
+
+### Go to Definition (QML → C++)
+- [x] **QML DefinitionProvider** — `F12` on a QML property binding or method call jumps to C++ declaration
+  - Regex-based C++ header scanner extracts `Q_PROPERTY`, `Q_INVOKABLE`, `QML_ELEMENT`, `QML_NAMED_ELEMENT`
+  - QML file scanner extracts property bindings and method calls
+  - Resolves `id.propertyName` patterns via workspace `id:` declaration map
+  - Returns `vscode.Location` pointing to exact C++ file and line
+
+### Find References (C++ → QML)
+- [x] **C++ ReferenceProvider** (experimental) — `Shift+F12` on `Q_INVOKABLE` / `Q_PROPERTY` lists QML usages
+  - Scans all QML files for property bindings and method calls
+  - Basic name-only matching (not type-qualified)
+
+### Autocomplete (QML)
+- [x] **QML CompletionItemProvider** — suggests C++-exposed properties and methods inside QML blocks
+  - `Q_PROPERTY` items shown as Property kind with `propertyName: ${1:value}` snippet
+  - `Q_INVOKABLE` items shown as Method kind with `methodName(${1})` snippet
+  - Shows C++ signature and class name in completion details
+
+### Indexing
+- [x] **`Qt: Rebuild QML-C++ Index`** command — manual re-index trigger
+- [x] **Auto-reindex** on save of `.h`, `.hpp`, `.cpp`, `.qml` files (2-second debounce)
+- [x] **Settings:** `qt.qmlCppBridgeEnabled` (toggle), `qt.qmlCppIndexExclude` (glob patterns)
+
+### Architecture
+- `src/qmlCppBridge.ts` — `QmlCppBridgeIndexer` with C++ scanner, QML scanner, and lookup maps
+- `src/qmlCppBridgeProviders.ts` — `QmlDefinitionProvider`, `QmlCompletionProvider`, `CppReferenceProvider`
+- Index stores: `Map<qmlTypeName, CppQmlSymbol[]>`, `Map<symbolName, QmlUsage[]>`, `Map<id, qmlType>`
+
+**Known limitations:**
+- Regex-based C++ parsing (not a full AST) — may miss complex template types in Q_PROPERTY, multiline macros, or preprocessor conditionals
+- Only scans workspace folders (not system includes) — Qt built-in QML types are not indexed
+- ReferenceProvider matches by symbol name only, not type-qualified name
+- Does not yet support `QML_SINGLETON` or `QML_ATTACHED` special resolution rules
 
 ---
 
-## 🚧 Version 1.3.0 — Debugging Integration
+## 🚧 Version 1.4.0 — Debugging Integration
 
 **Theme:** Seamless Qt-aware debugging without leaving VS Code.
 
@@ -295,7 +330,7 @@
 
 ---
 
-## 🚧 Version 1.4.0 — Qt Test Framework Integration
+## 🚧 Version 1.5.0 — Qt Test Framework Integration
 
 **Theme:** Run, debug, and visualize Qt Test results inside VS Code.
 
@@ -317,7 +352,7 @@
 
 ---
 
-## 🚧 Version 1.5.0 — Internationalization (lupdate / lrelease)
+## 🚧 Version 1.6.0 — Internationalization (lupdate / lrelease)
 
 **Theme:** Full i18n workflow for Qt applications.
 
@@ -340,7 +375,7 @@
 
 ---
 
-## 🚧 Version 1.6.0 — Qt for Python (PySide / PyQt) Support
+## 🚧 Version 1.7.0 — Qt for Python (PySide / PyQt) Support
 
 **Theme:** Extend the extension to Python-based Qt projects.
 
@@ -361,7 +396,7 @@
 
 ---
 
-## 🚧 Version 1.7.0 — Advanced Code Generation (MOC, UIC, RCC Automation)
+## 🚧 Version 1.8.0 — Advanced Code Generation (MOC, UIC, RCC Automation)
 
 **Theme:** Eliminate manual build steps for generated code.
 
@@ -391,7 +426,7 @@
 
 ---
 
-## 🚧 Version 1.8.0 — CI/CD Integration
+## 🚧 Version 1.9.0 — CI/CD Integration
 
 **Theme:** One-click setup for building Qt projects in CI/CD pipelines.
 
@@ -418,7 +453,7 @@
 
 ---
 
-## 🚧 Version 1.9.0 — Performance Profiling & Build Analytics
+## 🚧 Version 2.0.0 — Performance Profiling & Build Analytics
 
 **Theme:** Help developers optimize their Qt builds and applications.
 
@@ -437,7 +472,7 @@
 
 ---
 
-## 🚧 Version 2.0.0 — LSP & Advanced Code Intelligence
+## 🚧 Version 2.1.0 — LSP & Advanced Code Intelligence
 
 **Theme:** A Qt Language Server Protocol (LSP) client for deep C++ Qt understanding.
 

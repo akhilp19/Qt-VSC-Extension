@@ -16,3 +16,5 @@ export * from './qtCodeActionProvider';
 export * from './platformUtils';
 export * from './packageManagerDetector';
 export * from './qmlSupport';
+export * from './qmlCppBridge';
+export * from './qmlCppBridgeProviders';

@@ -2,7 +2,7 @@
   "name": "qt-vsc-extension",
   "displayName": "Qt C++ Tools",
   "description": "Build, run and manage Qt C++ projects in VS Code",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "publisher": "akhilp19",
   "author": {
     "name": "Akhil Pawar"
@@ -136,6 +136,11 @@
         "command": "qt.previewQml",
         "title": "Qt: Preview QML File",
         "icon": "$(play)"
+      },
+      {
+        "command": "qt.rebuildQmlCppIndex",
+        "title": "Qt: Rebuild QML-C++ Index",
+        "icon": "$(refresh)"
       }
     ],
     "taskDefinitions": [
@@ -317,6 +322,19 @@
           "type": "string",
           "default": "",
           "description": "Additional command-line arguments to pass to qmlscene when previewing QML files."
+        },
+        "qt.qmlCppBridgeEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable QML-C++ bridge features (Go to Definition, autocomplete, Find References)."
+        },
+        "qt.qmlCppIndexExclude": {
+          "type": "array",
+          "default": ["**/build/**", "**/out/**", "**/.git/**", "**/node_modules/**"],
+          "description": "Glob patterns to exclude from QML-C++ bridge indexing.",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -429,6 +447,10 @@
         {
           "command": "qt.previewQml",
           "when": "editorLangId == qml"
+        },
+        {
+          "command": "qt.rebuildQmlCppIndex",
+          "when": "workspaceFolderCount > 0"
         }
       ],
       "view/title": [

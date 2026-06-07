@@ -24,6 +24,8 @@ import { QtCreatorImporter } from './qtCreatorImporter';
 import { QtCodeActionProvider } from './qtCodeActionProvider';
 import { sourceDisplayName } from './packageManagerDetector';
 import { QmlSupport } from './qmlSupport';
+import { QmlCppBridgeIndexer } from './qmlCppBridge';
+import { QmlDefinitionProvider, QmlCompletionProvider as QmlBridgeCompletionProvider, CppReferenceProvider } from './qmlCppBridgeProviders';
 
 let taskProvider: vscode.Disposable | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -181,6 +183,59 @@ export function activate(context: vscode.ExtensionContext): void {
             if (config.get<boolean>('qmlLintOnSave') ?? true) {
                 await qmlSupport.lintQml(document.uri.fsPath);
             }
+        })
+    );
+    
+    // QML-C++ Bridge
+    const qmlCppBridge = new QmlCppBridgeIndexer(outputChannel);
+    
+    // Build index after a short delay so activation isn't blocked
+    setTimeout(() => {
+        void qmlCppBridge.indexWorkspace();
+    }, 3000);
+    
+    const qmlDefProvider = new QmlDefinitionProvider(qmlCppBridge, outputChannel);
+    const qmlBridgeCompProvider = new QmlBridgeCompletionProvider(qmlCppBridge, outputChannel);
+    const cppRefProvider = new CppReferenceProvider(qmlCppBridge, outputChannel);
+    
+    context.subscriptions.push(
+        vscode.languages.registerDefinitionProvider(
+            { scheme: 'file', pattern: '**/*.qml' },
+            qmlDefProvider
+        )
+    );
+    
+    context.subscriptions.push(
+        vscode.languages.registerCompletionItemProvider(
+            { scheme: 'file', pattern: '**/*.qml' },
+            qmlBridgeCompProvider,
+            '.', ':', ' '
+        )
+    );
+    
+    context.subscriptions.push(
+        vscode.languages.registerReferenceProvider(
+            { scheme: 'file', pattern: '**/*.{cpp,h,hpp}' },
+            cppRefProvider
+        )
+    );
+    
+    // Re-index on save of C++ or QML files
+    context.subscriptions.push(
+        vscode.workspace.onDidSaveTextDocument((document) => {
+            const ext = path.extname(document.fileName).toLowerCase();
+            if (ext === '.h' || ext === '.hpp' || ext === '.cpp' || ext === '.qml') {
+                qmlCppBridge.invalidateCache();
+            }
+        })
+    );
+    
+    // Manual rebuild command
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.rebuildQmlCppIndex', async () => {
+            void vscode.window.showInformationMessage('Rebuilding QML-C++ index...');
+            await qmlCppBridge.indexWorkspace();
+            void vscode.window.showInformationMessage('QML-C++ index rebuilt');
         })
     );
     

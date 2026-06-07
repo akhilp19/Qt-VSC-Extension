@@ -304,7 +304,7 @@
 
 ---
 
-## ✅ Version 1.4.0 (Current — Shipped) — Debugging Integration
+## ✅ Version 1.4.0 (Released) — Debugging Integration
 
 **Theme:** Seamless Qt-aware debugging without leaving VS Code.
 
@@ -350,25 +350,55 @@
 
 ---
 
-## 🚧 Version 1.5.0 — Qt Test Framework Integration
+## ✅ Version 1.5.0 (Current — Shipped) — Qt Test Framework Integration
 
 **Theme:** Run, debug, and visualize Qt Test results inside VS Code.
 
 ### Test Discovery
-- [ ] **Auto-detect `QObject` test classes** in project (classes with `Q_OBJECT` + `private slots:` with `test_` or `initTestCase`)
-- [ ] **Test Explorer integration** — populate VS Code's native Testing sidebar
-- [ ] **Support `QTEST_MAIN` macros** and custom `main.cpp` test runners
+- [x] **Auto-detect `QObject` test classes** in workspace C++ files
+  - Regex scanner finds `class X : public QObject` with `Q_OBJECT` + `private slots:`
+  - Extracts `test_*`, `initTestCase`, `cleanupTestCase`, `init`, `cleanup` methods
+  - Detects `QTEST_MAIN(Class)` / `QTEST_APPLESS_MAIN(Class)` markers
+  - Excludes `build/`, `out/`, `.git/`, `node_modules/` directories
+- [x] **Test Explorer integration** — populates VS Code's native Testing sidebar via `TestController`
+  - Root items: test classes (e.g., `TestFoo`)
+  - Child items: individual test methods (`test_something`)
+  - `TestItem.uri` and `range` point to source declaration for navigation
+- [x] **Auto-refresh** on save of `.h`/`.hpp`/`.cpp` files (2-second debounce)
+- [x] **`qt.testAutoDiscover`** setting — toggle auto-discovery on/off
 
 ### Test Execution
-- [ ] **Run individual test** (`Ctrl+; Ctrl+T`) — compile and run single `test_foo()` slot
-- [ ] **Run test class** — compile and run all slots in a `QObject` test class
-- [ ] **Run all Qt tests** in workspace
-- [ ] **XML output parsing** — parse `-xml` output from `qttest` to show pass/fail with durations
+- [x] **Run profile** — `Run Qt Tests` via Test Explorer (default profile)
+  - Run individual test method: `./testbinary ClassName::methodName`
+  - Run full test class: `./testbinary ClassName`
+  - Run all tests: `./testbinary`
+- [x] **Debug profile** — `Debug Qt Tests` via Test Explorer
+  - Launches test binary under VS Code debugger
+  - Uses auto-detected debugger (cppvsdbg / gdb / lldb)
+- [x] **Real-time output parsing** — parses QTest text output as it arrives
+  - `PASS   : ClassName::methodName()`
+  - `FAIL!  : ClassName::methodName() message (file.cpp:42)`
+  - `SKIP   : ClassName::methodName() message`
+- [x] **Cancellation support** — respects VS Code cancellation token, kills test process
 
-### Test Output
-- [ ] **Inline failure indicators** — red squiggle on failing `QCOMPARE` / `QVERIFY` line
-- [ ] **Diff view** for `QCOMPARE(actual, expected)` failures
-- [ ] **CodeLens** "Run Test" / "Debug Test" links above each test slot
+### Test Output & Failure Reporting
+- [x] **Pass/fail/skip reporting** via `testRun.passed()` / `failed()` / `skipped()`
+- [x] **Failure messages** with file/line location in Test Explorer detail panel
+  - `TestMessage` includes failure description
+  - `TestMessage.location` points to assertion failure source
+- [x] **Diff view** for failures via `vscode.TestMessage.diff()`
+
+### Architecture
+- `src/qtTestFramework.ts` — `QtTestFramework` class managing `TestController`
+- Uses VS Code's native Testing API (`vscode.tests.createTestController`)
+- Executable discovery reuses debugger heuristic (`buildDir` + `projectName`)
+- Test output parsed in real-time from `stdout` stream
+
+**Known limitations:**
+- Test executable found via same heuristic as debugger. Projects with separate test targets may need manual configuration.
+- Regex-based discovery may miss test classes inside complex preprocessor conditionals or namespaces.
+- Only discovers `private slots:` test methods; `public slots:` not detected.
+- Debug profile launches whole test binary; individual method filtering in debug session not yet supported.
 
 ---
 

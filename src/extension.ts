@@ -27,6 +27,7 @@ import { QmlSupport } from './qmlSupport';
 import { QmlCppBridgeIndexer } from './qmlCppBridge';
 import { QmlDefinitionProvider, QmlCompletionProvider as QmlBridgeCompletionProvider, CppReferenceProvider } from './qmlCppBridgeProviders';
 import { QtDebuggerIntegration } from './qtDebugger';
+import { QtTestFramework } from './qtTestFramework';
 
 let taskProvider: vscode.Disposable | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -258,6 +259,25 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         vscode.commands.registerCommand('qt.addSignalSlotBreakpoint', async () => {
             await qtDebugger.addSignalSlotBreakpoint();
+        })
+    );
+    
+    // Qt Test Framework integration
+    const qtTestFramework = new QtTestFramework(qtConfigManager, qtProjectDetector, outputChannel);
+    context.subscriptions.push(qtTestFramework);
+    
+    // Discover tests after a short delay
+    setTimeout(() => {
+        void qtTestFramework.discoverTests();
+    }, 4000);
+    
+    // Re-discover tests on save of C++ files
+    context.subscriptions.push(
+        vscode.workspace.onDidSaveTextDocument((document) => {
+            const ext = path.extname(document.fileName).toLowerCase();
+            if (ext === '.h' || ext === '.hpp' || ext === '.cpp') {
+                qtTestFramework.invalidateCache();
+            }
         })
     );
     

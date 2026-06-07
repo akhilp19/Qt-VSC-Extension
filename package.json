@@ -2,7 +2,7 @@
   "name": "qt-vsc-extension",
   "displayName": "Qt C++ Tools",
   "description": "Build, run and manage Qt C++ projects in VS Code",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "publisher": "akhilp19",
   "author": {
     "name": "Akhil Pawar"
@@ -17,6 +17,7 @@
   },
   "categories": [
     "Programming Languages",
+    "Testing",
     "Other"
   ],
   "keywords": [
@@ -371,6 +372,11 @@
           "type": "number",
           "default": 3768,
           "description": "Port for QML JS debugger."
+        },
+        "qt.testAutoDiscover": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically discover Qt Test classes in the workspace and populate the Test Explorer."
         }
       }
     },

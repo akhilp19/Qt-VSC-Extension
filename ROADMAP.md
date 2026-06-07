@@ -33,7 +33,7 @@
 
 ---
 
-## ✅ Version 0.1.0 (Current — Shipped) — Project Creation Wizards
+## ✅ Version 0.1.0 (Released) — Project Creation Wizards
 
 **Theme:** Turn the two placeholder commands into real project generators.
 
@@ -53,20 +53,20 @@
 
 ---
 
-## 🚧 Version 0.2.0 — Qt Asset Integration
+## ✅ Version 0.2.0 (Current — Shipped) — Qt Asset Integration
 
 **Theme:** Bring Qt Designer and resource workflows into VS Code.
 
-- [ ] **`.ui` file support**
+- [x] **`.ui` file support**
   - Open `.ui` files in Qt Designer from VS Code (external launch)
   - Context-menu action: "Open in Qt Designer"
 
-- [ ] **`.qrc` (Qt Resource File) support**
+- [x] **`.qrc` (Qt Resource File) support**
   - Syntax highlighting / basic IntelliSense for `.qrc` XML
   - Validate resource paths
   - Context action to run `rcc` manually
 
-- [ ] **Qt Designer integration (lightweight)**
+- [x] **Qt Designer integration (lightweight)**
   - Detect `designer.exe` alongside the selected Qt installation
   - Command: `Qt: Open Current File in Qt Designer`
 

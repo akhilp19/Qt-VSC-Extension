@@ -13,6 +13,8 @@ import {
     writeProjectFiles,
     ProjectTemplateOptions
 } from './projectTemplates';
+import { QtDesignerIntegration } from './qtDesignerIntegration';
+import { QrcSupport } from './qrcSupport';
 
 let taskProvider: vscode.Disposable | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -42,6 +44,12 @@ export function activate(context: vscode.ExtensionContext): void {
     // Register tree data provider
     const treeDisposable = vscode.window.registerTreeDataProvider('qt-projects', treeProvider);
     context.subscriptions.push(treeDisposable);
+    
+    // Initialize Qt Designer integration
+    const qtDesigner = new QtDesignerIntegration(qtConfigManager, outputChannel);
+    
+    // Initialize QRC support
+    const qrcSupport = new QrcSupport(qtConfigManager, outputChannel);
     
     // Register task provider
     const qtTaskProviderInstance = new QtTaskProvider(qtConfigManager, qtProjectDetector, outputChannel);
@@ -122,6 +130,26 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         vscode.commands.registerCommand('qt.refreshProjects', async () => {
             await treeProvider.refresh();
+        })
+    );
+    
+    // Qt Designer commands
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.openInDesigner', async (uri?: vscode.Uri) => {
+            await qtDesigner.openInDesigner(uri?.fsPath);
+        })
+    );
+    
+    // QRC commands
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.validateQrc', async (uri?: vscode.Uri) => {
+            await qrcSupport.validateQrc(uri?.fsPath);
+        })
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.runRcc', async (uri?: vscode.Uri) => {
+            await qrcSupport.runRcc(uri?.fsPath);
         })
     );
     

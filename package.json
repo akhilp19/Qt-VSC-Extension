@@ -2,7 +2,7 @@
   "name": "qt-vsc-extension",
   "displayName": "Qt C++ Tools",
   "description": "Build, run and manage Qt C++ projects in VS Code",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "akhilp19",
   "author": {
     "name": "Akhil Pawar"
@@ -78,6 +78,19 @@
         "command": "qt.refreshProjects",
         "title": "Qt: Refresh Projects",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "qt.openInDesigner",
+        "title": "Qt: Open in Qt Designer",
+        "icon": "$(preview)"
+      },
+      {
+        "command": "qt.validateQrc",
+        "title": "Qt: Validate Resource File"
+      },
+      {
+        "command": "qt.runRcc",
+        "title": "Qt: Compile Resource File (rcc)"
       }
     ],
     "taskDefinitions": [
@@ -283,6 +296,23 @@
           "command": "qt.runProject",
           "when": "view == qt-projects && viewItem == qtProject",
           "group": "inline@4"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "qt.openInDesigner",
+          "when": "resourceExtname == .ui",
+          "group": "2_qt@1"
+        },
+        {
+          "command": "qt.validateQrc",
+          "when": "resourceExtname == .qrc",
+          "group": "2_qt@1"
+        },
+        {
+          "command": "qt.runRcc",
+          "when": "resourceExtname == .qrc",
+          "group": "2_qt@2"
         }
       ]
     }

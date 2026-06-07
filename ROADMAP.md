@@ -173,19 +173,279 @@
 
 ---
 
-## ✅ Version 1.0.0 (Current — Shipped) — Cross-Platform Support
+## ✅ Version 1.0.0 (Released) — Cross-Platform Support
 
 **Theme:** Take the extension beyond Windows.
 
 - [x] **macOS support**
-  - Detect Qt installations in `/Users/<user>/Qt` and `/usr/local/Qt`
+  - Detect Qt installations in `/Users/<user>/Qt`, `/usr/local/Qt`, `/opt/Qt`, `/Applications/Qt`
   - `macdeployqt` integration for app bundle deployment
   - Support `.app` bundle execution
 
 - [x] **Linux support**
-  - Detect Qt via `qmake` in PATH, `/usr/lib/qt*`, and `/opt/qt*`
-  - `make` / `gcc` toolchain support
+  - Detect Qt via `qmake` in PATH, `/usr/lib/qt*`, `/opt/qt*`, `/usr/local/qt*`
+  - `make` / `gcc` / `clang` toolchain support
   - `linuxdeployqt` integration for deployment
+
+- [x] **Platform abstraction layer**
+  - `platformUtils.ts` — unified API for path, shell, and executable handling
+  - Automatic `process.platform` detection at runtime
+
+---
+
+## 🚧 Version 1.1.0 — Package Manager Integration
+
+**Theme:** Support Qt installed via Homebrew, apt, pacman, vcpkg, Conan, and aqtinstall.
+
+### Package Manager Detection
+- [ ] **Homebrew** (macOS / Linux)
+  - Detect Qt via `brew list qt@5`, `brew list qt@6`, `brew --prefix qt`
+  - Read `Cellar/qt/` symlinks to find actual install paths
+  - Support versioned formulae (`qt@5`, `qt@6`)
+
+- [ ] **APT / DPKG** (Debian / Ubuntu)
+  - Detect Qt via `dpkg -L libqt5core5a`, `dpkg -L libqt6core6`
+  - Parse `/usr/lib/x86_64-linux-gnu/qt5/` paths
+  - Map package names to Qt modules (`libqt5widgets5` → `widgets`)
+
+- [ ] **Pacman** (Arch / Manjaro)
+  - Detect Qt via `pacman -Ql qt5-base`, `pacman -Ql qt6-base`
+  - Parse `/usr/lib/qt5/`, `/usr/lib/qt6/` paths
+
+- [ ] **vcpkg**
+  - Detect `vcpkg` manifests (`vcpkg.json`) in workspace
+  - Read `VCPKG_ROOT` or find `vcpkg` in PATH
+  - Query installed Qt packages via `vcpkg list qtbase`
+  - Map vcpkg triplet paths to Qt include/lib directories
+
+- [ ] **Conan**
+  - Detect `conanfile.txt` / `conanfile.py` in workspace
+  - Read Conan cache for Qt packages (`qt/6.x.x`)
+  - Integrate with `conan install` build steps
+
+- [ ] **aqtinstall**
+  - Detect Qt installations made via `aqtinstall` (common in CI / headless setups)
+  - Read `aqt` config or standard install paths (`~/Qt`, `C:\Qt`)
+
+### Unified Package Manager UI
+- [ ] **"Package Manager" column** in Qt version picker showing source (Official / Homebrew / apt / vcpkg / etc.)
+- [ ] **"Install Qt" command** — open a guided installer or show package manager command (e.g., `brew install qt@6`)
+- [ ] **Auto-priority rules** — prefer official installer over package manager unless user overrides
+
+---
+
+## 🚧 Version 1.2.0 — Qt Quick / QML Support
+
+**Theme:** First-class QML development inside VS Code.
+
+### QML Language Support
+- [ ] **Syntax highlighting** for `.qml` and `.qmltypes` files (TextMate grammar)
+- [ ] **QML formatter** integration (`qmlformat` or `qmlfmt`)
+- [ ] **QML linting** via `qmllint` with inline diagnostics in Problems panel
+- [ ] **QML type inference** — resolve custom QML types defined in C++ (`QML_ELEMENT`, `QML_SINGLETON`)
+
+### QML Preview
+- [ ] **Live QML Preview** command — launch `qmlscene` or custom previewer with the current `.qml` file
+- [ ] **Hot reload** on save (watch `.qml` and auto-relaunch preview)
+- [ ] **Preview settings** — override `QML2_IMPORT_PATH`, screen size, DPI
+
+### QML-C++ Bridge
+- [ ] **Go to Definition** from QML `id:` or property binding to C++ `Q_PROPERTY`
+- [ ] **Find Usages** of C++ `Q_INVOKABLE` methods in `.qml` files
+- [ ] **Autocomplete** QML properties and methods exposed from C++ context
+
+---
+
+## 🚧 Version 1.3.0 — Debugging Integration
+
+**Theme:** Seamless Qt-aware debugging without leaving VS Code.
+
+### Debugger Configuration
+- [ ] **Auto-generate `launch.json`** for Qt projects
+  - Detect debugger type (MSVC → `cppvsdbg`, MinGW/GCC/Clang → `gdb` / `lldb`)
+  - Set correct executable path (`.exe`, `.app` bundle, or binary)
+  - Add Qt source path mapping for stepping into Qt internals
+
+### Qt-Specific Debugging
+- [ ] **Pretty printers for Qt types**
+  - `QString`, `QByteArray`, `QList`, `QMap`, `QHash`, `QVariant` — show human-readable values in Variables panel
+  - Ship pre-configured `.gdbinit` and `lldb` formatters
+  - Auto-inject pretty printers into debug session
+
+- [ ] **Signal/Slot breakpoint support**
+  - Set breakpoint on `QObject::connect` to trace signal emissions
+  - Visual indicator in gutter when a slot is connected
+
+- [ ] **QML debugging**
+  - Launch app with `-qmljsdebugger=port:3768` argument
+  - Attach VS Code debugger to QML runtime
+
+---
+
+## 🚧 Version 1.4.0 — Qt Test Framework Integration
+
+**Theme:** Run, debug, and visualize Qt Test results inside VS Code.
+
+### Test Discovery
+- [ ] **Auto-detect `QObject` test classes** in project (classes with `Q_OBJECT` + `private slots:` with `test_` or `initTestCase`)
+- [ ] **Test Explorer integration** — populate VS Code's native Testing sidebar
+- [ ] **Support `QTEST_MAIN` macros** and custom `main.cpp` test runners
+
+### Test Execution
+- [ ] **Run individual test** (`Ctrl+; Ctrl+T`) — compile and run single `test_foo()` slot
+- [ ] **Run test class** — compile and run all slots in a `QObject` test class
+- [ ] **Run all Qt tests** in workspace
+- [ ] **XML output parsing** — parse `-xml` output from `qttest` to show pass/fail with durations
+
+### Test Output
+- [ ] **Inline failure indicators** — red squiggle on failing `QCOMPARE` / `QVERIFY` line
+- [ ] **Diff view** for `QCOMPARE(actual, expected)` failures
+- [ ] **CodeLens** "Run Test" / "Debug Test" links above each test slot
+
+---
+
+## 🚧 Version 1.5.0 — Internationalization (lupdate / lrelease)
+
+**Theme:** Full i18n workflow for Qt applications.
+
+### Translation File Management
+- [ ] **Auto-detect `.ts` files** in project and list in sidebar
+- [ ] **`lupdate` integration**
+  - Command: `Qt: Update Translations (lupdate)`
+  - Scan `.cpp`, `.h`, `.ui`, `.qml` for `tr()`, `qsTr()`, `QT_TR_NOOP()`
+  - Generate/update `.ts` files from `.pro` `TRANSLATIONS` list or CMake `qt_add_translations()`
+
+- [ ] **`lrelease` integration**
+  - Command: `Qt: Compile Translations (lrelease)`
+  - Build `.qm` files from `.ts` files
+  - Show progress notification
+
+### Translation Workflow
+- [ ] **Translation status panel** — show completion % per language
+- [ ] **Open in Qt Linguist** — launch `linguist` with selected `.ts` file
+- [ ] **Missing translation warnings** — diagnostic when `tr()` call has no matching translation entry
+
+---
+
+## 🚧 Version 1.6.0 — Qt for Python (PySide / PyQt) Support
+
+**Theme:** Extend the extension to Python-based Qt projects.
+
+### Python Project Detection
+- [ ] **Detect PySide6 / PyQt6 / PySide2 / PyQt5** projects (`*.py` with `PySide6` imports, `requirements.txt`)
+- [ ] **Auto-detect Python interpreter** with Qt bindings installed
+- [ ] **Virtual environment awareness** — find Qt in `venv`, `conda`, `poetry` environments
+
+### Python Qt Tooling
+- [ ] **`pyside6-rcc` / `pyrcc5` integration** — compile `.qrc` to Python modules
+- [ ] **`pyside6-uic` / `pyuic5` integration** — compile `.ui` to Python classes
+- [ ] **`pyside6-designer` launcher** — same as C++ designer but for Python workflows
+
+### Python Qt Intelligence
+- [ ] **Qt class autocomplete** for Python (via Pylance / Jedi stubs)
+- [ ] **Signal/Slot autocomplete** for `button.clicked.connect(...)` patterns
+- [ ] **Snippets** for Python Qt boilerplate (`pyside-app`, `pyqt-mainwindow`)
+
+---
+
+## 🚧 Version 1.7.0 — Advanced Code Generation (MOC, UIC, RCC Automation)
+
+**Theme:** Eliminate manual build steps for generated code.
+
+### Automatic Code Generation
+- [ ] **MOC file watching**
+  - Watch `.h` files containing `Q_OBJECT` macro
+  - Auto-run `moc` on save and generate `moc_*.cpp` in build dir
+  - Show MOC output in output channel
+
+- [ ] **UIC file watching**
+  - Watch `.ui` files
+  - Auto-run `uic` to generate `ui_*.h` on save
+  - Show generated header inline or in build dir
+
+- [ ] **RCC file watching**
+  - Watch `.qrc` files
+  - Auto-run `rcc` to generate `qrc_*.cpp` on save
+
+### Generated Code Navigation
+- [ ] **Peek Generated Code** — show `moc_*.cpp` / `ui_*.h` inline without leaving editor
+- [ ] **Go to MOC** from class definition
+- [ ] **Go to UI Header** from `.ui` file
+
+### Build Integration
+- [ ] **Auto-inject MOC/UIC/RCC steps** into custom build systems (non-CMake / non-QMake)
+- [ ] **Precompiled header (PCH) support** — generate and manage `.pch` / `.gch` for faster Qt builds
+
+---
+
+## 🚧 Version 1.8.0 — CI/CD Integration
+
+**Theme:** One-click setup for building Qt projects in CI/CD pipelines.
+
+### GitHub Actions
+- [ ] **Generate `.github/workflows/build.yml`**
+  - Matrix builds: Windows (MSVC + MinGW), macOS (x64 + Apple Silicon), Linux (GCC + Clang)
+  - `aqtinstall` step to install Qt in CI
+  - Cache Qt installation between runs
+  - Artifact upload for built binaries
+
+- [ ] **Generate `.github/workflows/release.yml`**
+  - Auto-tag and create GitHub Release on version bump
+  - Attach `windeployqt` / `macdeployqt` / `linuxdeployqt` artifacts
+  - Code-signing setup stubs (Windows signtool, macOS codesign, Linux GPG)
+
+### Other CI Templates
+- [ ] **GitLab CI** `.gitlab-ci.yml` template
+- [ ] **Azure Pipelines** `azure-pipelines.yml` template
+- [ ] **Jenkins** `Jenkinsfile` template
+
+### Qt Installer Framework
+- [ ] **Generate installer config** (`config.xml`, `package.xml`) for `binarycreator`
+- [ ] **Build installer** command — run `binarycreator` to produce `.exe` / `.dmg` / `.run` installer
+
+---
+
+## 🚧 Version 1.9.0 — Performance Profiling & Build Analytics
+
+**Theme:** Help developers optimize their Qt builds and applications.
+
+### Build Performance
+- [ ] **Build time tracker** — log per-project, per-configuration build durations
+- [ ] **Build analytics dashboard** — graph build times over history in sidebar
+- [ ] **Slow target detection** — identify which `.cpp` files take longest to compile
+- [ ] **`ccache` / `sccache` integration**
+  - Auto-detect and configure compiler cache
+  - Show cache hit/miss stats after build
+
+### Application Profiling
+- [ ] **QML Profiler launcher** — run app with `-qmlprofiler` and open results in Qt Creator or basic viewer
+- [ ] **CPU Profiler integration** — launch `perf` / ` Instruments` / `VTune` from VS Code
+- [ ] **Memory leak detection** — integrate `valgrind` / `drmemory` / Xcode leaks for Qt apps
+
+---
+
+## 🚧 Version 2.0.0 — LSP & Advanced Code Intelligence
+
+**Theme:** A Qt Language Server Protocol (LSP) client for deep C++ Qt understanding.
+
+### Qt LSP Server
+- [ ] **Custom LSP server for Qt C++**
+  - Parse `moc` output to understand `Q_OBJECT` meta-information
+  - Provide accurate completions for `SIGNAL()` / `SLOT()` macros
+  - Resolve `connect()` overloads with type checking
+
+### Deep Code Understanding
+- [ ] **Rename refactoring** across signal/slot connections
+  - Rename a signal → update all `connect()` calls and `.qml` bindings
+  - Rename a `Q_PROPERTY` → update QML usages
+
+- [ ] **Find all signal emitters** — find every `emit mySignal()` call site
+- [ ] **Find all slot connections** — find every `connect(..., SLOT(mySlot()))` call
+
+### QML-C++ Cross-Reference
+- [ ] **Go to QML usage** from C++ `Q_INVOKABLE` / `Q_PROPERTY`
+- [ ] **Go to C++ definition** from QML `property` or `function` call
+- [ ] **Refactor QML type** — rename C++ `QML_ELEMENT` class and update all `.qml` imports
 
 ---
 
@@ -196,4 +456,4 @@
 3. Submit a PR referencing the roadmap item.
 
 > **Last updated:** June 7, 2026  
-> For the latest status, check the [GitHub Issues](https://github.com/akhilpawar/Qt-VSC-Extension/issues) page.
+> For the latest status, check the [GitHub Issues](https://github.com/akhilp19/Qt-VSC-Extension/issues) page.

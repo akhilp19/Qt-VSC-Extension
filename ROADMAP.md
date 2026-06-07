@@ -102,7 +102,7 @@
 
 ---
 
-## ✅ Version 0.4.0 (Current — Shipped) — Qt Code Intelligence
+## ✅ Version 0.4.0 (Released) — Qt Code Intelligence
 
 **Theme:** Bring Qt-specific autocomplete, snippets, and documentation into VS Code.
 
@@ -132,24 +132,24 @@
 
 ---
 
-## 🚧 Version 0.5.0 — Enhanced Sidebar & Project Import
+## ✅ Version 0.5.0 (Current — Shipped) — Enhanced Sidebar & Project Import
 
 **Theme:** Make the Qt Projects sidebar a true project dashboard.
 
-- [ ] **Build configuration selector**
+- [x] **Build configuration selector**
   - Switch Debug / Release directly in the Qt Projects view
   - Per-project build configuration overrides
 
-- [ ] **Project properties panel**
+- [x] **Project properties panel**
   - View/edit Qt version, build directory, and compiler per project
   - Quick-access settings from the sidebar
 
-- [ ] **Build history / status indicator**
+- [x] **Build history / status indicator**
   - Show last build result (success/failure) per project
   - Timestamp of last build
   - One-click re-build from status indicator
 
-- [ ] **Qt Creator project import**
+- [x] **Qt Creator project import**
   - Import `.pro.user` settings (build steps, run configs)
   - Import `.qbs` project metadata where possible
 

@@ -262,6 +262,25 @@ export class QtConfigManager {
     }
     
     /**
+     * Get build type for a specific project (falls back to global default)
+     */
+    getProjectBuildType(projectFile: string): string {
+        const config = vscode.workspace.getConfiguration('qt');
+        const perProject = config.get<Record<string, string>>('projectBuildConfigurations') || {};
+        return perProject[projectFile] || config.get<string>('defaultBuildType') || 'debug';
+    }
+
+    /**
+     * Set build type for a specific project
+     */
+    async setProjectBuildType(projectFile: string, buildType: string): Promise<void> {
+        const config = vscode.workspace.getConfiguration('qt');
+        const perProject = config.get<Record<string, string>>('projectBuildConfigurations') || {};
+        perProject[projectFile] = buildType;
+        await config.update('projectBuildConfigurations', perProject, vscode.ConfigurationTarget.Workspace);
+    }
+
+    /**
      * Clear cached installation (force re-detection)
      */
     clearCache(): void {

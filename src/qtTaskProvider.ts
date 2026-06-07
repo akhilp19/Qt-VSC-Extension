@@ -106,6 +106,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
         const qtInstallation = await this.qtConfigManager.getQtInstallation();
         const buildDir = this.qtConfigManager.getBuildDirectory();
         const makeCmd = this.qtConfigManager.getMakeCommand(qtInstallation);
+        const buildType = this.qtConfigManager.getProjectBuildType(projectFile);
         
         const projectName = path.basename(projectFile, path.extname(projectFile));
         
@@ -119,6 +120,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
             // QMake build: qmake -> make
             const qmakePath = qtInstallation?.qmakePath || 'qmake';
             const additionalArgs = config.get<string>('additionalQMakeArguments') || '';
+            const buildTypeArg = buildType === 'release' ? 'CONFIG+=release' : 'CONFIG+=debug';
             
             // Create build directory if it doesn't exist
             const commands: string[] = [];
@@ -128,7 +130,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
             commands.push(
                 `if (-not (Test-Path "${buildDir}")) { New-Item -ItemType Directory -Path "${buildDir}" -Force | Out-Null }`,
                 `cd "${buildDir}"`,
-                `& "${qmakePath}" "${projectFile}" ${additionalArgs}`,
+                `& "${qmakePath}" "${projectFile}" ${buildTypeArg} ${additionalArgs}`,
                 `& ${makeCmd}`
             );
             if (postBuildCommand) {
@@ -141,7 +143,6 @@ export class QtTaskProvider implements vscode.TaskProvider {
         } else {
             // CMake build
             const additionalArgs = config.get<string>('additionalCMakeArguments') || '';
-            const defaultBuildType = config.get<string>('defaultBuildType') || 'debug';
             
             const commands: string[] = [];
             if (preBuildCommand) {
@@ -149,7 +150,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
             }
             commands.push(
                 `if (-not (Test-Path "${buildDir}")) { New-Item -ItemType Directory -Path "${buildDir}" -Force | Out-Null }`,
-                `cmake -B "${buildDir}" -S "${path.dirname(projectFile)}" -DCMAKE_BUILD_TYPE=${defaultBuildType} ${additionalArgs}`,
+                `cmake -B "${buildDir}" -S "${path.dirname(projectFile)}" -DCMAKE_BUILD_TYPE=${buildType} ${additionalArgs}`,
                 `cmake --build "${buildDir}"`
             );
             if (postBuildCommand) {
@@ -250,6 +251,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
         const qtInstallation = await this.qtConfigManager.getQtInstallation();
         const buildDir = this.qtConfigManager.getBuildDirectory();
         const makeCmd = this.qtConfigManager.getMakeCommand(qtInstallation);
+        const buildType = this.qtConfigManager.getProjectBuildType(projectFile);
         const projectName = path.basename(projectFile, path.extname(projectFile));
         
         const config = vscode.workspace.getConfiguration('qt');
@@ -262,6 +264,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
             // QMake rebuild: clean -> qmake -> make
             const qmakePath = qtInstallation?.qmakePath || 'qmake';
             const additionalArgs = config.get<string>('additionalQMakeArguments') || '';
+            const buildTypeArg = buildType === 'release' ? 'CONFIG+=release' : 'CONFIG+=debug';
             
             const commands: string[] = [];
             if (preBuildCommand) {
@@ -271,7 +274,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
                 `if (-not (Test-Path "${buildDir}")) { New-Item -ItemType Directory -Path "${buildDir}" -Force | Out-Null }`,
                 `cd "${buildDir}"`,
                 `& ${makeCmd} clean 2>$null`,
-                `& "${qmakePath}" "${projectFile}" ${additionalArgs}`,
+                `& "${qmakePath}" "${projectFile}" ${buildTypeArg} ${additionalArgs}`,
                 `& ${makeCmd}`
             );
             if (postBuildCommand) {
@@ -284,7 +287,6 @@ export class QtTaskProvider implements vscode.TaskProvider {
         } else {
             // CMake rebuild
             const additionalArgs = config.get<string>('additionalCMakeArguments') || '';
-            const defaultBuildType = config.get<string>('defaultBuildType') || 'debug';
             
             const commands: string[] = [];
             if (preBuildCommand) {
@@ -292,7 +294,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
             }
             commands.push(
                 `if (Test-Path "${buildDir}") { Remove-Item -Recurse -Force "${buildDir}" }`,
-                `cmake -B "${buildDir}" -S "${path.dirname(projectFile)}" -DCMAKE_BUILD_TYPE=${defaultBuildType} ${additionalArgs}`,
+                `cmake -B "${buildDir}" -S "${path.dirname(projectFile)}" -DCMAKE_BUILD_TYPE=${buildType} ${additionalArgs}`,
                 `cmake --build "${buildDir}"`
             );
             if (postBuildCommand) {

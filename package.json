@@ -2,7 +2,7 @@
   "name": "qt-vsc-extension",
   "displayName": "Qt C++ Tools",
   "description": "Build, run and manage Qt C++ projects in VS Code",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "publisher": "akhilp19",
   "author": {
     "name": "Akhil Pawar"
@@ -100,6 +100,14 @@
       {
         "command": "qt.configureIntelliSense",
         "title": "Qt: Configure IntelliSense"
+      },
+      {
+        "command": "qt.selectBuildConfig",
+        "title": "Qt: Select Build Configuration"
+      },
+      {
+        "command": "qt.importQtCreator",
+        "title": "Qt: Import Qt Creator Settings"
       }
     ],
     "taskDefinitions": [
@@ -221,6 +229,11 @@
           "type": "string",
           "default": "",
           "description": "Command to run after build (e.g., copy assets)"
+        },
+        "qt.projectBuildConfigurations": {
+          "type": "object",
+          "default": {},
+          "description": "Per-project build configurations (debug/release). Managed by the extension."
         }
       }
     },
@@ -289,6 +302,10 @@
         },
         {
           "command": "qt.configureIntelliSense",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.importQtCreator",
           "when": "workspaceFolderCount > 0"
         }
       ],

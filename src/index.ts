@@ -10,3 +10,5 @@ export * from './intelliSenseHelper';
 export * from './qtApiData';
 export * from './qtCompletionProvider';
 export * from './qtHoverProvider';
+export * from './qtBuildTracker';
+export * from './qtCreatorImporter';

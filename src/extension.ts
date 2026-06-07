@@ -19,6 +19,8 @@ import { QtDeployment } from './qtDeployment';
 import { IntelliSenseHelper } from './intelliSenseHelper';
 import { QtCompletionProvider } from './qtCompletionProvider';
 import { QtHoverProvider } from './qtHoverProvider';
+import { QtBuildTracker } from './qtBuildTracker';
+import { QtCreatorImporter } from './qtCreatorImporter';
 
 let taskProvider: vscode.Disposable | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -42,8 +44,12 @@ export function activate(context: vscode.ExtensionContext): void {
     qtConfigManager = new QtConfigManager(outputChannel);
     qtProjectDetector = new QtProjectDetector(outputChannel);
     
+    // Create build tracker
+    const buildTracker = new QtBuildTracker(outputChannel);
+    context.subscriptions.push(buildTracker);
+    
     // Create tree provider
-    treeProvider = new QtProjectTreeProvider(qtProjectDetector, qtConfigManager, outputChannel);
+    treeProvider = new QtProjectTreeProvider(qtProjectDetector, qtConfigManager, buildTracker, outputChannel);
     
     // Register tree data provider
     const treeDisposable = vscode.window.registerTreeDataProvider('qt-projects', treeProvider);
@@ -109,26 +115,26 @@ export function activate(context: vscode.ExtensionContext): void {
     
     // Register commands
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.buildProject', async () => {
-            await executeQtTask('build');
+        vscode.commands.registerCommand('qt.buildProject', async (uri?: vscode.Uri) => {
+            await executeQtTask('build', uri?.fsPath);
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.cleanProject', async () => {
-            await executeQtTask('clean');
+        vscode.commands.registerCommand('qt.cleanProject', async (uri?: vscode.Uri) => {
+            await executeQtTask('clean', uri?.fsPath);
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.rebuildProject', async () => {
-            await executeQtTask('rebuild');
+        vscode.commands.registerCommand('qt.rebuildProject', async (uri?: vscode.Uri) => {
+            await executeQtTask('rebuild', uri?.fsPath);
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.runProject', async () => {
-            await executeQtTask('run');
+        vscode.commands.registerCommand('qt.runProject', async (uri?: vscode.Uri) => {
+            await executeQtTask('run', uri?.fsPath);
         })
     );
     
@@ -196,39 +202,80 @@ export function activate(context: vscode.ExtensionContext): void {
         })
     );
     
+    // Build configuration selector
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.selectBuildConfig', async (projectFile?: string) => {
+            await selectBuildConfig(projectFile);
+        })
+    );
+    
+    // Qt Creator import
+    const qtCreatorImporter = new QtCreatorImporter(outputChannel);
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.importQtCreator', async () => {
+            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+            if (!workspaceFolder) {
+                void vscode.window.showErrorMessage('No workspace folder open');
+                return;
+            }
+            const projects = await qtProjectDetector.detectProjects(workspaceFolder.uri.fsPath);
+            if (projects.length === 0) {
+                void vscode.window.showErrorMessage('No Qt project found');
+                return;
+            }
+            let targetFile = projects[0];
+            if (projects.length > 1) {
+                const selected = await vscode.window.showQuickPick(
+                    projects.map(p => ({ label: path.basename(p), description: p, value: p })),
+                    { placeHolder: 'Select project to import Qt Creator settings for' }
+                );
+                if (!selected) { return; }
+                targetFile = selected.value;
+            }
+            await qtCreatorImporter.showImportResults(targetFile);
+        })
+    );
+    
     // Auto-detect Qt on activation
     void qtConfigManager.detectQtInstallation();
     
     outputChannel.appendLine('Qt C++ Tools extension initialized successfully');
 }
 
-async function executeQtTask(taskType: 'build' | 'clean' | 'rebuild' | 'run'): Promise<void> {
-    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-    if (!workspaceFolder) {
-        void vscode.window.showErrorMessage('No workspace folder open');
-        return;
-    }
+async function executeQtTask(taskType: 'build' | 'clean' | 'rebuild' | 'run', specificProject?: string): Promise<void> {
+    let projectFile: string | undefined = specificProject;
     
-    // Find Qt projects in workspace
-    const projects = await qtProjectDetector.detectProjects(workspaceFolder.uri.fsPath);
-    if (projects.length === 0) {
-        void vscode.window.showErrorMessage('No Qt project found in workspace. Looking for .pro or CMakeLists.txt files.');
-        return;
-    }
-    
-    // If multiple projects, let user select
-    let projectFile: string;
-    if (projects.length === 1) {
-        projectFile = projects[0];
-    } else {
-        const selected = await vscode.window.showQuickPick(
-            projects.map(p => ({ label: p, description: p })),
-            { placeHolder: `Select Qt project to ${taskType}` }
-        );
-        if (!selected) {
+    if (!projectFile) {
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        if (!workspaceFolder) {
+            void vscode.window.showErrorMessage('No workspace folder open');
             return;
         }
-        projectFile = selected.label;
+        
+        // Find Qt projects in workspace
+        const projects = await qtProjectDetector.detectProjects(workspaceFolder.uri.fsPath);
+        if (projects.length === 0) {
+            void vscode.window.showErrorMessage('No Qt project found in workspace. Looking for .pro or CMakeLists.txt files.');
+            return;
+        }
+        
+        // If multiple projects, let user select
+        if (projects.length === 1) {
+            projectFile = projects[0];
+        } else {
+            const selected = await vscode.window.showQuickPick(
+                projects.map(p => ({ label: p, description: p })),
+                { placeHolder: `Select Qt project to ${taskType}` }
+            );
+            if (!selected) {
+                return;
+            }
+            projectFile = selected.label;
+        }
+    }
+    
+    if (!projectFile) {
+        return;
     }
     
     // Create and execute task
@@ -469,6 +516,32 @@ async function createCMakeProject(): Promise<void> {
     } catch (error) {
         void vscode.window.showErrorMessage(`Failed to create project: ${String(error)}`);
         outputChannel.appendLine(`Error creating CMake project: ${String(error)}`);
+    }
+}
+
+async function selectBuildConfig(projectFile?: string): Promise<void> {
+    if (!projectFile) {
+        void vscode.window.showErrorMessage('No project selected');
+        return;
+    }
+    
+    const currentType = qtConfigManager.getProjectBuildType(projectFile);
+    const selected = await vscode.window.showQuickPick(
+        [
+            { label: 'Debug', description: 'Build with debug symbols and no optimization', value: 'debug' },
+            { label: 'Release', description: 'Build with optimizations, no debug symbols', value: 'release' }
+        ],
+        { placeHolder: `Select build configuration (current: ${currentType})` }
+    );
+    
+    if (selected) {
+        await qtConfigManager.setProjectBuildType(projectFile, selected.value);
+        void vscode.window.showInformationMessage(
+            `Build configuration set to ${selected.label} for ${path.basename(projectFile)}`
+        );
+        outputChannel.appendLine(`Build config for ${projectFile}: ${selected.value}`);
+        // Refresh tree to show updated config
+        await treeProvider.refresh();
     }
 }
 

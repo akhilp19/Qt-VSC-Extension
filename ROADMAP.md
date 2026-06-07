@@ -350,7 +350,7 @@
 
 ---
 
-## ✅ Version 1.5.0 (Current — Shipped) — Qt Test Framework Integration
+## ✅ Version 1.5.0 (Released) — Qt Test Framework Integration
 
 **Theme:** Run, debug, and visualize Qt Test results inside VS Code.
 
@@ -402,26 +402,51 @@
 
 ---
 
-## 🚧 Version 1.6.0 — Internationalization (lupdate / lrelease)
+## ✅ Version 1.6.0 (Current — Shipped) — Internationalization (lupdate / lrelease)
 
 **Theme:** Full i18n workflow for Qt applications.
 
 ### Translation File Management
-- [ ] **Auto-detect `.ts` files** in project and list in sidebar
-- [ ] **`lupdate` integration**
-  - Command: `Qt: Update Translations (lupdate)`
-  - Scan `.cpp`, `.h`, `.ui`, `.qml` for `tr()`, `qsTr()`, `QT_TR_NOOP()`
-  - Generate/update `.ts` files from `.pro` `TRANSLATIONS` list or CMake `qt_add_translations()`
+- [x] **Auto-detect `.ts` files** in workspace and list in sidebar
+  - New `Qt Translations` view under the Qt Projects explorer
+  - Scans workspace excluding `build/`, `out/`, `.git/`, `node_modules/`
+- [x] **Parse `.ts` XML** to compute completion percentage
+  - Counts `<message>` elements vs finished `<translation>` elements
+  - Shows `X%` as description next to each `.ts` file
+  - Extracts language from `<TS language="...">`
 
-- [ ] **`lrelease` integration**
-  - Command: `Qt: Compile Translations (lrelease)`
-  - Build `.qm` files from `.ts` files
-  - Show progress notification
+### lupdate / lrelease Integration
+- [x] **`Qt: Update Translations (lupdate)`** command
+  - Finds `lupdate` in Qt bin directory or PATH
+  - Auto-detects `.pro` or `CMakeLists.txt` project file
+  - For CMake projects without explicit TRANSLATIONS, collects all source files and `.ts` files
+  - Shows progress notification during execution
+  - Parses output for errors/warnings
+- [x] **`Qt: Compile Translations (lrelease)`** command
+  - Finds `lrelease` in Qt bin directory or PATH
+  - Runs on all detected `.ts` files or project file
+  - Shows progress notification
+- [x] **`qt.lupdateArgs`** and **`qt.lreleaseArgs`** settings — additional arguments
 
-### Translation Workflow
-- [ ] **Translation status panel** — show completion % per language
-- [ ] **Open in Qt Linguist** — launch `linguist` with selected `.ts` file
-- [ ] **Missing translation warnings** — diagnostic when `tr()` call has no matching translation entry
+### Qt Linguist Integration
+- [x] **`Qt: Open in Qt Linguist`** command
+  - Finds `linguist` in Qt bin directory or PATH
+  - Launches detached process with selected `.ts` file
+  - Available from sidebar, Explorer context menu on `.ts` files, and Command Palette
+
+### Missing Translation Diagnostics
+- [x] **Diagnostic collection** for unfinished translations
+  - Scans `.ts` files for `<translation type="unfinished">`, empty translations
+  - Creates `Warning` diagnostics on the `.ts` file
+  - Updates on `.ts` file save
+
+### Sidebar Actions
+- [x] **Refresh** button in `Qt Translations` view
+- [x] Context menu on `.ts` files: Open in Linguist, Compile (lrelease)
+
+**Known limitations:**
+- Diagnostics are attached to `.ts` files rather than source files (simplified approach)
+- Large `.ts` files may take a moment to parse for completion percentage
 
 ---
 

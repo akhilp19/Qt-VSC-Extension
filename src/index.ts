@@ -20,3 +20,4 @@ export * from './qmlCppBridge';
 export * from './qmlCppBridgeProviders';
 export * from './qtDebugger';
 export * from './qtTestFramework';
+export * from './qtTranslation';

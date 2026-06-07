@@ -28,6 +28,7 @@ import { QmlCppBridgeIndexer } from './qmlCppBridge';
 import { QmlDefinitionProvider, QmlCompletionProvider as QmlBridgeCompletionProvider, CppReferenceProvider } from './qmlCppBridgeProviders';
 import { QtDebuggerIntegration } from './qtDebugger';
 import { QtTestFramework } from './qtTestFramework';
+import { QtTranslationProvider } from './qtTranslation';
 
 let taskProvider: vscode.Disposable | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -277,6 +278,46 @@ export function activate(context: vscode.ExtensionContext): void {
             const ext = path.extname(document.fileName).toLowerCase();
             if (ext === '.h' || ext === '.hpp' || ext === '.cpp') {
                 qtTestFramework.invalidateCache();
+            }
+        })
+    );
+    
+    // Translation integration
+    const translationProvider = new QtTranslationProvider(qtConfigManager, outputChannel);
+    context.subscriptions.push(translationProvider);
+    
+    const translationTree = vscode.window.registerTreeDataProvider('qt-translations', translationProvider);
+    context.subscriptions.push(translationTree);
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.lupdate', async () => {
+            await translationProvider.runLupdate();
+        })
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.lrelease', async () => {
+            await translationProvider.runLrelease();
+        })
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.openInLinguist', async (uri?: vscode.Uri) => {
+            await translationProvider.openInLinguist(uri?.fsPath);
+        })
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.refreshTranslations', async () => {
+            translationProvider.refresh();
+        })
+    );
+    
+    // Refresh translation diagnostics on .ts file save
+    context.subscriptions.push(
+        vscode.workspace.onDidSaveTextDocument((document) => {
+            if (document.fileName.endsWith('.ts')) {
+                translationProvider.refresh();
             }
         })
     );

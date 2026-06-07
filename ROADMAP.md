@@ -264,7 +264,7 @@
 
 ---
 
-## ✅ Version 1.3.0 (Current — Shipped) — QML-C++ Bridge
+## ✅ Version 1.3.0 (Released) — QML-C++ Bridge
 
 **Theme:** Bridge QML and C++ codebases for seamless navigation.
 
@@ -304,29 +304,49 @@
 
 ---
 
-## 🚧 Version 1.4.0 — Debugging Integration
+## ✅ Version 1.4.0 (Current — Shipped) — Debugging Integration
 
 **Theme:** Seamless Qt-aware debugging without leaving VS Code.
 
 ### Debugger Configuration
-- [ ] **Auto-generate `launch.json`** for Qt projects
-  - Detect debugger type (MSVC → `cppvsdbg`, MinGW/GCC/Clang → `gdb` / `lldb`)
-  - Set correct executable path (`.exe`, `.app` bundle, or binary)
-  - Add Qt source path mapping for stepping into Qt internals
+- [x] **Auto-generate `launch.json`** for Qt projects
+  - Detects debugger type from compiler + platform:
+    - Windows + MSVC → `cppvsdbg`
+    - Windows + MinGW → `cppdbg` + `MIMode: gdb`
+    - macOS → `cppdbg` + `MIMode: lldb`
+    - Linux → `cppdbg` + `MIMode: gdb`
+  - Finds built executable heuristically from build directory + project name
+  - Generates two configs per project: `"Debug <Project>"` and `"Debug <Project> (QML)"`
+  - Appends to existing `.vscode/launch.json` without overwriting (deduplicates by name)
+  - Creates `.vscode/` directory + `launch.json` if missing
+- [x] **`qt.generateLaunchJson`** command — "Qt: Generate Debug Launch Configuration"
+- [x] **`qt.debuggerType`** setting — override auto-detected debugger (`auto` / `cppvsdbg` / `gdb` / `lldb`)
+- [x] **`qt.debugAdditionalArgs`** setting — extra args passed to debug target
 
-### Qt-Specific Debugging
-- [ ] **Pretty printers for Qt types**
-  - `QString`, `QByteArray`, `QList`, `QMap`, `QHash`, `QVariant` — show human-readable values in Variables panel
-  - Ship pre-configured `.gdbinit` and `lldb` formatters
-  - Auto-inject pretty printers into debug session
+### Qt Pretty Printers
+- [x] **Shipped `scripts/qt_pretty_printers.py`** with Python pretty printers for gdb/LLDB
+  - `QString` → human-readable string (UTF-16)
+  - `QByteArray` → bytes preview with total size
+  - `QList` / `QVector` → list with item count + first 50 items
+  - `QMap` / `QHash` → dict with key:value pairs (first 30 nodes)
+  - `QVariant` → contained type name + value
+  - `QUrl` → reconstructed URL string
+  - `QDateTime` → ISO timestamp
+  - `QDate` → YYYY-MM-DD
+  - `QTime` → HH:MM:SS.mmm
+- [x] **`Qt: Setup Qt Pretty Printers`** command with two modes:
+  - **Add to launch.json** — injects `setupCommands` with `source /path/to/qt_pretty_printers.py` into existing Qt debug configs
+  - **Generate .gdbinit** — creates `.gdbinit` in workspace root referencing the script
+- [x] Auto-copies printer script to workspace `.vscode/qt_pretty_printers.py`
 
-- [ ] **Signal/Slot breakpoint support**
-  - Set breakpoint on `QObject::connect` to trace signal emissions
-  - Visual indicator in gutter when a slot is connected
+### Signal/Slot Breakpoint Support
+- [x] **`Qt: Add Signal/Slot Breakpoint`** command
+  - Adds a `FunctionBreakpoint` on `QObject::connect` via VS Code debug API
+  - Traces signal/slot connections at runtime
 
-- [ ] **QML debugging**
-  - Launch app with `-qmljsdebugger=port:3768` argument
-  - Attach VS Code debugger to QML runtime
+### QML Debugging
+- [x] **QML debug launch config** — `"Debug <Project> (QML)"` adds `-qmljsdebugger=port:3768,block` to args
+- [x] **`qt.qmlDebugPort`** setting — configurable port for QML JS debugger
 
 ---
 

@@ -26,6 +26,7 @@ import { sourceDisplayName } from './packageManagerDetector';
 import { QmlSupport } from './qmlSupport';
 import { QmlCppBridgeIndexer } from './qmlCppBridge';
 import { QmlDefinitionProvider, QmlCompletionProvider as QmlBridgeCompletionProvider, CppReferenceProvider } from './qmlCppBridgeProviders';
+import { QtDebuggerIntegration } from './qtDebugger';
 
 let taskProvider: vscode.Disposable | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -236,6 +237,27 @@ export function activate(context: vscode.ExtensionContext): void {
             void vscode.window.showInformationMessage('Rebuilding QML-C++ index...');
             await qmlCppBridge.indexWorkspace();
             void vscode.window.showInformationMessage('QML-C++ index rebuilt');
+        })
+    );
+    
+    // Debugger integration
+    const qtDebugger = new QtDebuggerIntegration(qtConfigManager, qtProjectDetector, outputChannel);
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.generateLaunchJson', async (uri?: vscode.Uri) => {
+            await qtDebugger.generateLaunchConfig(uri?.fsPath);
+        })
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.setupPrettyPrinters', async () => {
+            await qtDebugger.setupPrettyPrinters();
+        })
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.addSignalSlotBreakpoint', async () => {
+            await qtDebugger.addSignalSlotBreakpoint();
         })
     );
     

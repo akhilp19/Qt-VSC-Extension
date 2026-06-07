@@ -18,3 +18,4 @@ export * from './packageManagerDetector';
 export * from './qmlSupport';
 export * from './qmlCppBridge';
 export * from './qmlCppBridgeProviders';
+export * from './qtDebugger';

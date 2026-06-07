@@ -53,7 +53,7 @@
 
 ---
 
-## ✅ Version 0.2.0 (Current — Shipped) — Qt Asset Integration
+## ✅ Version 0.2.0 (Released) — Qt Asset Integration
 
 **Theme:** Bring Qt Designer and resource workflows into VS Code.
 
@@ -72,20 +72,20 @@
 
 ---
 
-## 🚧 Version 0.3.0 — Deployment & Tooling
+## ✅ Version 0.3.0 (Current — Shipped) — Deployment & Tooling
 
 **Theme:** Close the loop from build to runnable/distributable app.
 
-- [ ] **`windeployqt` integration**
+- [x] **`windeployqt` integration**
   - Command: `Qt: Deploy Application`
   - Detects built executable and runs `windeployqt` with correct args
   - Configurable deploy directory
 
-- [ ] **IntelliSense configuration helper**
+- [x] **IntelliSense configuration helper**
   - Auto-generate `c_cpp_properties.json` entries based on the active Qt installation
   - Include paths for Qt headers, defines like `QT_CORE_LIB`, etc.
 
-- [ ] **Pre-build / Post-build hooks**
+- [x] **Pre-build / Post-build hooks**
   - Allow user-defined commands to run before/after build (e.g., code generation, copying assets)
 
 ---

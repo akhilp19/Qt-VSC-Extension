@@ -15,6 +15,8 @@ import {
 } from './projectTemplates';
 import { QtDesignerIntegration } from './qtDesignerIntegration';
 import { QrcSupport } from './qrcSupport';
+import { QtDeployment } from './qtDeployment';
+import { IntelliSenseHelper } from './intelliSenseHelper';
 
 let taskProvider: vscode.Disposable | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -50,6 +52,12 @@ export function activate(context: vscode.ExtensionContext): void {
     
     // Initialize QRC support
     const qrcSupport = new QrcSupport(qtConfigManager, outputChannel);
+    
+    // Initialize deployment
+    const qtDeployment = new QtDeployment(qtConfigManager, qtProjectDetector, outputChannel);
+    
+    // Initialize IntelliSense helper
+    const intelliSenseHelper = new IntelliSenseHelper(qtConfigManager, outputChannel);
     
     // Register task provider
     const qtTaskProviderInstance = new QtTaskProvider(qtConfigManager, qtProjectDetector, outputChannel);
@@ -150,6 +158,20 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         vscode.commands.registerCommand('qt.runRcc', async (uri?: vscode.Uri) => {
             await qrcSupport.runRcc(uri?.fsPath);
+        })
+    );
+    
+    // Deployment commands
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.deploy', async () => {
+            await qtDeployment.deployApplication();
+        })
+    );
+    
+    // IntelliSense commands
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.configureIntelliSense', async () => {
+            await intelliSenseHelper.configureIntelliSense();
         })
     );
     

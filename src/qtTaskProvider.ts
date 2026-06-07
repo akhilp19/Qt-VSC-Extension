@@ -109,36 +109,52 @@ export class QtTaskProvider implements vscode.TaskProvider {
         
         const projectName = path.basename(projectFile, path.extname(projectFile));
         
+        const config = vscode.workspace.getConfiguration('qt');
+        const preBuildCommand = config.get<string>('preBuildCommand') || '';
+        const postBuildCommand = config.get<string>('postBuildCommand') || '';
+        
         let execution: vscode.ShellExecution;
         
         if (projectType === 'qmake') {
             // QMake build: qmake -> make
             const qmakePath = qtInstallation?.qmakePath || 'qmake';
-            const config = vscode.workspace.getConfiguration('qt');
             const additionalArgs = config.get<string>('additionalQMakeArguments') || '';
             
             // Create build directory if it doesn't exist
-            const commands = [
+            const commands: string[] = [];
+            if (preBuildCommand) {
+                commands.push(preBuildCommand);
+            }
+            commands.push(
                 `if (-not (Test-Path "${buildDir}")) { New-Item -ItemType Directory -Path "${buildDir}" -Force | Out-Null }`,
                 `cd "${buildDir}"`,
                 `& "${qmakePath}" "${projectFile}" ${additionalArgs}`,
                 `& ${makeCmd}`
-            ];
+            );
+            if (postBuildCommand) {
+                commands.push(postBuildCommand);
+            }
             
             execution = new vscode.ShellExecution(commands.join('; '), {
                 cwd: workspaceFolder.uri.fsPath
             });
         } else {
             // CMake build
-            const config = vscode.workspace.getConfiguration('qt');
             const additionalArgs = config.get<string>('additionalCMakeArguments') || '';
             const defaultBuildType = config.get<string>('defaultBuildType') || 'debug';
             
-            const commands = [
+            const commands: string[] = [];
+            if (preBuildCommand) {
+                commands.push(preBuildCommand);
+            }
+            commands.push(
                 `if (-not (Test-Path "${buildDir}")) { New-Item -ItemType Directory -Path "${buildDir}" -Force | Out-Null }`,
                 `cmake -B "${buildDir}" -S "${path.dirname(projectFile)}" -DCMAKE_BUILD_TYPE=${defaultBuildType} ${additionalArgs}`,
                 `cmake --build "${buildDir}"`
-            ];
+            );
+            if (postBuildCommand) {
+                commands.push(postBuildCommand);
+            }
             
             execution = new vscode.ShellExecution(commands.join('; '), {
                 cwd: workspaceFolder.uri.fsPath
@@ -236,36 +252,52 @@ export class QtTaskProvider implements vscode.TaskProvider {
         const makeCmd = this.qtConfigManager.getMakeCommand(qtInstallation);
         const projectName = path.basename(projectFile, path.extname(projectFile));
         
+        const config = vscode.workspace.getConfiguration('qt');
+        const preBuildCommand = config.get<string>('preBuildCommand') || '';
+        const postBuildCommand = config.get<string>('postBuildCommand') || '';
+        
         let execution: vscode.ShellExecution;
         
         if (projectType === 'qmake') {
             // QMake rebuild: clean -> qmake -> make
             const qmakePath = qtInstallation?.qmakePath || 'qmake';
-            const config = vscode.workspace.getConfiguration('qt');
             const additionalArgs = config.get<string>('additionalQMakeArguments') || '';
             
-            const commands = [
+            const commands: string[] = [];
+            if (preBuildCommand) {
+                commands.push(preBuildCommand);
+            }
+            commands.push(
                 `if (-not (Test-Path "${buildDir}")) { New-Item -ItemType Directory -Path "${buildDir}" -Force | Out-Null }`,
                 `cd "${buildDir}"`,
                 `& ${makeCmd} clean 2>$null`,
                 `& "${qmakePath}" "${projectFile}" ${additionalArgs}`,
                 `& ${makeCmd}`
-            ];
+            );
+            if (postBuildCommand) {
+                commands.push(postBuildCommand);
+            }
             
             execution = new vscode.ShellExecution(commands.join('; '), {
                 cwd: workspaceFolder.uri.fsPath
             });
         } else {
             // CMake rebuild
-            const config = vscode.workspace.getConfiguration('qt');
             const additionalArgs = config.get<string>('additionalCMakeArguments') || '';
             const defaultBuildType = config.get<string>('defaultBuildType') || 'debug';
             
-            const commands = [
+            const commands: string[] = [];
+            if (preBuildCommand) {
+                commands.push(preBuildCommand);
+            }
+            commands.push(
                 `if (Test-Path "${buildDir}") { Remove-Item -Recurse -Force "${buildDir}" }`,
                 `cmake -B "${buildDir}" -S "${path.dirname(projectFile)}" -DCMAKE_BUILD_TYPE=${defaultBuildType} ${additionalArgs}`,
                 `cmake --build "${buildDir}"`
-            ];
+            );
+            if (postBuildCommand) {
+                commands.push(postBuildCommand);
+            }
             
             execution = new vscode.ShellExecution(commands.join('; '), {
                 cwd: workspaceFolder.uri.fsPath

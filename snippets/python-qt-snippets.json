@@ -1,0 +1,176 @@
+{
+  "PySide6 Application": {
+    "prefix": "pyside-app",
+    "body": [
+      "import sys",
+      "from PySide6.QtWidgets import QApplication, QMainWindow",
+      "",
+      "",
+      "class MainWindow(QMainWindow):",
+      "    def __init__(self):",
+      "        super().__init__()",
+      "        self.setWindowTitle(\"${1:My App}\")",
+      "        self.setGeometry(100, 100, 800, 600)",
+      "        ${2:# TODO: Add widgets}",
+      "",
+      "",
+      "if __name__ == \"__main__\":",
+      "    app = QApplication(sys.argv)",
+      "    window = MainWindow()",
+      "    window.show()",
+      "    sys.exit(app.exec())",
+      ""
+    ],
+    "description": "PySide6 QApplication + MainWindow"
+  },
+  "PySide6 Widget": {
+    "prefix": "pyside-widget",
+    "body": [
+      "from PySide6.QtWidgets import QWidget",
+      "",
+      "",
+      "class ${1:MyWidget}(QWidget):",
+      "    def __init__(self, parent=None):",
+      "        super().__init__(parent)",
+      "        self.setWindowTitle(\"${2:Widget}\")",
+      "        ${3:# TODO: Setup UI}",
+      ""
+    ],
+    "description": "PySide6 QWidget subclass"
+  },
+  "PySide6 Slot": {
+    "prefix": "pyside-slot",
+    "body": [
+      "from PySide6.QtCore import Slot",
+      "",
+      "    @Slot()",
+      "    def ${1:on_clicked}(self):",
+      "        ${2:# handle action}",
+      ""
+    ],
+    "description": "PySide6 @Slot() decorator"
+  },
+  "PySide6 Signal": {
+    "prefix": "pyside-signal",
+    "body": [
+      "from PySide6.QtCore import Signal",
+      "",
+      "    ${1:value_changed} = Signal(${2:int})",
+      ""
+    ],
+    "description": "PySide6 Signal declaration"
+  },
+  "PySide6 Connect": {
+    "prefix": "pyside-connect",
+    "body": [
+      "${1:button}.clicked.connect(self.${2:on_clicked})",
+      ""
+    ],
+    "description": "PySide6 signal/slot connect"
+  },
+  "PySide6 Main Block": {
+    "prefix": "pyside-main",
+    "body": [
+      "if __name__ == \"__main__\":",
+      "    app = QApplication(sys.argv)",
+      "    window = ${1:MainWindow}()",
+      "    window.show()",
+      "    sys.exit(app.exec())",
+      ""
+    ],
+    "description": "PySide6 main block with QApplication"
+  },
+  "PyQt6 Application": {
+    "prefix": "pyqt-app",
+    "body": [
+      "import sys",
+      "from PyQt6.QtWidgets import QApplication, QMainWindow",
+      "",
+      "",
+      "class MainWindow(QMainWindow):",
+      "    def __init__(self):",
+      "        super().__init__()",
+      "        self.setWindowTitle(\"${1:My App}\")",
+      "        self.setGeometry(100, 100, 800, 600)",
+      "        ${2:# TODO: Add widgets}",
+      "",
+      "",
+      "if __name__ == \"__main__\":",
+      "    app = QApplication(sys.argv)",
+      "    window = MainWindow()",
+      "    window.show()",
+      "    sys.exit(app.exec())",
+      ""
+    ],
+    "description": "PyQt6 QApplication + MainWindow"
+  },
+  "PyQt6 Slot": {
+    "prefix": "pyqt-slot",
+    "body": [
+      "from PyQt6.QtCore import pyqtSlot",
+      "",
+      "    @pyqtSlot()",
+      "    def ${1:on_clicked}(self):",
+      "        ${2:# handle action}",
+      ""
+    ],
+    "description": "PyQt6 @pyqtSlot() decorator"
+  },
+  "PyQt6 Signal": {
+    "prefix": "pyqt-signal",
+    "body": [
+      "from PyQt6.QtCore import pyqtSignal",
+      "",
+      "    ${1:value_changed} = pyqtSignal(${2:int})",
+      ""
+    ],
+    "description": "PyQt6 pyqtSignal declaration"
+  },
+  "PyQt6 Main Block": {
+    "prefix": "pyqt-main",
+    "body": [
+      "if __name__ == \"__main__\":",
+      "    app = QApplication(sys.argv)",
+      "    window = ${1:MainWindow}()",
+      "    window.show()",
+      "    sys.exit(app.exec())",
+      ""
+    ],
+    "description": "PyQt6 main block with QApplication"
+  },
+  "PySide6 QAction": {
+    "prefix": "pyside-action",
+    "body": [
+      "from PySide6.QtGui import QAction",
+      "",
+      "action = QAction(\"${1:Action Name}\", self)",
+      "action.setShortcut(\"${2:Ctrl+N}\")",
+      "action.triggered.connect(self.${3:on_action})",
+      "${4:menu}.addAction(action)",
+      ""
+    ],
+    "description": "PySide6 QAction with shortcut and connect"
+  },
+  "PySide6 QMessageBox": {
+    "prefix": "pyside-msgbox",
+    "body": [
+      "from PySide6.QtWidgets import QMessageBox",
+      "",
+      "QMessageBox.${1|information,warning,critical,question|}(self, \"${2:Title}\", \"${3:Message}\")",
+      ""
+    ],
+    "description": "PySide6 QMessageBox"
+  },
+  "PySide6 QFileDialog": {
+    "prefix": "pyside-filedlg",
+    "body": [
+      "from PySide6.QtWidgets import QFileDialog",
+      "",
+      "file_path, _ = QFileDialog.get${1|OpenFileName,SaveFileName,ExistingDirectory|}(self, \"${2:Select File}\", \"\", \"${3:All Files (*)}\")",
+      "if file_path:",
+      "    ${4:# handle file_path}",
+      ""
+    ],
+    "description": "PySide6 QFileDialog"
+  }
+}

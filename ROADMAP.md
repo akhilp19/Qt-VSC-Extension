@@ -402,7 +402,7 @@
 
 ---
 
-## ✅ Version 1.6.0 (Current — Shipped) — Internationalization (lupdate / lrelease)
+## ✅ Version 1.6.0 (Released) — Internationalization (lupdate / lrelease)
 
 **Theme:** Full i18n workflow for Qt applications.
 
@@ -450,24 +450,46 @@
 
 ---
 
-## 🚧 Version 1.7.0 — Qt for Python (PySide / PyQt) Support
+## ✅ Version 1.7.0 (Current — Shipped) — Qt for Python (PySide / PyQt) Support
 
 **Theme:** Extend the extension to Python-based Qt projects.
 
 ### Python Project Detection
-- [ ] **Detect PySide6 / PyQt6 / PySide2 / PyQt5** projects (`*.py` with `PySide6` imports, `requirements.txt`)
-- [ ] **Auto-detect Python interpreter** with Qt bindings installed
-- [ ] **Virtual environment awareness** — find Qt in `venv`, `conda`, `poetry` environments
+- [x] **Detect PySide6 / PyQt6 / PySide2 / PyQt5** projects
+  - Scans `.py` files for `from PySide6 import`, `import PyQt6`, etc.
+  - Checks `requirements.txt` for Qt binding package names
+  - Python Qt projects appear in Qt Projects sidebar alongside C++ projects
+  - Project type: `'python'` (extends `'qmake'` / `'cmake'`)
 
 ### Python Qt Tooling
-- [ ] **`pyside6-rcc` / `pyrcc5` integration** — compile `.qrc` to Python modules
-- [ ] **`pyside6-uic` / `pyuic5` integration** — compile `.ui` to Python classes
-- [ ] **`pyside6-designer` launcher** — same as C++ designer but for Python workflows
+- [x] **`Qt: Compile .ui to Python (pyside6-uic)`** command
+  - Finds `pyside6-uic` / `pyuic5` / `pyside2-uic` in Qt bin, Python scripts dir, or PATH
+  - Generates `*_ui.py` from `.ui` file
+  - Auto-detects binding from workspace or `qt.pythonQtBinding` setting
+  - Open generated file notification
+- [x] **`Qt: Compile .qrc to Python (pyside6-rcc)`** command
+  - Finds `pyside6-rcc` / `pyrcc5` / `pyside2-rcc`
+  - Generates `*_rc.py` from `.qrc` file
+- [x] **`Qt: Open Qt Designer (Python)`** command
+  - Finds `pyside6-designer` or falls back to regular `designer`
+  - Launches detached process
+- [x] **`qt.pythonQtBinding`** setting — `auto` / `PySide6` / `PyQt6` / `PySide2` / `PyQt5`
 
-### Python Qt Intelligence
-- [ ] **Qt class autocomplete** for Python (via Pylance / Jedi stubs)
-- [ ] **Signal/Slot autocomplete** for `button.clicked.connect(...)` patterns
-- [ ] **Snippets** for Python Qt boilerplate (`pyside-app`, `pyqt-mainwindow`)
+### Python Qt Snippets
+- [x] **12 Python Qt snippets** registered for `.py` files:
+  - `pyside-app` / `pyqt-app` — Full QApplication + MainWindow
+  - `pyside-widget` — QWidget subclass
+  - `pyside-slot` / `pyqt-slot` — `@Slot()` / `@pyqtSlot()` decorator
+  - `pyside-signal` / `pyqt-signal` — `Signal()` / `pyqtSignal()` declaration
+  - `pyside-connect` — `button.clicked.connect(self.handler)`
+  - `pyside-main` / `pyqt-main` — main block with QApplication
+  - `pyside-action` — QAction with shortcut and connect
+  - `pyside-msgbox` — QMessageBox
+  - `pyside-filedlg` — QFileDialog
+
+### Build System
+- [x] **Python projects** in task provider — only Run task is created (no build/clean/rebuild)
+- [x] **Run task** executes `python <file.py>` for Python Qt projects
 
 ---
 

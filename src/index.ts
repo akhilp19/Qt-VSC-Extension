@@ -21,3 +21,4 @@ export * from './qmlCppBridgeProviders';
 export * from './qtDebugger';
 export * from './qtTestFramework';
 export * from './qtTranslation';
+export * from './qtPythonSupport';

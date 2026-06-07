@@ -2,7 +2,7 @@
   "name": "qt-vsc-extension",
   "displayName": "Qt C++ Tools",
   "description": "Build, run and manage Qt C++ projects in VS Code",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "publisher": "akhilp19",
   "author": {
     "name": "Akhil Pawar"
@@ -37,6 +37,7 @@
     "workspaceContains:**/CMakeLists.txt",
     "onLanguage:cpp",
     "onLanguage:qml",
+    "onLanguage:python",
     "onView:qt-projects"
   ],
   "main": "./out/extension.js",
@@ -177,6 +178,21 @@
         "command": "qt.refreshTranslations",
         "title": "Qt: Refresh Translations",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "qt.compileUiToPython",
+        "title": "Qt: Compile .ui to Python (pyside6-uic)",
+        "icon": "$(file-code)"
+      },
+      {
+        "command": "qt.compileRccToPython",
+        "title": "Qt: Compile .qrc to Python (pyside6-rcc)",
+        "icon": "$(file-code)"
+      },
+      {
+        "command": "qt.openPythonDesigner",
+        "title": "Qt: Open Qt Designer (Python)",
+        "icon": "$(preview)"
       }
     ],
     "taskDefinitions": [
@@ -407,6 +423,18 @@
           "type": "string",
           "default": "",
           "description": "Additional arguments to pass to lrelease when compiling translations."
+        },
+        "qt.pythonQtBinding": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "PySide6",
+            "PyQt6",
+            "PySide2",
+            "PyQt5"
+          ],
+          "default": "auto",
+          "description": "Preferred Python Qt binding. 'auto' detects from imports in workspace Python files."
         }
       }
     },
@@ -552,6 +580,18 @@
         {
           "command": "qt.refreshTranslations",
           "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.compileUiToPython",
+          "when": "resourceExtname == .ui"
+        },
+        {
+          "command": "qt.compileRccToPython",
+          "when": "resourceExtname == .qrc"
+        },
+        {
+          "command": "qt.openPythonDesigner",
+          "when": "workspaceFolderCount > 0"
         }
       ],
       "view/title": [
@@ -643,6 +683,16 @@
           "command": "qt.lrelease",
           "when": "resourceExtname == .ts",
           "group": "2_qt@2"
+        },
+        {
+          "command": "qt.compileUiToPython",
+          "when": "resourceExtname == .ui",
+          "group": "2_qt@3"
+        },
+        {
+          "command": "qt.compileRccToPython",
+          "when": "resourceExtname == .qrc",
+          "group": "2_qt@3"
         }
       ],
       "view/item/context": [

@@ -9,7 +9,7 @@ export class QtProjectTreeItem extends vscode.TreeItem {
         public readonly label: string,
         public readonly collapsibleState: vscode.TreeItemCollapsibleState,
         public readonly projectFile: string,
-        public readonly projectType: 'qmake' | 'cmake'
+        public readonly projectType: 'qmake' | 'cmake' | 'python'
     ) {
         super(label, collapsibleState);
         this.contextValue = 'qtProject';

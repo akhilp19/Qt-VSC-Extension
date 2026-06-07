@@ -1,10 +1,11 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { QtPythonSupport } from './qtPythonSupport';
 
 export interface QtProject {
     file: string;
-    type: 'qmake' | 'cmake';
+    type: 'qmake' | 'cmake' | 'python';
     name: string;
     directory: string;
 }
@@ -61,6 +62,10 @@ export class QtProjectDetector {
             }
         }
         
+        // Find Python files with Qt bindings
+        const pythonQtFiles = await this.detectPythonQtProjects(workspacePath);
+        projects.push(...pythonQtFiles);
+        
         this.outputChannel.appendLine(`Found ${projects.length} Qt project(s)`);
         for (const project of projects) {
             this.outputChannel.appendLine(`  - ${project}`);
@@ -98,6 +103,13 @@ export class QtProjectDetector {
                     directory: directory
                 };
             }
+        } else if (ext === '.py') {
+            return {
+                file: projectFile,
+                type: 'python',
+                name: name,
+                directory: directory
+            };
         }
         
         return undefined;
@@ -132,6 +144,14 @@ export class QtProjectDetector {
         return files;
     }
     
+    /**
+     * Detect Python files with Qt bindings in workspace
+     */
+    private async detectPythonQtProjects(workspacePath: string): Promise<string[]> {
+        const pythonSupport = new QtPythonSupport(this.outputChannel);
+        return pythonSupport.detectPythonQtProjects(workspacePath);
+    }
+
     /**
      * Check if a CMakeLists.txt file is for a Qt project
      */

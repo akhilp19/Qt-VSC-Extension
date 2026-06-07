@@ -29,6 +29,7 @@ import { QmlDefinitionProvider, QmlCompletionProvider as QmlBridgeCompletionProv
 import { QtDebuggerIntegration } from './qtDebugger';
 import { QtTestFramework } from './qtTestFramework';
 import { QtTranslationProvider } from './qtTranslation';
+import { QtPythonSupport } from './qtPythonSupport';
 
 let taskProvider: vscode.Disposable | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -319,6 +320,27 @@ export function activate(context: vscode.ExtensionContext): void {
             if (document.fileName.endsWith('.ts')) {
                 translationProvider.refresh();
             }
+        })
+    );
+    
+    // Python Qt support
+    const qtPythonSupport = new QtPythonSupport(outputChannel);
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.compileUiToPython', async (uri?: vscode.Uri) => {
+            await qtPythonSupport.compileUiToPython(uri?.fsPath);
+        })
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.compileRccToPython', async (uri?: vscode.Uri) => {
+            await qtPythonSupport.compileRccToPython(uri?.fsPath);
+        })
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.openPythonDesigner', async () => {
+            await qtPythonSupport.openDesignerForPython();
         })
     );
     

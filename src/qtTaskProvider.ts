@@ -52,11 +52,16 @@ export class QtTaskProvider implements vscode.TaskProvider {
                 }
                 
                 // Create build, clean, rebuild, quick build, and run tasks for each project
-                tasks.push(await this.createBuildTask(projectFile, projectInfo.type, folder));
-                tasks.push(await this.createBuildTask(projectFile, projectInfo.type, folder, true));
-                tasks.push(await this.createCleanTask(projectFile, projectInfo.type, folder));
-                tasks.push(await this.createRebuildTask(projectFile, projectInfo.type, folder));
-                tasks.push(await this.createRunTask(projectFile, projectInfo.type, folder));
+                if (projectInfo.type === 'python') {
+                    // Python Qt projects only need run tasks
+                    tasks.push(await this.createRunTask(projectFile, projectInfo.type, folder));
+                } else {
+                    tasks.push(await this.createBuildTask(projectFile, projectInfo.type, folder));
+                    tasks.push(await this.createBuildTask(projectFile, projectInfo.type, folder, true));
+                    tasks.push(await this.createCleanTask(projectFile, projectInfo.type, folder));
+                    tasks.push(await this.createRebuildTask(projectFile, projectInfo.type, folder));
+                    tasks.push(await this.createRunTask(projectFile, projectInfo.type, folder));
+                }
             }
         }
         
@@ -125,7 +130,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
 
     private async createBuildTask(
         projectFile: string,
-        projectType: 'qmake' | 'cmake',
+        projectType: 'qmake' | 'cmake' | 'python',
         workspaceFolder: vscode.WorkspaceFolder,
         quickBuild: boolean = false
     ): Promise<vscode.Task> {
@@ -234,7 +239,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
      */
     private async createCleanTask(
         projectFile: string,
-        projectType: 'qmake' | 'cmake',
+        projectType: 'qmake' | 'cmake' | 'python',
         workspaceFolder: vscode.WorkspaceFolder
     ): Promise<vscode.Task> {
         const buildDir = this.qtConfigManager.getBuildDirectory();
@@ -287,7 +292,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
      */
     private async createRebuildTask(
         projectFile: string,
-        projectType: 'qmake' | 'cmake',
+        projectType: 'qmake' | 'cmake' | 'python',
         workspaceFolder: vscode.WorkspaceFolder
     ): Promise<vscode.Task> {
         const qtInstallation = await this.qtConfigManager.getQtInstallation();
@@ -380,7 +385,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
      */
     private async createRunTask(
         projectFile: string,
-        projectType: 'qmake' | 'cmake',
+        projectType: 'qmake' | 'cmake' | 'python',
         workspaceFolder: vscode.WorkspaceFolder
     ): Promise<vscode.Task> {
         const buildDir = this.qtConfigManager.getBuildDirectory();
@@ -391,7 +396,13 @@ export class QtTaskProvider implements vscode.TaskProvider {
         
         let execution: vscode.ShellExecution;
         
-        if (exePath && fs.existsSync(exePath)) {
+        if (projectType === 'python') {
+            // Python project: run with python interpreter
+            const pythonCmd = isWindows() ? 'python' : 'python3';
+            execution = new vscode.ShellExecution(`${pythonCmd} "${projectFile}"`, {
+                cwd: workspaceFolder.uri.fsPath
+            });
+        } else if (exePath && fs.existsSync(exePath)) {
             execution = new vscode.ShellExecution(execCmd(exePath), {
                 cwd: path.dirname(exePath)
             });

@@ -3,6 +3,18 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { QtConfigManager } from './qtConfigManager';
 import { QtProjectDetector } from './qtProjectDetector';
+import {
+    isWindows,
+    mkdirCmd,
+    cdCmd,
+    execCmd,
+    simpleExecCmd,
+    ifDirExistsCmd,
+    rmDirCmd,
+    nullRedirect,
+    joinCmds,
+    quotePath
+} from './platformUtils';
 
 export class QtTaskProvider implements vscode.TaskProvider {
     private qtConfigManager: QtConfigManager;
@@ -146,22 +158,22 @@ export class QtTaskProvider implements vscode.TaskProvider {
             if (quickBuild && fs.existsSync(buildDir)) {
                 // Quick build: skip qmake, just run make
                 commands.push(
-                    `cd "${buildDir}"`,
-                    `& ${makeArgs}`
+                    cdCmd(buildDir),
+                    simpleExecCmd(makeArgs)
                 );
             } else {
                 commands.push(
-                    `if (-not (Test-Path "${buildDir}")) { New-Item -ItemType Directory -Path "${buildDir}" -Force | Out-Null }`,
-                    `cd "${buildDir}"`,
-                    `& "${qmakePath}" "${projectFile}" ${buildTypeArg} ${additionalArgs}`,
-                    `& ${makeArgs}`
+                    mkdirCmd(buildDir),
+                    cdCmd(buildDir),
+                    execCmd(qmakePath, `${quotePath(projectFile)} ${buildTypeArg} ${additionalArgs}`),
+                    simpleExecCmd(makeArgs)
                 );
             }
             if (postBuildCommand) {
                 commands.push(postBuildCommand);
             }
             
-            execution = new vscode.ShellExecution(commands.join('; '), {
+            execution = new vscode.ShellExecution(joinCmds(...commands), {
                 cwd: workspaceFolder.uri.fsPath
             });
         } else {
@@ -176,20 +188,20 @@ export class QtTaskProvider implements vscode.TaskProvider {
             if (quickBuild && fs.existsSync(buildDir)) {
                 // Quick build: skip cmake configure
                 commands.push(
-                    `cmake --build "${buildDir}" ${cmakeBuildArgs}`
+                    `cmake --build ${quotePath(buildDir)} ${cmakeBuildArgs}`
                 );
             } else {
                 commands.push(
-                    `if (-not (Test-Path "${buildDir}")) { New-Item -ItemType Directory -Path "${buildDir}" -Force | Out-Null }`,
-                    `cmake -B "${buildDir}" -S "${path.dirname(projectFile)}" -DCMAKE_BUILD_TYPE=${buildType} ${additionalArgs}`,
-                    `cmake --build "${buildDir}" ${cmakeBuildArgs}`
+                    mkdirCmd(buildDir),
+                    `cmake -B ${quotePath(buildDir)} -S ${quotePath(path.dirname(projectFile))} -DCMAKE_BUILD_TYPE=${buildType} ${additionalArgs}`,
+                    `cmake --build ${quotePath(buildDir)} ${cmakeBuildArgs}`
                 );
             }
             if (postBuildCommand) {
                 commands.push(postBuildCommand);
             }
             
-            execution = new vscode.ShellExecution(commands.join('; '), {
+            execution = new vscode.ShellExecution(joinCmds(...commands), {
                 cwd: workspaceFolder.uri.fsPath
             });
         }
@@ -233,20 +245,18 @@ export class QtTaskProvider implements vscode.TaskProvider {
         
         if (projectType === 'qmake') {
             // QMake clean
-            const commands = [
-                `if (Test-Path "${buildDir}") {`,
-                `  cd "${buildDir}"`,
-                `  & ${makeCmd} clean`,
-                `}`
-            ];
-            
-            execution = new vscode.ShellExecution(commands.join('; '), {
-                cwd: workspaceFolder.uri.fsPath
-            });
+            const cleanCmd = joinCmds(
+                cdCmd(buildDir),
+                simpleExecCmd(`${makeCmd} clean`)
+            );
+            execution = new vscode.ShellExecution(
+                ifDirExistsCmd(buildDir, cleanCmd),
+                { cwd: workspaceFolder.uri.fsPath }
+            );
         } else {
             // CMake clean
             execution = new vscode.ShellExecution(
-                `if (Test-Path "${buildDir}") { cmake --build "${buildDir}" --target clean }`,
+                ifDirExistsCmd(buildDir, `cmake --build ${quotePath(buildDir)} --target clean`),
                 { cwd: workspaceFolder.uri.fsPath }
             );
         }
@@ -306,17 +316,17 @@ export class QtTaskProvider implements vscode.TaskProvider {
                 commands.push(preBuildCommand);
             }
             commands.push(
-                `if (-not (Test-Path "${buildDir}")) { New-Item -ItemType Directory -Path "${buildDir}" -Force | Out-Null }`,
-                `cd "${buildDir}"`,
-                `& ${makeCmd} clean 2>$null`,
-                `& "${qmakePath}" "${projectFile}" ${buildTypeArg} ${additionalArgs}`,
-                `& ${makeArgs}`
+                mkdirCmd(buildDir),
+                cdCmd(buildDir),
+                simpleExecCmd(`${makeCmd} clean ${nullRedirect()}`),
+                execCmd(qmakePath, `${quotePath(projectFile)} ${buildTypeArg} ${additionalArgs}`),
+                simpleExecCmd(makeArgs)
             );
             if (postBuildCommand) {
                 commands.push(postBuildCommand);
             }
             
-            execution = new vscode.ShellExecution(commands.join('; '), {
+            execution = new vscode.ShellExecution(joinCmds(...commands), {
                 cwd: workspaceFolder.uri.fsPath
             });
         } else {
@@ -329,15 +339,15 @@ export class QtTaskProvider implements vscode.TaskProvider {
                 commands.push(preBuildCommand);
             }
             commands.push(
-                `if (Test-Path "${buildDir}") { Remove-Item -Recurse -Force "${buildDir}" }`,
-                `cmake -B "${buildDir}" -S "${path.dirname(projectFile)}" -DCMAKE_BUILD_TYPE=${buildType} ${additionalArgs}`,
-                `cmake --build "${buildDir}" ${cmakeBuildArgs}`
+                rmDirCmd(buildDir),
+                `cmake -B ${quotePath(buildDir)} -S ${quotePath(path.dirname(projectFile))} -DCMAKE_BUILD_TYPE=${buildType} ${additionalArgs}`,
+                `cmake --build ${quotePath(buildDir)} ${cmakeBuildArgs}`
             );
             if (postBuildCommand) {
                 commands.push(postBuildCommand);
             }
             
-            execution = new vscode.ShellExecution(commands.join('; '), {
+            execution = new vscode.ShellExecution(joinCmds(...commands), {
                 cwd: workspaceFolder.uri.fsPath
             });
         }
@@ -382,15 +392,17 @@ export class QtTaskProvider implements vscode.TaskProvider {
         let execution: vscode.ShellExecution;
         
         if (exePath && fs.existsSync(exePath)) {
-            execution = new vscode.ShellExecution(`& "${exePath}"`, {
+            execution = new vscode.ShellExecution(execCmd(exePath), {
                 cwd: path.dirname(exePath)
             });
         } else {
             // Executable not found, show error
-            execution = new vscode.ShellExecution(
-                `Write-Host "Error: Executable not found. Please build the project first." -ForegroundColor Red`,
-                { cwd: workspaceFolder.uri.fsPath }
-            );
+            const errorCmd = isWindows()
+                ? `Write-Host "Error: Executable not found. Please build the project first." -ForegroundColor Red`
+                : `echo "Error: Executable not found. Please build the project first."`;
+            execution = new vscode.ShellExecution(errorCmd, {
+                cwd: workspaceFolder.uri.fsPath
+            });
         }
         
         const task = new vscode.Task(

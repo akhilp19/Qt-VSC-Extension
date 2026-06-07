@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { execSync } from 'child_process';
+import { isWindows, getQtSearchPaths, pathExeLookupCmd, exe } from './platformUtils';
 
 export interface QtInstallation {
     path: string;
@@ -77,7 +78,8 @@ export class QtConfigManager {
         
         // 3. Check PATH environment variable
         try {
-            const qmakeInPath = execSync('where qmake', { encoding: 'utf-8' }).trim().split('\n')[0];
+            const lookupCmd = pathExeLookupCmd('qmake');
+            const qmakeInPath = execSync(lookupCmd, { encoding: 'utf-8' }).trim().split('\n')[0];
             if (qmakeInPath && fs.existsSync(qmakeInPath)) {
                 this.outputChannel.appendLine(`Found qmake in PATH: ${qmakeInPath}`);
                 const installation = await this.createInstallationFromQMake(qmakeInPath);
@@ -107,12 +109,7 @@ export class QtConfigManager {
      */
     async findQtInstallations(): Promise<QtInstallation[]> {
         const installations: QtInstallation[] = [];
-        const searchPaths = [
-            'C:\\Qt',
-            'C:\\Program Files\\Qt',
-            'C:\\Program Files (x86)\\Qt',
-            process.env.USERPROFILE ? path.join(process.env.USERPROFILE, 'Qt') : ''
-        ].filter(p => p && fs.existsSync(p));
+        const searchPaths = getQtSearchPaths().filter(p => fs.existsSync(p));
         
         for (const searchPath of searchPaths) {
             try {
@@ -152,14 +149,14 @@ export class QtConfigManager {
      */
     private findQMakeInPath(dirPath: string): string | undefined {
         const binPath = path.join(dirPath, 'bin');
-        const qmakePath = path.join(binPath, 'qmake.exe');
+        const qmakePath = path.join(binPath, exe('qmake'));
         
         if (fs.existsSync(qmakePath)) {
             return qmakePath;
         }
         
         // Try without bin subdirectory
-        const directQmakePath = path.join(dirPath, 'qmake.exe');
+        const directQmakePath = path.join(dirPath, exe('qmake'));
         if (fs.existsSync(directQmakePath)) {
             return directQmakePath;
         }
@@ -209,6 +206,22 @@ export class QtConfigManager {
             return 'mingw';
         } else if (lowerPath.includes('gcc')) {
             return 'gcc';
+        } else if (lowerPath.includes('clang')) {
+            return 'clang';
+        } else if (lowerPath.includes('apple')) {
+            return 'apple-clang';
+        }
+        
+        if (!isWindows()) {
+            // On Unix, try to detect from qmake spec
+            try {
+                const spec = execSync(`"${qmakePath}" -query QMAKE_XSPEC`, { encoding: 'utf-8' }).trim();
+                if (spec.includes('clang')) { return 'clang'; }
+                if (spec.includes('gcc') || spec.includes('g++')) { return 'gcc'; }
+                if (spec.includes('macx')) { return 'apple-clang'; }
+            } catch {
+                // ignore
+            }
         }
         
         return 'unknown';
@@ -231,18 +244,23 @@ export class QtConfigManager {
             const compiler = qtInstallation.compiler.toLowerCase();
             if (compiler.includes('msvc')) {
                 // Check if jom is available (faster parallel build for MSVC)
-                const jomPath = qtInstallation.qmakePath.replace('qmake.exe', 'jom.exe');
+                const jomPath = qtInstallation.qmakePath.replace(exe('qmake'), exe('jom'));
                 if (fs.existsSync(jomPath)) {
                     return 'jom';
                 }
                 return 'nmake';
             } else if (compiler.includes('mingw')) {
                 return 'mingw32-make';
+            } else if (compiler.includes('gcc') || compiler.includes('clang') || compiler.includes('apple')) {
+                return 'make';
             }
         }
         
-        // Default fallback
-        return 'nmake';
+        // Platform default fallback
+        if (isWindows()) {
+            return 'nmake';
+        }
+        return 'make';
     }
     
     /**

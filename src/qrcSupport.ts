@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { spawn } from 'child_process';
 import { QtConfigManager } from './qtConfigManager';
+import { exe, quotePath } from './platformUtils';
 
 export class QrcSupport {
     private qtConfigManager: QtConfigManager;
@@ -148,16 +149,17 @@ export class QrcSupport {
 
         if (qtInstallation?.qmakePath) {
             const binDir = path.dirname(qtInstallation.qmakePath);
-            const rccPath = path.join(binDir, 'rcc.exe');
+            const rccPath = path.join(binDir, exe('rcc'));
             if (fs.existsSync(rccPath)) {
                 return rccPath;
             }
         }
 
-        // Fallback: search PATH for rcc.exe
+        // Fallback: search PATH for rcc
         try {
             const { execSync } = await import('child_process');
-            const rccInPath = execSync('where rcc', { encoding: 'utf-8' }).trim().split('\n')[0];
+            const lookupCmd = process.platform === 'win32' ? 'where rcc' : 'which rcc';
+            const rccInPath = execSync(lookupCmd, { encoding: 'utf-8' }).trim().split('\n')[0];
             if (rccInPath && fs.existsSync(rccInPath)) {
                 return rccInPath;
             }
@@ -165,7 +167,7 @@ export class QrcSupport {
             // rcc not in PATH
         }
 
-        this.outputChannel.appendLine('rcc.exe not found in Qt installation or PATH.');
+        this.outputChannel.appendLine(`${exe('rcc')} not found in Qt installation or PATH.`);
         return undefined;
     }
 }

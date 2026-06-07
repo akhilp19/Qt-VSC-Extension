@@ -13,3 +13,4 @@ export * from './qtHoverProvider';
 export * from './qtBuildTracker';
 export * from './qtCreatorImporter';
 export * from './qtCodeActionProvider';
+export * from './platformUtils';

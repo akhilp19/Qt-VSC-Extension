@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { spawn } from 'child_process';
 import { QtConfigManager } from './qtConfigManager';
+import { exe } from './platformUtils';
 
 export class QtDesignerIntegration {
     private qtConfigManager: QtConfigManager;
@@ -75,16 +76,17 @@ export class QtDesignerIntegration {
 
         if (qtInstallation?.qmakePath) {
             const binDir = path.dirname(qtInstallation.qmakePath);
-            const designerPath = path.join(binDir, 'designer.exe');
+            const designerPath = path.join(binDir, exe('designer'));
             if (fs.existsSync(designerPath)) {
                 return designerPath;
             }
         }
 
-        // Fallback: search PATH for designer.exe
+        // Fallback: search PATH for designer
         try {
             const { execSync } = await import('child_process');
-            const designerInPath = execSync('where designer', { encoding: 'utf-8' }).trim().split('\n')[0];
+            const lookupCmd = process.platform === 'win32' ? 'where designer' : 'which designer';
+            const designerInPath = execSync(lookupCmd, { encoding: 'utf-8' }).trim().split('\n')[0];
             if (designerInPath && fs.existsSync(designerInPath)) {
                 return designerInPath;
             }
@@ -92,7 +94,7 @@ export class QtDesignerIntegration {
             // designer not in PATH
         }
 
-        this.outputChannel.appendLine('Qt Designer (designer.exe) not found in Qt installation or PATH.');
+        this.outputChannel.appendLine(`Qt Designer (${exe('designer')}) not found in Qt installation or PATH.`);
         return undefined;
     }
 }

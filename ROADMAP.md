@@ -155,7 +155,7 @@
 
 ---
 
-## ✅ Version 0.6.0 (Current — Shipped) — Advanced Build Features
+## ✅ Version 0.6.0 (Released) — Advanced Build Features
 
 **Theme:** Smarter, faster, and more reliable builds.
 
@@ -173,16 +173,16 @@
 
 ---
 
-## 🔮 Version 1.0.0 — Cross-Platform Support
+## ✅ Version 1.0.0 (Current — Shipped) — Cross-Platform Support
 
 **Theme:** Take the extension beyond Windows.
 
-- [ ] **macOS support**
+- [x] **macOS support**
   - Detect Qt installations in `/Users/<user>/Qt` and `/usr/local/Qt`
   - `macdeployqt` integration for app bundle deployment
   - Support `.app` bundle execution
 
-- [ ] **Linux support**
+- [x] **Linux support**
   - Detect Qt via `qmake` in PATH, `/usr/lib/qt*`, and `/opt/qt*`
   - `make` / `gcc` toolchain support
   - `linuxdeployqt` integration for deployment

@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import { spawn } from 'child_process';
 import { QtConfigManager } from './qtConfigManager';
 import { QtProjectDetector } from './qtProjectDetector';
+import { isWindows, isMacOS, exe, deployToolName, quotePath } from './platformUtils';
 
 export class QtDeployment {
     private qtConfigManager: QtConfigManager;
@@ -21,7 +22,7 @@ export class QtDeployment {
     }
 
     /**
-     * Deploy the current Qt application using windeployqt.
+     * Deploy the current Qt application using platform-specific deploy tool.
      */
     async deployApplication(): Promise<void> {
         const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
@@ -63,11 +64,11 @@ export class QtDeployment {
             return;
         }
 
-        // Find windeployqt
-        const windeployqtPath = await this.findWinDeployQt();
-        if (!windeployqtPath) {
+        // Find deploy tool
+        const deployToolPath = await this.findDeployTool();
+        if (!deployToolPath) {
             void vscode.window.showErrorMessage(
-                'windeployqt.exe not found. Make sure Qt is installed and detected.'
+                `${deployToolName()} not found. Make sure Qt is installed and detected.`
             );
             return;
         }
@@ -83,12 +84,26 @@ export class QtDeployment {
             fs.mkdirSync(deployDir, { recursive: true });
         }
 
-        // Additional args
+        // Platform-specific args
         const additionalArgs = config.get<string>('additionalWinDeployQtArguments') || '';
-
-        // Run windeployqt
-        const args = [`"${exePath}"`, '--dir', `"${deployDir}"`, additionalArgs].filter(a => a.length > 0);
-        const command = `"${windeployqtPath}" ${args.join(' ')}`;
+        const deployTool = deployToolName();
+        let args: string[] = [];
+        
+        if (isMacOS()) {
+            // macdeployqt: deploy app bundle
+            args = [quotePath(exePath)];
+        } else if (isWindows()) {
+            args = [quotePath(exePath), '--dir', quotePath(deployDir)];
+        } else {
+            // linuxdeployqt: deploy to AppDir or target
+            args = [quotePath(exePath), '-appimage'];
+        }
+        
+        if (additionalArgs) {
+            args.push(additionalArgs);
+        }
+        
+        const command = `${quotePath(deployToolPath)} ${args.join(' ')}`;
 
         this.outputChannel.appendLine(`Deploying application...`);
         this.outputChannel.appendLine(`  Executable: ${exePath}`);
@@ -138,15 +153,15 @@ export class QtDeployment {
                     } else {
                         this.outputChannel.appendLine(`Deployment failed with code ${code ?? 'unknown'}.`);
                         void vscode.window.showErrorMessage(
-                            `windeployqt failed. Check Output → Qt C++ Tools for details.`
+                            `${deployTool} failed. Check Output → Qt C++ Tools for details.`
                         );
-                        reject(new Error(`windeployqt exited with code ${code}`));
+                        reject(new Error(`${deployTool} exited with code ${code}`));
                     }
                 });
 
                 child.on('error', (err) => {
                     this.outputChannel.appendLine(`Deployment error: ${err.message}`);
-                    void vscode.window.showErrorMessage(`Failed to run windeployqt: ${err.message}`);
+                    void vscode.window.showErrorMessage(`Failed to run ${deployTool}: ${err.message}`);
                     reject(err);
                 });
             });
@@ -154,23 +169,25 @@ export class QtDeployment {
     }
 
     /**
-     * Find windeployqt.exe in the active Qt installation.
+     * Find platform-specific deploy tool in the active Qt installation.
      */
-    async findWinDeployQt(): Promise<string | undefined> {
+    async findDeployTool(): Promise<string | undefined> {
         const qtInstallation = await this.qtConfigManager.getQtInstallation();
+        const toolName = deployToolName();
 
         if (qtInstallation?.qmakePath) {
             const binDir = path.dirname(qtInstallation.qmakePath);
-            const windeployqtPath = path.join(binDir, 'windeployqt.exe');
-            if (fs.existsSync(windeployqtPath)) {
-                return windeployqtPath;
+            const toolPath = path.join(binDir, exe(toolName));
+            if (fs.existsSync(toolPath)) {
+                return toolPath;
             }
         }
 
         // Fallback: search PATH
         try {
             const { execSync } = await import('child_process');
-            const result = execSync('where windeployqt', { encoding: 'utf-8' }).trim().split('\n')[0];
+            const lookupCmd = process.platform === 'win32' ? `where ${toolName}` : `which ${toolName}`;
+            const result = execSync(lookupCmd, { encoding: 'utf-8' }).trim().split('\n')[0];
             if (result && fs.existsSync(result)) {
                 return result;
             }
@@ -178,7 +195,7 @@ export class QtDeployment {
             // not in PATH
         }
 
-        this.outputChannel.appendLine('windeployqt.exe not found in Qt installation or PATH.');
+        this.outputChannel.appendLine(`${exe(toolName)} not found in Qt installation or PATH.`);
         return undefined;
     }
 }

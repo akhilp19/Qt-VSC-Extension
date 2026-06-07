@@ -132,24 +132,60 @@
 
 ---
 
-## 🔮 Future
+## 🚧 Version 0.5.0 — Enhanced Sidebar & Project Import
 
-- [ ] **Cross-platform support**
-  - macOS (`.app` bundles, `macdeployqt`)
-  - Linux (`make`, `gcc`, `linuxdeployqt`)
+**Theme:** Make the Qt Projects sidebar a true project dashboard.
 
-- [ ] **Enhanced Sidebar**
-  - Build configuration selector (Debug / Release) directly in the Qt Projects view
-  - Project properties panel (Qt version, build dir, etc.)
-  - Build history / last build status indicator
+- [ ] **Build configuration selector**
+  - Switch Debug / Release directly in the Qt Projects view
+  - Per-project build configuration overrides
 
-- [ ] **Advanced Build Features**
-  - Parallel build control (jom by default on MSVC)
-  - Incremental build optimization hints
-  - Build error quick-fix suggestions
+- [ ] **Project properties panel**
+  - View/edit Qt version, build directory, and compiler per project
+  - Quick-access settings from the sidebar
 
-- [ ] **Project Import**
-  - Import existing Qt Creator `.pro.user` or `.qbs` metadata where possible
+- [ ] **Build history / status indicator**
+  - Show last build result (success/failure) per project
+  - Timestamp of last build
+  - One-click re-build from status indicator
+
+- [ ] **Qt Creator project import**
+  - Import `.pro.user` settings (build steps, run configs)
+  - Import `.qbs` project metadata where possible
+
+---
+
+## 🚧 Version 0.6.0 — Advanced Build Features
+
+**Theme:** Smarter, faster, and more reliable builds.
+
+- [ ] **Parallel build control**
+  - Auto-use `jom` on MSVC when available
+  - Configurable job count for `make` / `mingw32-make`
+
+- [ ] **Incremental build optimization**
+  - Detect unnecessary rebuilds and warn
+  - Suggest `ccache` integration for faster compiles
+
+- [ ] **Build error quick-fix suggestions**
+  - Offer common fixes in the Problems panel (e.g., missing `#include`, undeclared `Q_OBJECT`)
+  - One-click apply via Code Actions
+
+---
+
+## 🔮 Version 1.0.0 — Cross-Platform Support
+
+**Theme:** Take the extension beyond Windows.
+
+- [ ] **macOS support**
+  - Detect Qt installations in `/Users/<user>/Qt` and `/usr/local/Qt`
+  - `macdeployqt` integration for app bundle deployment
+  - Support `.app` bundle execution
+
+- [ ] **Linux support**
+  - Detect Qt via `qmake` in PATH, `/usr/lib/qt*`, and `/opt/qt*`
+  - `make` / `gcc` toolchain support
+  - `linuxdeployqt` integration for deployment
 
 ---
 

@@ -39,8 +39,9 @@ export class QtTaskProvider implements vscode.TaskProvider {
                     continue;
                 }
                 
-                // Create build, clean, and rebuild tasks for each project
+                // Create build, clean, rebuild, quick build, and run tasks for each project
                 tasks.push(await this.createBuildTask(projectFile, projectInfo.type, folder));
+                tasks.push(await this.createBuildTask(projectFile, projectInfo.type, folder, true));
                 tasks.push(await this.createCleanTask(projectFile, projectInfo.type, folder));
                 tasks.push(await this.createRebuildTask(projectFile, projectInfo.type, folder));
                 tasks.push(await this.createRunTask(projectFile, projectInfo.type, folder));
@@ -83,7 +84,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
         
         switch (definition.task) {
             case 'build':
-                return await this.createBuildTask(projectFile, projectInfo.type, workspaceFolder);
+                return await this.createBuildTask(projectFile, projectInfo.type, workspaceFolder, definition.quickBuild === true);
             case 'clean':
                 return await this.createCleanTask(projectFile, projectInfo.type, workspaceFolder);
             case 'rebuild':
@@ -98,15 +99,30 @@ export class QtTaskProvider implements vscode.TaskProvider {
     /**
      * Create a build task for a project
      */
+    private getParallelFlag(makeCmd: string, jobs: number): string {
+        const cmd = makeCmd.toLowerCase();
+        if (cmd.includes('nmake')) {
+            return ''; // nmake does not support parallel builds
+        }
+        if (cmd.includes('jom')) {
+            return `/J ${jobs}`;
+        }
+        // mingw32-make, make, gmake
+        return `-j${jobs}`;
+    }
+
     private async createBuildTask(
         projectFile: string,
         projectType: 'qmake' | 'cmake',
-        workspaceFolder: vscode.WorkspaceFolder
+        workspaceFolder: vscode.WorkspaceFolder,
+        quickBuild: boolean = false
     ): Promise<vscode.Task> {
         const qtInstallation = await this.qtConfigManager.getQtInstallation();
         const buildDir = this.qtConfigManager.getBuildDirectory();
         const makeCmd = this.qtConfigManager.getMakeCommand(qtInstallation);
         const buildType = this.qtConfigManager.getProjectBuildType(projectFile);
+        const jobs = this.qtConfigManager.getParallelJobs();
+        const parallelFlag = this.getParallelFlag(makeCmd, jobs);
         
         const projectName = path.basename(projectFile, path.extname(projectFile));
         
@@ -121,18 +137,26 @@ export class QtTaskProvider implements vscode.TaskProvider {
             const qmakePath = qtInstallation?.qmakePath || 'qmake';
             const additionalArgs = config.get<string>('additionalQMakeArguments') || '';
             const buildTypeArg = buildType === 'release' ? 'CONFIG+=release' : 'CONFIG+=debug';
+            const makeArgs = parallelFlag ? `${makeCmd} ${parallelFlag}` : makeCmd;
             
-            // Create build directory if it doesn't exist
             const commands: string[] = [];
             if (preBuildCommand) {
                 commands.push(preBuildCommand);
             }
-            commands.push(
-                `if (-not (Test-Path "${buildDir}")) { New-Item -ItemType Directory -Path "${buildDir}" -Force | Out-Null }`,
-                `cd "${buildDir}"`,
-                `& "${qmakePath}" "${projectFile}" ${buildTypeArg} ${additionalArgs}`,
-                `& ${makeCmd}`
-            );
+            if (quickBuild && fs.existsSync(buildDir)) {
+                // Quick build: skip qmake, just run make
+                commands.push(
+                    `cd "${buildDir}"`,
+                    `& ${makeArgs}`
+                );
+            } else {
+                commands.push(
+                    `if (-not (Test-Path "${buildDir}")) { New-Item -ItemType Directory -Path "${buildDir}" -Force | Out-Null }`,
+                    `cd "${buildDir}"`,
+                    `& "${qmakePath}" "${projectFile}" ${buildTypeArg} ${additionalArgs}`,
+                    `& ${makeArgs}`
+                );
+            }
             if (postBuildCommand) {
                 commands.push(postBuildCommand);
             }
@@ -143,16 +167,24 @@ export class QtTaskProvider implements vscode.TaskProvider {
         } else {
             // CMake build
             const additionalArgs = config.get<string>('additionalCMakeArguments') || '';
+            const cmakeBuildArgs = parallelFlag ? `--parallel ${jobs}` : '';
             
             const commands: string[] = [];
             if (preBuildCommand) {
                 commands.push(preBuildCommand);
             }
-            commands.push(
-                `if (-not (Test-Path "${buildDir}")) { New-Item -ItemType Directory -Path "${buildDir}" -Force | Out-Null }`,
-                `cmake -B "${buildDir}" -S "${path.dirname(projectFile)}" -DCMAKE_BUILD_TYPE=${buildType} ${additionalArgs}`,
-                `cmake --build "${buildDir}"`
-            );
+            if (quickBuild && fs.existsSync(buildDir)) {
+                // Quick build: skip cmake configure
+                commands.push(
+                    `cmake --build "${buildDir}" ${cmakeBuildArgs}`
+                );
+            } else {
+                commands.push(
+                    `if (-not (Test-Path "${buildDir}")) { New-Item -ItemType Directory -Path "${buildDir}" -Force | Out-Null }`,
+                    `cmake -B "${buildDir}" -S "${path.dirname(projectFile)}" -DCMAKE_BUILD_TYPE=${buildType} ${additionalArgs}`,
+                    `cmake --build "${buildDir}" ${cmakeBuildArgs}`
+                );
+            }
             if (postBuildCommand) {
                 commands.push(postBuildCommand);
             }
@@ -252,6 +284,8 @@ export class QtTaskProvider implements vscode.TaskProvider {
         const buildDir = this.qtConfigManager.getBuildDirectory();
         const makeCmd = this.qtConfigManager.getMakeCommand(qtInstallation);
         const buildType = this.qtConfigManager.getProjectBuildType(projectFile);
+        const jobs = this.qtConfigManager.getParallelJobs();
+        const parallelFlag = this.getParallelFlag(makeCmd, jobs);
         const projectName = path.basename(projectFile, path.extname(projectFile));
         
         const config = vscode.workspace.getConfiguration('qt');
@@ -265,6 +299,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
             const qmakePath = qtInstallation?.qmakePath || 'qmake';
             const additionalArgs = config.get<string>('additionalQMakeArguments') || '';
             const buildTypeArg = buildType === 'release' ? 'CONFIG+=release' : 'CONFIG+=debug';
+            const makeArgs = parallelFlag ? `${makeCmd} ${parallelFlag}` : makeCmd;
             
             const commands: string[] = [];
             if (preBuildCommand) {
@@ -275,7 +310,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
                 `cd "${buildDir}"`,
                 `& ${makeCmd} clean 2>$null`,
                 `& "${qmakePath}" "${projectFile}" ${buildTypeArg} ${additionalArgs}`,
-                `& ${makeCmd}`
+                `& ${makeArgs}`
             );
             if (postBuildCommand) {
                 commands.push(postBuildCommand);
@@ -287,6 +322,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
         } else {
             // CMake rebuild
             const additionalArgs = config.get<string>('additionalCMakeArguments') || '';
+            const cmakeBuildArgs = parallelFlag ? `--parallel ${jobs}` : '';
             
             const commands: string[] = [];
             if (preBuildCommand) {
@@ -295,7 +331,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
             commands.push(
                 `if (Test-Path "${buildDir}") { Remove-Item -Recurse -Force "${buildDir}" }`,
                 `cmake -B "${buildDir}" -S "${path.dirname(projectFile)}" -DCMAKE_BUILD_TYPE=${buildType} ${additionalArgs}`,
-                `cmake --build "${buildDir}"`
+                `cmake --build "${buildDir}" ${cmakeBuildArgs}`
             );
             if (postBuildCommand) {
                 commands.push(postBuildCommand);

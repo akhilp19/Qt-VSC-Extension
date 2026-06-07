@@ -12,3 +12,4 @@ export * from './qtCompletionProvider';
 export * from './qtHoverProvider';
 export * from './qtBuildTracker';
 export * from './qtCreatorImporter';
+export * from './qtCodeActionProvider';

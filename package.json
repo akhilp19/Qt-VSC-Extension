@@ -2,7 +2,7 @@
   "name": "qt-vsc-extension",
   "displayName": "Qt C++ Tools",
   "description": "Build, run and manage Qt C++ projects in VS Code",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "publisher": "akhilp19",
   "author": {
     "name": "Akhil Pawar"
@@ -108,6 +108,11 @@
       {
         "command": "qt.importQtCreator",
         "title": "Qt: Import Qt Creator Settings"
+      },
+      {
+        "command": "qt.quickBuild",
+        "title": "Qt: Quick Build",
+        "icon": "$(zap)"
       }
     ],
     "taskDefinitions": [
@@ -138,6 +143,11 @@
               "debug",
               "release"
             ]
+          },
+          "quickBuild": {
+            "type": "boolean",
+            "default": false,
+            "description": "Skip qmake/cmake reconfiguration if build directory exists"
           }
         }
       }
@@ -234,6 +244,11 @@
           "type": "object",
           "default": {},
           "description": "Per-project build configurations (debug/release). Managed by the extension."
+        },
+        "qt.parallelJobs": {
+          "type": "number",
+          "default": 0,
+          "description": "Number of parallel jobs for compilation. 0 = auto-detect based on CPU cores."
         }
       }
     },
@@ -306,6 +321,10 @@
         },
         {
           "command": "qt.importQtCreator",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.quickBuild",
           "when": "workspaceFolderCount > 0"
         }
       ],

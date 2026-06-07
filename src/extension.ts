@@ -21,6 +21,7 @@ import { QtCompletionProvider } from './qtCompletionProvider';
 import { QtHoverProvider } from './qtHoverProvider';
 import { QtBuildTracker } from './qtBuildTracker';
 import { QtCreatorImporter } from './qtCreatorImporter';
+import { QtCodeActionProvider } from './qtCodeActionProvider';
 
 let taskProvider: vscode.Disposable | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -70,6 +71,7 @@ export function activate(context: vscode.ExtensionContext): void {
     // Register Qt code intelligence providers
     const qtCompletionProvider = new QtCompletionProvider(outputChannel);
     const qtHoverProvider = new QtHoverProvider(outputChannel);
+    const qtCodeActionProvider = new QtCodeActionProvider(outputChannel);
     
     context.subscriptions.push(
         vscode.languages.registerCompletionItemProvider(
@@ -83,6 +85,13 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.languages.registerHoverProvider(
             { scheme: 'file', pattern: '**/*.{cpp,h,hpp,c}' },
             qtHoverProvider
+        )
+    );
+    
+    context.subscriptions.push(
+        vscode.languages.registerCodeActionsProvider(
+            { scheme: 'file', pattern: '**/*.{cpp,h,hpp,c}' },
+            qtCodeActionProvider
         )
     );
     
@@ -117,6 +126,12 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         vscode.commands.registerCommand('qt.buildProject', async (uri?: vscode.Uri) => {
             await executeQtTask('build', uri?.fsPath);
+        })
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.quickBuild', async (uri?: vscode.Uri) => {
+            await executeQtTask('build', uri?.fsPath, true);
         })
     );
     
@@ -242,7 +257,7 @@ export function activate(context: vscode.ExtensionContext): void {
     outputChannel.appendLine('Qt C++ Tools extension initialized successfully');
 }
 
-async function executeQtTask(taskType: 'build' | 'clean' | 'rebuild' | 'run', specificProject?: string): Promise<void> {
+async function executeQtTask(taskType: 'build' | 'clean' | 'rebuild' | 'run', specificProject?: string, quickBuild: boolean = false): Promise<void> {
     let projectFile: string | undefined = specificProject;
     
     if (!projectFile) {
@@ -282,7 +297,8 @@ async function executeQtTask(taskType: 'build' | 'clean' | 'rebuild' | 'run', sp
     const taskDef: vscode.TaskDefinition = {
         type: 'qt',
         task: taskType,
-        file: projectFile
+        file: projectFile,
+        quickBuild: quickBuild
     };
     
     const tasks = await vscode.tasks.fetchTasks({ type: 'qt' });
@@ -550,3 +566,8 @@ export function deactivate(): void {
         taskProvider.dispose();
     }
 }
+
+// Info message helper for code actions
+vscode.commands.registerCommand('qt.showInfoMessage', (message: string) => {
+    void vscode.window.showInformationMessage(message);
+});

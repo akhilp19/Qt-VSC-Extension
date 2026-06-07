@@ -132,7 +132,7 @@
 
 ---
 
-## ✅ Version 0.5.0 (Current — Shipped) — Enhanced Sidebar & Project Import
+## ✅ Version 0.5.0 (Released) — Enhanced Sidebar & Project Import
 
 **Theme:** Make the Qt Projects sidebar a true project dashboard.
 
@@ -155,19 +155,19 @@
 
 ---
 
-## 🚧 Version 0.6.0 — Advanced Build Features
+## ✅ Version 0.6.0 (Current — Shipped) — Advanced Build Features
 
 **Theme:** Smarter, faster, and more reliable builds.
 
-- [ ] **Parallel build control**
+- [x] **Parallel build control**
   - Auto-use `jom` on MSVC when available
   - Configurable job count for `make` / `mingw32-make`
 
-- [ ] **Incremental build optimization**
+- [x] **Incremental build optimization**
   - Detect unnecessary rebuilds and warn
   - Suggest `ccache` integration for faster compiles
 
-- [ ] **Build error quick-fix suggestions**
+- [x] **Build error quick-fix suggestions**
   - Offer common fixes in the Problems panel (e.g., missing `#include`, undeclared `Q_OBJECT`)
   - One-click apply via Code Actions
 

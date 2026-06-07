@@ -271,6 +271,20 @@ export class QtConfigManager {
     }
 
     /**
+     * Get parallel job count for builds
+     */
+    getParallelJobs(): number {
+        const config = vscode.workspace.getConfiguration('qt');
+        const jobs = config.get<number>('parallelJobs');
+        if (jobs && jobs > 0) {
+            return jobs;
+        }
+        // Auto-detect: use CPU count, capped at reasonable limits
+        const cpus = require('os').cpus().length;
+        return Math.max(1, Math.min(cpus, 16));
+    }
+
+    /**
      * Set build type for a specific project
      */
     async setProjectBuildType(projectFile: string, buildType: string): Promise<void> {

@@ -72,7 +72,7 @@
 
 ---
 
-## ✅ Version 0.3.0 (Current — Shipped) — Deployment & Tooling
+## ✅ Version 0.3.0 (Released) — Deployment & Tooling
 
 **Theme:** Close the loop from build to runnable/distributable app.
 
@@ -102,31 +102,31 @@
 
 ---
 
-## 🚧 Version 0.4.0 — Qt Code Intelligence
+## ✅ Version 0.4.0 (Current — Shipped) — Qt Code Intelligence
 
 **Theme:** Bring Qt-specific autocomplete, snippets, and documentation into VS Code.
 
-- [ ] **Qt class and method autocomplete**
+- [x] **Qt class and method autocomplete**
   - Parse Qt headers to provide `CompletionItemProvider` for Qt classes
   - Suggest methods, enums, and constants from `QObject`, `QWidget`, `QString`, etc.
   - Context-aware suggestions (e.g., only `QWidget` methods when inside a widget class)
 
-- [ ] **Signal / Slot helper**
+- [x] **Signal / Slot helper**
   - Autocomplete for `connect(sender, SIGNAL(...), receiver, SLOT(...))`
   - Detect `signals:` and `slots:` sections in header files
   - Suggest available signals when typing `connect()`
 
-- [ ] **Qt snippets**
+- [x] **Qt snippets**
   - `qhead` → boilerplate `.h` file with `Q_OBJECT`
   - `qslot` → `private slots:` stub
   - `qsig` → `signals:` stub
   - `qconnect` → `QObject::connect(...)` template
 
-- [ ] **Documentation on hover**
+- [x] **Documentation on hover**
   - Show Qt documentation summary when hovering over Qt classes/methods
   - Link to official Qt docs (doc.qt.io)
 
-- [ ] **MOC-aware IntelliSense**
+- [x] **MOC-aware IntelliSense**
   - Recognize `Q_PROPERTY`, `Q_INVOKABLE`, `Q_ENUM` macros
   - Provide completions for QML-exposed C++ properties
 

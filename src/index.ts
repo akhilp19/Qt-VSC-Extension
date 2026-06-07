@@ -7,3 +7,6 @@ export * from './qtDesignerIntegration';
 export * from './qrcSupport';
 export * from './qtDeployment';
 export * from './intelliSenseHelper';
+export * from './qtApiData';
+export * from './qtCompletionProvider';
+export * from './qtHoverProvider';

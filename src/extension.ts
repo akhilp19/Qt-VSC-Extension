@@ -17,6 +17,8 @@ import { QtDesignerIntegration } from './qtDesignerIntegration';
 import { QrcSupport } from './qrcSupport';
 import { QtDeployment } from './qtDeployment';
 import { IntelliSenseHelper } from './intelliSenseHelper';
+import { QtCompletionProvider } from './qtCompletionProvider';
+import { QtHoverProvider } from './qtHoverProvider';
 
 let taskProvider: vscode.Disposable | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -58,6 +60,25 @@ export function activate(context: vscode.ExtensionContext): void {
     
     // Initialize IntelliSense helper
     const intelliSenseHelper = new IntelliSenseHelper(qtConfigManager, outputChannel);
+    
+    // Register Qt code intelligence providers
+    const qtCompletionProvider = new QtCompletionProvider(outputChannel);
+    const qtHoverProvider = new QtHoverProvider(outputChannel);
+    
+    context.subscriptions.push(
+        vscode.languages.registerCompletionItemProvider(
+            { scheme: 'file', pattern: '**/*.{cpp,h,hpp,c}' },
+            qtCompletionProvider,
+            '.', '>', ':'
+        )
+    );
+    
+    context.subscriptions.push(
+        vscode.languages.registerHoverProvider(
+            { scheme: 'file', pattern: '**/*.{cpp,h,hpp,c}' },
+            qtHoverProvider
+        )
+    );
     
     // Register task provider
     const qtTaskProviderInstance = new QtTaskProvider(qtConfigManager, qtProjectDetector, outputChannel);

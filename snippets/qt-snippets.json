@@ -1,0 +1,169 @@
+{
+  "Qt Class Header": {
+    "prefix": "qhead",
+    "description": "Qt class header with Q_OBJECT macro",
+    "body": [
+      "#ifndef ${1:CLASSNAME}_H",
+      "#define ${1:CLASSNAME}_H",
+      "",
+      "#include <QObject>",
+      "",
+      "class ${2:ClassName} : public ${3|QObject,QWidget,QMainWindow,QDialog|}",
+      "{",
+      "    Q_OBJECT",
+      "public:",
+      "    explicit ${2:ClassName}(${4:QWidget *parent = nullptr});",
+      "    ~${2:ClassName}();",
+      "",
+      "signals:",
+      "    ${5:void somethingChanged();}",
+      "",
+      "private slots:",
+      "    ${6:void onSomethingClicked();}",
+      "",
+      "private:",
+      "    ${7:// private members}",
+      "};",
+      "",
+      "#endif // ${1:CLASSNAME}_H"
+    ]
+  },
+  "Qt Slots Section": {
+    "prefix": "qslot",
+    "description": "Private slots section",
+    "body": [
+      "private slots:",
+      "    ${1:void on_${2:button}_${3:clicked}();}"
+    ]
+  },
+  "Qt Signals Section": {
+    "prefix": "qsig",
+    "description": "Signals section",
+    "body": [
+      "signals:",
+      "    ${1:void ${2:valueChanged}(${3:const QString &newValue});}"
+    ]
+  },
+  "Qt Connect": {
+    "prefix": "qconnect",
+    "description": "QObject::connect with SIGNAL/SLOT",
+    "body": [
+      "connect(${1:sender}, SIGNAL(${2:signal}(${3:args})),",
+      "        ${4:receiver}, SLOT(${5:slot}(${6:args})));"
+    ]
+  },
+  "Qt Connect Lambda": {
+    "prefix": "qconnectl",
+    "description": "QObject::connect with lambda",
+    "body": [
+      "connect(${1:sender}, &${2:ClassName}::${3:signal},",
+      "        [=]() {",
+      "            ${4:// handle signal}",
+      "        });"
+    ]
+  },
+  "Qt Property": {
+    "prefix": "qprop",
+    "description": "Q_PROPERTY declaration",
+    "body": [
+      "Q_PROPERTY(${1:type} ${2:name}",
+      "           READ ${3:getName}",
+      "           WRITE ${4:setName}",
+      "           NOTIFY ${5:nameChanged})"
+    ]
+  },
+  "Qt QDebug": {
+    "prefix": "qdbg",
+    "description": "qDebug() statement",
+    "body": [
+      "qDebug() << ${1:\"debug message\"};"
+    ]
+  },
+  "Qt tr": {
+    "prefix": "qtr",
+    "description": "Qt translation string",
+    "body": [
+      "tr(\"${1:text}\")"
+    ]
+  },
+  "Qt Assert": {
+    "prefix": "qassert",
+    "description": "Q_ASSERT statement",
+    "body": [
+      "Q_ASSERT(${1:condition});"
+    ]
+  },
+  "Qt foreach": {
+    "prefix": "qforeach",
+    "description": "Qt foreach loop",
+    "body": [
+      "Q_FOREACH(${1:type} ${2:item}, ${3:container}) {",
+      "    ${4:// loop body}",
+      "}"
+    ]
+  },
+  "Qt MainWindow": {
+    "prefix": "qmain",
+    "description": "QMainWindow class skeleton",
+    "body": [
+      "#ifndef ${1:MAINWINDOW}_H",
+      "#define ${1:MAINWINDOW}_H",
+      "",
+      "#include <QMainWindow>",
+      "",
+      "namespace Ui {",
+      "class ${2:MainWindow};",
+      "}",
+      "",
+      "class ${2:MainWindow} : public QMainWindow",
+      "{",
+      "    Q_OBJECT",
+      "",
+      "public:",
+      "    explicit ${2:MainWindow}(QWidget *parent = nullptr);",
+      "    ~${2:MainWindow}();",
+      "",
+      "private:",
+      "    Ui::${2:MainWindow} *ui;",
+      "};",
+      "",
+      "#endif // ${1:MAINWINDOW}_H"
+    ]
+  },
+  "Qt Slot Definition": {
+    "prefix": "qslotdef",
+    "description": "Slot method definition",
+    "body": [
+      "void ${1:ClassName}::${2:on_action_triggered}()",
+      "{",
+      "    ${3:// slot implementation}",
+      "}"
+    ]
+  },
+  "Qt Signal Emit": {
+    "prefix": "qemit",
+    "description": "Emit a signal",
+    "body": [
+      "emit ${1:signalName}(${2:arguments});"
+    ]
+  },
+  "Qt Timer": {
+    "prefix": "qtimer",
+    "description": "QTimer setup",
+    "body": [
+      "QTimer *${1:timer} = new QTimer(this);",
+      "connect(${1:timer}, &QTimer::timeout, [=]() {",
+      "    ${2:// timer tick}",
+      "});",
+      "${1:timer}->start(${3:1000}); // ms"
+    ]
+  },
+  "Qt InvokeMethod": {
+    "prefix": "qinvoke",
+    "description": "QMetaObject::invokeMethod",
+    "body": [
+      "QMetaObject::invokeMethod(${1:object}, \"${2:methodName}\",",
+      "    ${3|Qt::AutoConnection,Qt::DirectConnection,Qt::QueuedConnection,Qt::BlockingQueuedConnection|});"
+    ]
+  }
+}

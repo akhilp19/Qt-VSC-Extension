@@ -78,15 +78,27 @@
 
 - [x] **`windeployqt` integration**
   - Command: `Qt: Deploy Application`
-  - Detects built executable and runs `windeployqt` with correct args
-  - Configurable deploy directory
+  - Auto-detects `windeployqt.exe` from the active Qt installation or PATH
+  - Automatically finds the built executable (no manual path needed)
+  - Configurable deploy directory (`qt.deployDirectory`)
+  - Supports additional `windeployqt` arguments via settings
+  - Shows progress notification during deployment
 
 - [x] **IntelliSense configuration helper**
-  - Auto-generate `c_cpp_properties.json` entries based on the active Qt installation
-  - Include paths for Qt headers, defines like `QT_CORE_LIB`, etc.
+  - Command: `Qt: Configure IntelliSense`
+  - Auto-generate `.vscode/c_cpp_properties.json` with Qt paths
+  - Queries `qmake` for `QT_INSTALL_HEADERS`, libs, and bins
+  - Adds Qt module include paths (QtCore, QtGui, QtWidgets, QtNetwork, etc.)
+  - Detects compiler path automatically (MSVC via `vswhere`, MinGW `g++.exe`)
+  - Sets correct `intelliSenseMode` (`windows-msvc-x64` or `windows-gcc-x64`)
+  - Adds common Qt defines (`QT_CORE_LIB`, `QT_GUI_LIB`, `QT_WIDGETS_LIB`, etc.)
+  - Safely creates or updates config without overwriting other entries
 
 - [x] **Pre-build / Post-build hooks**
-  - Allow user-defined commands to run before/after build (e.g., code generation, copying assets)
+  - Settings: `qt.preBuildCommand` and `qt.postBuildCommand`
+  - Executes before/after every Build and Rebuild task
+  - Works for both QMake and CMake projects
+  - Perfect for code generation, asset copying, or custom build steps
 
 ---
 

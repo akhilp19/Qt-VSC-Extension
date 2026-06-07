@@ -4,7 +4,7 @@
 
 ---
 
-## ✅ Version 0.0.1 (Current — Shipped)
+## ✅ Version 0.0.1 (Released)
 
 ### Build System Integration
 - [x] Auto-detect Qt projects (`.pro` for QMake, `CMakeLists.txt` for CMake)
@@ -33,7 +33,7 @@
 
 ---
 
-## ✅ Version 0.1.0 — Project Creation Wizards
+## ✅ Version 0.1.0 (Current — Shipped) — Project Creation Wizards
 
 **Theme:** Turn the two placeholder commands into real project generators.
 
@@ -117,4 +117,5 @@
 2. Open an issue to discuss design if it involves new UI or user-facing behavior.
 3. Submit a PR referencing the roadmap item.
 
+> **Last updated:** June 7, 2026  
 > For the latest status, check the [GitHub Issues](https://github.com/akhilpawar/Qt-VSC-Extension/issues) page.

@@ -3,7 +3,7 @@
   "displayName": "Qt C++ Tools",
   "description": "Build, run and manage Qt C++ projects in VS Code",
   "version": "0.1.0",
-  "publisher": "akhilpawar",
+  "publisher": "akhilp19",
   "author": {
     "name": "Akhil Pawar"
   },

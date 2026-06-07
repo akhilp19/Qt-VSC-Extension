@@ -1,8 +1,18 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { QtTaskProvider } from './qtTaskProvider';
 import { QtConfigManager } from './qtConfigManager';
 import { QtProjectDetector } from './qtProjectDetector';
 import { QtProjectTreeProvider } from './qtProjectTreeProvider';
+import {
+    ProjectType,
+    PROJECT_TYPES,
+    QT_MODULES,
+    generateQMakeProject,
+    generateCMakeProject,
+    writeProjectFiles,
+    ProjectTemplateOptions
+} from './projectTemplates';
 
 let taskProvider: vscode.Disposable | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -226,7 +236,8 @@ async function createQMakeProject(): Promise<void> {
         void vscode.window.showErrorMessage('Please open a folder first');
         return;
     }
-    
+
+    // 1. Project name
     const projectName = await vscode.window.showInputBox({
         prompt: 'Enter project name',
         placeHolder: 'MyQtApp',
@@ -240,13 +251,69 @@ async function createQMakeProject(): Promise<void> {
             return null;
         }
     });
-    
+
     if (!projectName) {
         return;
     }
-    
-    await vscode.window.showInformationMessage('QMake project creation will be implemented in the next phase');
-    outputChannel.appendLine(`TODO: Create QMake project: ${projectName}`);
+
+    // 2. Project type
+    const selectedType = await vscode.window.showQuickPick(
+        PROJECT_TYPES.map(t => ({ label: t.label, description: t.description, value: t.value })),
+        { placeHolder: 'Select project type' }
+    );
+
+    if (!selectedType) {
+        return;
+    }
+
+    // 3. Qt modules
+    const selectedModules = await vscode.window.showQuickPick(
+        QT_MODULES.map(m => ({ label: m.label, description: m.description, value: m.value, picked: m.picked })),
+        { placeHolder: 'Select Qt modules (Space to multi-select)', canPickMany: true }
+    );
+
+    const modules = selectedModules?.map(m => m.value) ?? ['core', 'gui'];
+
+    // 4. Window class for widgets app
+    let includeWindowClass = false;
+    if (selectedType.value === 'widgets-app') {
+        const windowChoice = await vscode.window.showQuickPick(
+            [
+                { label: 'Simple QWidget', description: 'Minimal main.cpp with a QWidget', value: false },
+                { label: 'MainWindow with .ui file', description: 'Generate MainWindow class + .ui file', value: true }
+            ],
+            { placeHolder: 'Select window style' }
+        );
+        includeWindowClass = windowChoice?.value ?? false;
+    }
+
+    // 5. Generate files
+    const options: ProjectTemplateOptions = {
+        projectName,
+        projectType: selectedType.value as ProjectType,
+        modules,
+        qtVersion: 'qt6',
+        includeWindowClass
+    };
+
+    const targetDir = path.join(workspaceFolder.uri.fsPath, projectName);
+    const files = generateQMakeProject(options);
+
+    try {
+        const created = await writeProjectFiles(targetDir, files, outputChannel);
+        void vscode.window.showInformationMessage(
+            `Created QMake project "${projectName}" with ${created.length} file(s).`,
+            'Open Folder'
+        ).then(choice => {
+            if (choice === 'Open Folder') {
+                const proFile = path.join(targetDir, `${projectName}.pro`);
+                void vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(targetDir));
+            }
+        });
+    } catch (error) {
+        void vscode.window.showErrorMessage(`Failed to create project: ${String(error)}`);
+        outputChannel.appendLine(`Error creating QMake project: ${String(error)}`);
+    }
 }
 
 async function createCMakeProject(): Promise<void> {
@@ -255,7 +322,8 @@ async function createCMakeProject(): Promise<void> {
         void vscode.window.showErrorMessage('Please open a folder first');
         return;
     }
-    
+
+    // 1. Project name
     const projectName = await vscode.window.showInputBox({
         prompt: 'Enter project name',
         placeHolder: 'MyQtApp',
@@ -269,13 +337,68 @@ async function createCMakeProject(): Promise<void> {
             return null;
         }
     });
-    
+
     if (!projectName) {
         return;
     }
-    
-    await vscode.window.showInformationMessage('CMake project creation will be implemented in the next phase');
-    outputChannel.appendLine(`TODO: Create CMake project: ${projectName}`);
+
+    // 2. Project type
+    const selectedType = await vscode.window.showQuickPick(
+        PROJECT_TYPES.map(t => ({ label: t.label, description: t.description, value: t.value })),
+        { placeHolder: 'Select project type' }
+    );
+
+    if (!selectedType) {
+        return;
+    }
+
+    // 3. Qt version
+    const selectedQtVersion = await vscode.window.showQuickPick(
+        [
+            { label: 'Qt 6', description: 'Use Qt 6 (find_package(Qt6 ...))', value: 'qt6' as const },
+            { label: 'Qt 5', description: 'Use Qt 5 (find_package(Qt5 ...))', value: 'qt5' as const }
+        ],
+        { placeHolder: 'Select Qt version' }
+    );
+
+    if (!selectedQtVersion) {
+        return;
+    }
+
+    // 4. Qt modules
+    const selectedModules = await vscode.window.showQuickPick(
+        QT_MODULES.map(m => ({ label: m.label, description: m.description, value: m.value, picked: m.picked })),
+        { placeHolder: 'Select Qt modules (Space to multi-select)', canPickMany: true }
+    );
+
+    const modules = selectedModules?.map(m => m.value) ?? ['core', 'gui'];
+
+    // 5. Generate files
+    const options: ProjectTemplateOptions = {
+        projectName,
+        projectType: selectedType.value as ProjectType,
+        modules,
+        qtVersion: selectedQtVersion.value,
+        includeWindowClass: false
+    };
+
+    const targetDir = path.join(workspaceFolder.uri.fsPath, projectName);
+    const files = generateCMakeProject(options);
+
+    try {
+        const created = await writeProjectFiles(targetDir, files, outputChannel);
+        void vscode.window.showInformationMessage(
+            `Created CMake project "${projectName}" with ${created.length} file(s).`,
+            'Open Folder'
+        ).then(choice => {
+            if (choice === 'Open Folder') {
+                void vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(targetDir));
+            }
+        });
+    } catch (error) {
+        void vscode.window.showErrorMessage(`Failed to create project: ${String(error)}`);
+        outputChannel.appendLine(`Error creating CMake project: ${String(error)}`);
+    }
 }
 
 export function deactivate(): void {

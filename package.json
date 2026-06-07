@@ -2,7 +2,7 @@
   "name": "qt-vsc-extension",
   "displayName": "Qt C++ Tools",
   "description": "Build, run and manage Qt C++ projects in VS Code",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "publisher": "akhilpawar",
   "author": {
     "name": "Akhil Pawar"

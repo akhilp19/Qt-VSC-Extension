@@ -2,7 +2,7 @@
   "name": "qt-vsc-extension",
   "displayName": "Qt C++ Tools",
   "description": "Build, run and manage Qt C++ projects in VS Code",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publisher": "akhilp19",
   "author": {
     "name": "Akhil Pawar"
@@ -113,6 +113,11 @@
         "command": "qt.quickBuild",
         "title": "Qt: Quick Build",
         "icon": "$(zap)"
+      },
+      {
+        "command": "qt.installQt",
+        "title": "Qt: Install Qt",
+        "icon": "$(cloud-download)"
       }
     ],
     "taskDefinitions": [
@@ -249,6 +254,31 @@
           "type": "number",
           "default": 0,
           "description": "Number of parallel jobs for compilation. 0 = auto-detect based on CPU cores."
+        },
+        "qt.packageManagerAutoDetect": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically detect Qt installations from package managers (Homebrew, APT, Pacman, vcpkg, Conan, aqtinstall)."
+        },
+        "qt.preferredPackageManager": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "official",
+            "homebrew",
+            "apt",
+            "pacman",
+            "vcpkg",
+            "conan",
+            "aqtinstall"
+          ],
+          "default": "auto",
+          "description": "Preferred source for Qt installations. 'auto' uses the first found. 'official' prefers Qt installer over package managers."
+        },
+        "qt.showQtSource": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show package manager source badge (e.g., [Homebrew]) next to Qt versions in the picker."
         }
       }
     },
@@ -326,6 +356,10 @@
         {
           "command": "qt.quickBuild",
           "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.installQt",
+          "when": "true"
         }
       ],
       "view/title": [

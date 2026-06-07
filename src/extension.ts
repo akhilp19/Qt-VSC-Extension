@@ -22,6 +22,7 @@ import { QtHoverProvider } from './qtHoverProvider';
 import { QtBuildTracker } from './qtBuildTracker';
 import { QtCreatorImporter } from './qtCreatorImporter';
 import { QtCodeActionProvider } from './qtCodeActionProvider';
+import { sourceDisplayName } from './packageManagerDetector';
 
 let taskProvider: vscode.Disposable | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -132,6 +133,12 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         vscode.commands.registerCommand('qt.quickBuild', async (uri?: vscode.Uri) => {
             await executeQtTask('build', uri?.fsPath, true);
+        })
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.installQt', async () => {
+            await showInstallQtInstructions();
         })
     );
     
@@ -346,8 +353,12 @@ async function selectQtVersion(): Promise<void> {
         return;
     }
     
+    const showSource = vscode.workspace.getConfiguration('qt').get<boolean>('showQtSource') ?? true;
+    
     const items = qtVersions.map(qt => ({
-        label: qt.version || 'Unknown',
+        label: showSource && qt.source
+            ? `${qt.version || 'Unknown'} [${sourceDisplayName(qt.source)}]`
+            : (qt.version || 'Unknown'),
         description: qt.path,
         detail: `qmake: ${qt.qmakePath}`
     }));
@@ -359,8 +370,85 @@ async function selectQtVersion(): Promise<void> {
     if (selected) {
         const config = vscode.workspace.getConfiguration('qt');
         await config.update('qmakePath', selected.detail.replace('qmake: ', ''), vscode.ConfigurationTarget.Workspace);
-        void vscode.window.showInformationMessage(`Using Qt version: ${selected.label}`);
+        const labelClean = selected.label.replace(/\s*\[.*?\]\s*$/, '');
+        void vscode.window.showInformationMessage(`Using Qt version: ${labelClean}`);
         outputChannel.appendLine(`Selected Qt version: ${selected.label} at ${selected.description}`);
+    }
+}
+
+async function showInstallQtInstructions(): Promise<void> {
+    const platform = process.platform;
+    
+    interface InstallOption {
+        label: string;
+        description: string;
+        command: string;
+        platforms: string[];
+    }
+    
+    const options: InstallOption[] = [
+        {
+            label: 'Official Qt Installer',
+            description: 'Download from qt.io (all platforms)',
+            command: 'Visit https://www.qt.io/download-qt-installer',
+            platforms: ['win32', 'darwin', 'linux']
+        },
+        {
+            label: 'Homebrew',
+            description: 'macOS / Linux package manager',
+            command: 'brew install qt@6',
+            platforms: ['darwin', 'linux']
+        },
+        {
+            label: 'APT (Debian/Ubuntu)',
+            description: 'Linux package manager',
+            command: 'sudo apt update && sudo apt install qtbase5-dev qttools5-dev',
+            platforms: ['linux']
+        },
+        {
+            label: 'Pacman (Arch/Manjaro)',
+            description: 'Linux package manager',
+            command: 'sudo pacman -S qt6-base qt6-tools',
+            platforms: ['linux']
+        },
+        {
+            label: 'vcpkg',
+            description: 'Cross-platform C++ package manager',
+            command: 'vcpkg install qtbase',
+            platforms: ['win32', 'darwin', 'linux']
+        },
+        {
+            label: 'Conan',
+            description: 'Cross-platform C++ package manager',
+            command: 'conan install --requires=qt/6.7.0',
+            platforms: ['win32', 'darwin', 'linux']
+        },
+        {
+            label: 'aqtinstall',
+            description: 'Unofficial Qt installer (CLI, headless-friendly)',
+            command: 'pip install aqtinstall && aqt install-qt linux desktop 6.7.0',
+            platforms: ['win32', 'darwin', 'linux']
+        }
+    ];
+    
+    const filtered = options.filter(o => o.platforms.includes(platform));
+    
+    const selected = await vscode.window.showQuickPick(
+        filtered.map(o => ({ label: o.label, description: o.description, command: o.command })),
+        { placeHolder: 'Select how to install Qt' }
+    );
+    
+    if (selected) {
+        void vscode.window.showInformationMessage(
+            `Install command: ${selected.command}`,
+            'Copy to Clipboard'
+        ).then(choice => {
+            if (choice === 'Copy to Clipboard') {
+                void vscode.env.clipboard.writeText(selected.command);
+                void vscode.window.showInformationMessage('Command copied to clipboard');
+            }
+        });
+        outputChannel.appendLine(`User selected Qt install method: ${selected.label}`);
     }
 }
 

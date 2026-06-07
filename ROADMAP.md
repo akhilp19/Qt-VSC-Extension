@@ -193,44 +193,39 @@
 
 ---
 
-## 🚧 Version 1.1.0 — Package Manager Integration
+## ✅ Version 1.1.0 (Current — Shipped) — Package Manager Integration
 
 **Theme:** Support Qt installed via Homebrew, apt, pacman, vcpkg, Conan, and aqtinstall.
 
 ### Package Manager Detection
-- [ ] **Homebrew** (macOS / Linux)
-  - Detect Qt via `brew list qt@5`, `brew list qt@6`, `brew --prefix qt`
+- [x] **`src/packageManagerDetector.ts`** — central detection module with 6 package manager backends
+- [x] **Homebrew** (macOS / Linux)
+  - Detect Qt via `brew --prefix qt@6`, `brew --prefix qt@5`, `brew --prefix qt`
   - Read `Cellar/qt/` symlinks to find actual install paths
   - Support versioned formulae (`qt@5`, `qt@6`)
-
-- [ ] **APT / DPKG** (Debian / Ubuntu)
-  - Detect Qt via `dpkg -L libqt5core5a`, `dpkg -L libqt6core6`
-  - Parse `/usr/lib/x86_64-linux-gnu/qt5/` paths
-  - Map package names to Qt modules (`libqt5widgets5` → `widgets`)
-
-- [ ] **Pacman** (Arch / Manjaro)
-  - Detect Qt via `pacman -Ql qt5-base`, `pacman -Ql qt6-base`
-  - Parse `/usr/lib/qt5/`, `/usr/lib/qt6/` paths
-
-- [ ] **vcpkg**
-  - Detect `vcpkg` manifests (`vcpkg.json`) in workspace
-  - Read `VCPKG_ROOT` or find `vcpkg` in PATH
+- [x] **APT / DPKG** (Debian / Ubuntu)
+  - Detect Qt via standard paths `/usr/lib/x86_64-linux-gnu/qt5/`, `/usr/lib/qt5/`
+  - Verify with `dpkg -S qmake` when available
+- [x] **Pacman** (Arch / Manjaro)
+  - Detect Qt via standard paths `/usr/lib/qt6/`, `/usr/lib/qt5/`
+  - Verify with `pacman -Ql qt6-base` / `pacman -Ql qt5-base`
+- [x] **vcpkg** (Cross-platform)
+  - Read `VCPKG_ROOT` env var or find `vcpkg` in PATH
   - Query installed Qt packages via `vcpkg list qtbase`
   - Map vcpkg triplet paths to Qt include/lib directories
-
-- [ ] **Conan**
-  - Detect `conanfile.txt` / `conanfile.py` in workspace
-  - Read Conan cache for Qt packages (`qt/6.x.x`)
-  - Integrate with `conan install` build steps
-
-- [ ] **aqtinstall**
-  - Detect Qt installations made via `aqtinstall` (common in CI / headless setups)
-  - Read `aqt` config or standard install paths (`~/Qt`, `C:\Qt`)
+- [x] **Conan** (Cross-platform)
+  - Search Conan 1 cache (`~/.conan/data/qt/`) and Conan 2 cache (`~/.conan2/p/`)
+  - Find qmake in package bin directories
+- [x] **aqtinstall** (Cross-platform)
+  - Detect Qt installations in standard aqt paths (`~/Qt`, `C:\Qt`)
+  - Look for aqt marker files (`.aqtinstall`, `aqtinstall.log`)
 
 ### Unified Package Manager UI
-- [ ] **"Package Manager" column** in Qt version picker showing source (Official / Homebrew / apt / vcpkg / etc.)
-- [ ] **"Install Qt" command** — open a guided installer or show package manager command (e.g., `brew install qt@6`)
-- [ ] **Auto-priority rules** — prefer official installer over package manager unless user overrides
+- [x] **Source badge** in Qt version picker showing `[Homebrew]`, `[APT]`, `[vcpkg]`, etc.
+- [x] **`Qt: Install Qt` command** — shows platform-filtered QuickPick with install instructions for each package manager
+- [x] **Auto-priority rules** — `qt.preferredPackageManager` setting (`auto` / `official` / `homebrew` / `apt` / `pacman` / `vcpkg` / `conan` / `aqtinstall`)
+- [x] **`qt.packageManagerAutoDetect`** setting — toggle package manager scanning on/off
+- [x] **`qt.showQtSource`** setting — toggle source badge display
 
 ---
 

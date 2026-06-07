@@ -3,12 +3,14 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { execSync } from 'child_process';
 import { isWindows, getQtSearchPaths, pathExeLookupCmd, exe } from './platformUtils';
+import { detectAllPackageManagers, sourceDisplayName } from './packageManagerDetector';
 
 export interface QtInstallation {
     path: string;
     qmakePath: string;
     version?: string;
     compiler?: string;
+    source?: string;
 }
 
 export class QtConfigManager {
@@ -92,7 +94,39 @@ export class QtConfigManager {
             // qmake not in PATH, continue searching
         }
         
-        // 4. Search common installation directories
+        // 4. Check package managers (Homebrew, apt, pacman, vcpkg, Conan, aqtinstall)
+        const pmAutoDetect = config.get<boolean>('packageManagerAutoDetect') ?? true;
+        if (pmAutoDetect) {
+            try {
+                const pmResults = detectAllPackageManagers();
+                if (pmResults.length > 0) {
+                    const preferred = config.get<string>('preferredPackageManager') || 'auto';
+                    let chosen = pmResults[0];
+                    if (preferred !== 'auto') {
+                        const match = pmResults.find(r => r.source === preferred);
+                        if (match) {
+                            chosen = match;
+                        }
+                    }
+                    this.outputChannel.appendLine(
+                        `Found Qt ${chosen.version} via ${sourceDisplayName(chosen.source)} at ${chosen.path}`
+                    );
+                    const installation: QtInstallation = {
+                        path: chosen.path,
+                        qmakePath: chosen.qmakePath,
+                        version: chosen.version,
+                        compiler: this.detectCompiler(chosen.qmakePath),
+                        source: chosen.source
+                    };
+                    this.cachedQtInstallation = installation;
+                    return installation;
+                }
+            } catch (error) {
+                this.outputChannel.appendLine(`Package manager detection failed: ${error}`);
+            }
+        }
+        
+        // 5. Search common installation directories
         const installations = await this.findQtInstallations();
         if (installations.length > 0) {
             this.outputChannel.appendLine(`Found Qt installation: ${installations[0].path}`);
@@ -105,10 +139,32 @@ export class QtConfigManager {
     }
     
     /**
-     * Find all Qt installations in common directories
+     * Find all Qt installations in common directories and package managers
      */
     async findQtInstallations(): Promise<QtInstallation[]> {
         const installations: QtInstallation[] = [];
+        
+        // 1. Package manager installations
+        const config = vscode.workspace.getConfiguration('qt');
+        const pmAutoDetect = config.get<boolean>('packageManagerAutoDetect') ?? true;
+        if (pmAutoDetect) {
+            try {
+                const pmResults = detectAllPackageManagers();
+                for (const pm of pmResults) {
+                    installations.push({
+                        path: pm.path,
+                        qmakePath: pm.qmakePath,
+                        version: pm.version,
+                        compiler: this.detectCompiler(pm.qmakePath),
+                        source: pm.source
+                    });
+                }
+            } catch (error) {
+                this.outputChannel.appendLine(`Package manager detection failed during scan: ${error}`);
+            }
+        }
+        
+        // 2. Official / common directory installations
         const searchPaths = getQtSearchPaths().filter(p => fs.existsSync(p));
         
         for (const searchPath of searchPaths) {
@@ -126,7 +182,7 @@ export class QtConfigManager {
                         for (const compilerDir of compilerDirs) {
                             const qmakePath = this.findQMakeInPath(compilerDir);
                             if (qmakePath) {
-                                const installation = await this.createInstallationFromQMake(qmakePath);
+                                const installation = await this.createInstallationFromQMake(qmakePath, 'official');
                                 if (installation) {
                                     installations.push(installation);
                                 }
@@ -167,7 +223,7 @@ export class QtConfigManager {
     /**
      * Create Qt installation object from qmake path
      */
-    private async createInstallationFromQMake(qmakePath: string): Promise<QtInstallation | undefined> {
+    private async createInstallationFromQMake(qmakePath: string, source?: string): Promise<QtInstallation | undefined> {
         try {
             // Get Qt version and paths from qmake
             const versionOutput = execSync(`"${qmakePath}" -query QT_VERSION`, { encoding: 'utf-8' }).trim();
@@ -180,7 +236,8 @@ export class QtConfigManager {
                 path: installPrefixOutput,
                 qmakePath: qmakePath,
                 version: versionOutput,
-                compiler: compiler
+                compiler: compiler,
+                source: source
             };
         } catch (error) {
             this.outputChannel.appendLine(`Failed to query qmake at ${qmakePath}: ${error}`);

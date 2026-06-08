@@ -561,13 +561,30 @@
 - [x] **Duplicate protection** — detects existing PCH config and aborts
 - [x] **CMake target name fallback** — manual input if auto-detection fails
 
-### Future
-- [ ] **Auto-inject MOC/UIC/RCC steps** into custom build systems beyond Makefile generation
-- [ ] **PCH compiler flag auto-configuration** — update compiler settings directly instead of modifying project files
+## ✅ Version 1.11.0 (Current — Shipped) — Advanced Build Script Injection & Direct PCH Compiler Configuration
+
+**Theme:** Inject code generation into existing build scripts and configure PCH compiler flags without modifying project files.
+
+### Advanced Build Script Injection
+- [x] **Detect existing build scripts** — `Makefile`, `build.sh`, `compile.bat`, and any `.sh`/`.bat` with compiler invocations
+- [x] **Inject into existing Makefile** — appends MOC/UIC/RCC variable definitions and pattern rules
+- [x] **Inject into shell/batch scripts** — inserts `moc`/`uic`/`rcc` commands before compiler invocations
+- [x] **Smart fallback** — when generating a Makefile and one exists, offers "Inject into Existing"
+- [x] **Automatic backups** — creates `.bak` / `.bak.1` / `.bak.2` before modifying
+- [x] **Change preview** — shows added lines before applying
+- [x] **Duplicate protection** — detects existing MOC/UIC rules and aborts
+
+### Direct PCH Compiler Configuration
+- [x] **Configure via VS Code Settings** — updates `C_Cpp.default.compilerArgs` in `settings.json` or `compilerArgs` in `c_cpp_properties.json`
+- [x] **Configure via Build Tasks** — injects `CL` (MSVC) or `CXXFLAGS` (GCC/Clang) env vars into `.vscode/tasks.json`
+- [x] **Auto-detect compiler family** from Qt installation
+- [x] **Correct flags per compiler** — MSVC `/Yu/FI`, GCC/Clang `-include`
+- [x] **No project file changes** — alternative to modifying `.pro` or `CMakeLists.txt`
+- [x] **Post-generation shortcut** — "Configure Compiler Flags" button after generating `qt_pch.h`
 
 ---
 
-## 🚧 Version 1.9.0 — CI/CD Integration
+## 🚧 Version 2.2.0 — CI/CD Integration
 
 **Theme:** One-click setup for building Qt projects in CI/CD pipelines.
 

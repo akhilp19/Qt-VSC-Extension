@@ -30,6 +30,7 @@ import { QtDebuggerIntegration } from './qtDebugger';
 import { QtTestFramework } from './qtTestFramework';
 import { QtTranslationProvider } from './qtTranslation';
 import { QtPythonSupport } from './qtPythonSupport';
+import { QtCodeGenerator } from './qtCodeGenerator';
 
 let taskProvider: vscode.Disposable | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -341,6 +342,28 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         vscode.commands.registerCommand('qt.openPythonDesigner', async () => {
             await qtPythonSupport.openDesignerForPython();
+        })
+    );
+    
+    // Qt Code Generator (MOC/UIC/RCC)
+    const qtCodeGenerator = new QtCodeGenerator(qtConfigManager, outputChannel);
+    context.subscriptions.push(qtCodeGenerator);
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.generateMoc', async (uri?: vscode.Uri) => {
+            await qtCodeGenerator.runMoc(uri?.fsPath);
+        })
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.generateUic', async (uri?: vscode.Uri) => {
+            await qtCodeGenerator.runUic(uri?.fsPath);
+        })
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.generateRcc', async (uri?: vscode.Uri) => {
+            await qtCodeGenerator.runRcc(uri?.fsPath);
         })
     );
     

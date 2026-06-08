@@ -22,3 +22,4 @@ export * from './qtDebugger';
 export * from './qtTestFramework';
 export * from './qtTranslation';
 export * from './qtPythonSupport';
+export * from './qtCodeGenerator';

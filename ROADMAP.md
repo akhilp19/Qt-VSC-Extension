@@ -543,7 +543,7 @@
 - [x] Generates `qt_pch.h` with `#pragma once`
 - [x] Build-system instructions (QMake, CMake, MSVC) with copy-to-clipboard
 
-## ✅ Version 1.10.0 (Current — Shipped) — Custom Build System Integration & PCH Build Integration
+## ✅ Version 1.10.0 (Released) — Custom Build System Integration & PCH Build Integration
 
 **Theme:** Support raw Qt projects without QMake/CMake, and auto-integrate PCH into build files.
 
@@ -645,5 +645,5 @@
 3. Submit a PR referencing the roadmap item.
 
 > **Last updated:** June 9, 2026  
-> **v1.10.0 shipped:** Custom Build System Integration & PCH Build Integration  
+> **v1.11.0 shipped:** Advanced Build Script Injection & Direct PCH Compiler Configuration  
 > For the latest status, check the [GitHub Issues](https://github.com/akhilp19/Qt-VSC-Extension/issues) page.

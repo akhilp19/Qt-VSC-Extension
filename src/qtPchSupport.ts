@@ -183,12 +183,15 @@ export class QtPchSupport {
 
         const result = await vscode.window.showInformationMessage(
             `Generated ${pchFileName} with ${headers.length} headers`,
+            'Configure Compiler Flags',
             'Copy Build Instructions',
             'Open File',
             'OK'
         );
 
-        if (result === 'Open File') {
+        if (result === 'Configure Compiler Flags') {
+            await vscode.commands.executeCommand('qt.configurePchCompiler');
+        } else if (result === 'Open File') {
             const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(pchPath));
             await vscode.window.showTextDocument(doc);
         } else if (result === 'Copy Build Instructions') {

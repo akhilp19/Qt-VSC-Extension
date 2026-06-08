@@ -35,6 +35,8 @@ import { QtGeneratedCodeNavigation } from './qtGeneratedCodeNavigation';
 import { QtPchSupport } from './qtPchSupport';
 import { QtCustomBuildSystem } from './qtCustomBuildSystem';
 import { QtPchBuildIntegration } from './qtPchBuildIntegration';
+import { QtBuildScriptInjector } from './qtBuildScriptInjector';
+import { QtPchCompilerConfig } from './qtPchCompilerConfig';
 
 let taskProvider: vscode.Disposable | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -418,6 +420,24 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         vscode.commands.registerCommand('qt.integratePch', async () => {
             await qtPchIntegration.integratePch();
+        })
+    );
+    
+    // Qt Build Script Injector
+    const qtBuildScriptInjector = new QtBuildScriptInjector(outputChannel);
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.injectBuildScripts', async (uri?: vscode.Uri) => {
+            await qtBuildScriptInjector.injectBuildScripts(uri?.fsPath);
+        })
+    );
+    
+    // Qt PCH Compiler Config
+    const qtPchCompilerConfig = new QtPchCompilerConfig(outputChannel);
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.configurePchCompiler', async () => {
+            await qtPchCompilerConfig.configurePchCompiler();
         })
     );
     

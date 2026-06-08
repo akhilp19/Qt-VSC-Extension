@@ -200,12 +200,31 @@ export class QtCustomBuildSystem {
         const makefilePath = path.join(targetDir, 'Makefile');
 
         if (fs.existsSync(makefilePath)) {
-            const overwrite = await vscode.window.showWarningMessage(
-                'Makefile already exists. Overwrite?',
+            const choice = await vscode.window.showWarningMessage(
+                'Makefile already exists.',
                 'Overwrite',
+                'Inject into Existing',
                 'Cancel'
             );
-            if (overwrite !== 'Overwrite') {
+            if (choice === 'Cancel') {
+                return;
+            }
+            if (choice === 'Inject into Existing') {
+                const { QtBuildScriptInjector } = await import('./qtBuildScriptInjector');
+                const injector = new QtBuildScriptInjector(this.outputChannel);
+                const headers: string[] = [];
+                const uiFiles: string[] = [];
+                const qrcFiles: string[] = [];
+                try {
+                    const entries = fs.readdirSync(targetDir);
+                    for (const entry of entries) {
+                        const ext = path.extname(entry).toLowerCase();
+                        if (ext === '.h' || ext === '.hpp') { headers.push(entry); }
+                        else if (ext === '.ui') { uiFiles.push(entry); }
+                        else if (ext === '.qrc') { qrcFiles.push(entry); }
+                    }
+                } catch { /* ignore */ }
+                await injector.injectIntoMakefile(makefilePath, headers, uiFiles, qrcFiles);
                 return;
             }
         }

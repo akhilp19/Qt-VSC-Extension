@@ -27,3 +27,5 @@ export * from './qtGeneratedCodeNavigation';
 export * from './qtPchSupport';
 export * from './qtCustomBuildSystem';
 export * from './qtPchBuildIntegration';
+export * from './qtBuildScriptInjector';
+export * from './qtPchCompilerConfig';

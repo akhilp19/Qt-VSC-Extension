@@ -2,7 +2,7 @@
   "name": "qt-vsc-extension",
   "displayName": "Qt C++ Tools",
   "description": "Build, run and manage Qt C++ projects in VS Code",
-  "version": "1.10.0",
+  "version": "1.11.0",
   "publisher": "akhilp19",
   "author": {
     "name": "Akhil Pawar"
@@ -233,6 +233,16 @@
         "command": "qt.integratePch",
         "title": "Qt: Integrate Precompiled Header into Build",
         "icon": "$(gear)"
+      },
+      {
+        "command": "qt.injectBuildScripts",
+        "title": "Qt: Inject MOC/UIC/RCC into Build Script",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "qt.configurePchCompiler",
+        "title": "Qt: Configure PCH Compiler Flags",
+        "icon": "$(symbol-operator)"
       }
     ],
     "taskDefinitions": [
@@ -683,6 +693,14 @@
         },
         {
           "command": "qt.integratePch",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.injectBuildScripts",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.configurePchCompiler",
           "when": "workspaceFolderCount > 0"
         }
       ],

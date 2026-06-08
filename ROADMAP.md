@@ -584,30 +584,34 @@
 
 ---
 
-## 🚧 Version 2.2.0 — CI/CD Integration
+## ✅ Version 1.12.0 (Current — Shipped) — CI/CD Integration
 
 **Theme:** One-click setup for building Qt projects in CI/CD pipelines.
 
 ### GitHub Actions
-- [ ] **Generate `.github/workflows/build.yml`**
-  - Matrix builds: Windows (MSVC + MinGW), macOS (x64 + Apple Silicon), Linux (GCC + Clang)
-  - `aqtinstall` step to install Qt in CI
+- [x] **Generate `.github/workflows/build.yml`**
+  - Matrix builds: Windows (MSVC), macOS (Clang), Linux (GCC)
+  - `jurplel/install-qt-action@v4` step to install Qt in CI
   - Cache Qt installation between runs
   - Artifact upload for built binaries
 
-- [ ] **Generate `.github/workflows/release.yml`**
-  - Auto-tag and create GitHub Release on version bump
-  - Attach `windeployqt` / `macdeployqt` / `linuxdeployqt` artifacts
-  - Code-signing setup stubs (Windows signtool, macOS codesign, Linux GPG)
+- [x] **Generate `.github/workflows/release.yml`**
+  - Triggers on tag push (`v*.*.*`)
+  - Builds on all platforms
+  - Creates GitHub Release with attached artifacts
 
-### Other CI Templates
-- [ ] **GitLab CI** `.gitlab-ci.yml` template
-- [ ] **Azure Pipelines** `azure-pipelines.yml` template
-- [ ] **Jenkins** `Jenkinsfile` template
+### GitLab CI
+- [x] **Generate `.gitlab-ci.yml`** template
+  - Linux build with `aqtinstall`
+  - Artifact upload
 
 ### Qt Installer Framework
 - [ ] **Generate installer config** (`config.xml`, `package.xml`) for `binarycreator`
 - [ ] **Build installer** command — run `binarycreator` to produce `.exe` / `.dmg` / `.run` installer
+
+---
+
+## 🚧 Version 2.0.0 — Performance Profiling & Build Analytics
 
 ---
 

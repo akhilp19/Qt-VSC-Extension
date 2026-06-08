@@ -2,7 +2,7 @@
   "name": "qt-vsc-extension",
   "displayName": "Qt C++ Tools",
   "description": "Build, run and manage Qt C++ projects in VS Code",
-  "version": "1.11.0",
+  "version": "1.12.0",
   "publisher": "akhilp19",
   "author": {
     "name": "Akhil Pawar"
@@ -243,6 +243,11 @@
         "command": "qt.configurePchCompiler",
         "title": "Qt: Configure PCH Compiler Flags",
         "icon": "$(symbol-operator)"
+      },
+      {
+        "command": "qt.setupCiCd",
+        "title": "Qt: Setup CI/CD Pipeline",
+        "icon": "$(server-process)"
       }
     ],
     "taskDefinitions": [
@@ -701,6 +706,10 @@
         },
         {
           "command": "qt.configurePchCompiler",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.setupCiCd",
           "when": "workspaceFolderCount > 0"
         }
       ],

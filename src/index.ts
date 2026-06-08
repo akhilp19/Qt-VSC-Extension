@@ -29,3 +29,4 @@ export * from './qtCustomBuildSystem';
 export * from './qtPchBuildIntegration';
 export * from './qtBuildScriptInjector';
 export * from './qtPchCompilerConfig';
+export * from './qtCiCdIntegration';

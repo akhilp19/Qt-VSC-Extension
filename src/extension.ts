@@ -37,6 +37,7 @@ import { QtCustomBuildSystem } from './qtCustomBuildSystem';
 import { QtPchBuildIntegration } from './qtPchBuildIntegration';
 import { QtBuildScriptInjector } from './qtBuildScriptInjector';
 import { QtPchCompilerConfig } from './qtPchCompilerConfig';
+import { QtCiCdIntegration } from './qtCiCdIntegration';
 
 let taskProvider: vscode.Disposable | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -438,6 +439,15 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         vscode.commands.registerCommand('qt.configurePchCompiler', async () => {
             await qtPchCompilerConfig.configurePchCompiler();
+        })
+    );
+    
+    // Qt CI/CD Integration
+    const qtCiCd = new QtCiCdIntegration(outputChannel);
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.setupCiCd', async () => {
+            await qtCiCd.setupCiCd();
         })
     );
     

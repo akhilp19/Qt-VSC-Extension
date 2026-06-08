@@ -666,5 +666,5 @@
 3. Submit a PR referencing the roadmap item.
 
 > **Last updated:** June 9, 2026  
-> **v1.11.0 shipped:** Advanced Build Script Injection & Direct PCH Compiler Configuration  
+> **v1.12.0 shipped:** CI/CD Integration for Qt Projects  
 > For the latest status, check the [GitHub Issues](https://github.com/akhilp19/Qt-VSC-Extension/issues) page.

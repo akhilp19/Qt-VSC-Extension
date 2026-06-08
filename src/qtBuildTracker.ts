@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { QtBuildAnalytics, PersistedBuildRecord } from './qtBuildAnalytics';
 
 export interface BuildRecord {
     projectFile: string;
@@ -11,12 +12,14 @@ export interface BuildRecord {
 export class QtBuildTracker {
     private outputChannel: vscode.OutputChannel;
     private records: BuildRecord[] = [];
+    private buildAnalytics?: QtBuildAnalytics;
     private activeBuilds = new Map<string, BuildRecord>();
     private _onDidUpdate = new vscode.EventEmitter<void>();
     readonly onDidUpdate = this._onDidUpdate.event;
 
-    constructor(outputChannel: vscode.OutputChannel) {
+    constructor(outputChannel: vscode.OutputChannel, buildAnalytics?: QtBuildAnalytics) {
         this.outputChannel = outputChannel;
+        this.buildAnalytics = buildAnalytics;
         this.setupTaskListeners();
     }
 
@@ -52,11 +55,24 @@ export class QtBuildTracker {
             const record = this.activeBuilds.get(key);
             if (record) {
                 record.endTime = Date.now();
-                // VS Code doesn't give us direct success/failure, assume success if it ended
                 record.success = true;
                 this.activeBuilds.delete(key);
                 this.records.push(record);
                 this.outputChannel.appendLine(`[BuildTracker] Finished ${taskType} for ${projectFile}`);
+
+                // Persist to analytics
+                if (this.buildAnalytics) {
+                    const persisted: PersistedBuildRecord = {
+                        projectFile: record.projectFile,
+                        taskType: record.taskType,
+                        startTime: record.startTime,
+                        endTime: record.endTime,
+                        durationMs: record.endTime - record.startTime,
+                        success: record.success
+                    };
+                    this.buildAnalytics.addRecord(persisted);
+                }
+
                 this._onDidUpdate.fire();
             }
         });

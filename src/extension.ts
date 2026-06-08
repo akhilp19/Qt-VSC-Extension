@@ -39,6 +39,8 @@ import { QtBuildScriptInjector } from './qtBuildScriptInjector';
 import { QtPchCompilerConfig } from './qtPchCompilerConfig';
 import { QtCiCdIntegration } from './qtCiCdIntegration';
 import { QtInstallerFramework } from './qtInstallerFramework';
+import { QtBuildAnalytics } from './qtBuildAnalytics';
+import { QtBuildAnalyticsProvider } from './qtBuildAnalyticsProvider';
 
 let taskProvider: vscode.Disposable | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -62,8 +64,9 @@ export function activate(context: vscode.ExtensionContext): void {
     qtConfigManager = new QtConfigManager(outputChannel);
     qtProjectDetector = new QtProjectDetector(outputChannel);
     
-    // Create build tracker
-    const buildTracker = new QtBuildTracker(outputChannel);
+    // Create build analytics and tracker
+    const buildAnalytics = new QtBuildAnalytics(outputChannel);
+    const buildTracker = new QtBuildTracker(outputChannel, buildAnalytics);
     context.subscriptions.push(buildTracker);
     
     // Create tree provider
@@ -144,6 +147,24 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(cleanStatusBarItem);
     
     // Register commands
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.showBuildAnalytics', async () => {
+            await vscode.commands.executeCommand('qt-build-analytics.focus');
+        })
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.configureCcache', async () => {
+            await buildAnalytics.configureCcache();
+        })
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.showCcacheStats', async () => {
+            await buildAnalytics.showCcacheStats();
+        })
+    );
+    
     context.subscriptions.push(
         vscode.commands.registerCommand('qt.buildProject', async (uri?: vscode.Uri) => {
             await executeQtTask('build', uri?.fsPath);
@@ -298,6 +319,12 @@ export function activate(context: vscode.ExtensionContext): void {
     
     const translationTree = vscode.window.registerTreeDataProvider('qt-translations', translationProvider);
     context.subscriptions.push(translationTree);
+    
+    // Register build analytics tree provider
+    const analyticsProvider = new QtBuildAnalyticsProvider(buildAnalytics, buildTracker, outputChannel);
+    context.subscriptions.push(analyticsProvider);
+    const analyticsTree = vscode.window.registerTreeDataProvider('qt-build-analytics', analyticsProvider);
+    context.subscriptions.push(analyticsTree);
     
     context.subscriptions.push(
         vscode.commands.registerCommand('qt.lupdate', async () => {

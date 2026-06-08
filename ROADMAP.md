@@ -615,22 +615,22 @@
 
 ---
 
-## 🚧 Version 2.0.0 — Performance Profiling & Build Analytics
+## ✅ Version 1.14.0 (Current — Shipped) — Build Analytics & Compiler Cache Integration
 
-**Theme:** Help developers optimize their Qt builds and applications.
+**Theme:** Help developers optimize their Qt builds with analytics and compiler caching.
 
 ### Build Performance
-- [ ] **Build time tracker** — log per-project, per-configuration build durations
-- [ ] **Build analytics dashboard** — graph build times over history in sidebar
-- [ ] **Slow target detection** — identify which `.cpp` files take longest to compile
-- [ ] **`ccache` / `sccache` integration**
+- [x] **Build time tracker** — logs per-project build durations with persistent history
+- [x] **Build analytics dashboard** — sidebar tree view with build history, durations, success rates
+- [x] **`ccache` / `sccache` integration**
   - Auto-detect and configure compiler cache
-  - Show cache hit/miss stats after build
+  - Show cache hit/miss stats
 
 ### Application Profiling
 - [ ] **QML Profiler launcher** — run app with `-qmlprofiler` and open results in Qt Creator or basic viewer
 - [ ] **CPU Profiler integration** — launch `perf` / ` Instruments` / `VTune` from VS Code
 - [ ] **Memory leak detection** — integrate `valgrind` / `drmemory` / Xcode leaks for Qt apps
+- [ ] **Slow target detection** — identify which `.cpp` files take longest to compile
 
 ---
 

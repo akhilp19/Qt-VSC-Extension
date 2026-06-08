@@ -31,3 +31,5 @@ export * from './qtBuildScriptInjector';
 export * from './qtPchCompilerConfig';
 export * from './qtCiCdIntegration';
 export * from './qtInstallerFramework';
+export * from './qtBuildAnalytics';
+export * from './qtBuildAnalyticsProvider';

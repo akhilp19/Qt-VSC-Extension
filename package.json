@@ -2,7 +2,7 @@
   "name": "qt-vsc-extension",
   "displayName": "Qt C++ Tools",
   "description": "Build, run and manage Qt C++ projects in VS Code",
-  "version": "1.13.0",
+  "version": "1.14.0",
   "publisher": "akhilp19",
   "author": {
     "name": "Akhil Pawar"
@@ -258,6 +258,21 @@
         "command": "qt.buildInstaller",
         "title": "Qt: Build Installer",
         "icon": "$(package)"
+      },
+      {
+        "command": "qt.showBuildAnalytics",
+        "title": "Qt: Show Build Analytics",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "qt.configureCcache",
+        "title": "Qt: Configure ccache/sccache",
+        "icon": "$(database)"
+      },
+      {
+        "command": "qt.showCcacheStats",
+        "title": "Qt: Show ccache Stats",
+        "icon": "$(output)"
       }
     ],
     "taskDefinitions": [
@@ -520,6 +535,16 @@
           "type": "string",
           "default": "",
           "description": "Output directory for auto-generated code (moc_*.cpp, ui_*.h, qrc_*.cpp). Empty = same directory as input file. Supports ${workspaceFolder} variable."
+        },
+        "qt.useCcache": {
+          "type": "boolean",
+          "default": false,
+          "description": "Use ccache or sccache for faster Qt builds. Detects and configures automatically when enabled."
+        },
+        "qt.ccachePath": {
+          "type": "string",
+          "default": "",
+          "description": "Custom path to ccache or sccache executable. Leave empty for auto-detection."
         }
       }
     },
@@ -559,6 +584,11 @@
         {
           "id": "qt-translations",
           "name": "Qt Translations",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "id": "qt-build-analytics",
+          "name": "Qt Build Analytics",
           "when": "workspaceFolderCount > 0"
         }
       ]
@@ -728,6 +758,18 @@
         },
         {
           "command": "qt.buildInstaller",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.showBuildAnalytics",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.configureCcache",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.showCcacheStats",
           "when": "workspaceFolderCount > 0"
         }
       ],

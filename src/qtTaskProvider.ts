@@ -150,6 +150,8 @@ export class QtTaskProvider implements vscode.TaskProvider {
         const config = vscode.workspace.getConfiguration('qt');
         const preBuildCommand = config.get<string>('preBuildCommand') || '';
         const postBuildCommand = config.get<string>('postBuildCommand') || '';
+        const useCcache = config.get<boolean>('useCcache') ?? false;
+        const ccachePath = config.get<string>('ccachePath') || 'ccache';
         
         let execution: vscode.ShellExecution;
         
@@ -163,6 +165,9 @@ export class QtTaskProvider implements vscode.TaskProvider {
             const commands: string[] = [];
             if (preBuildCommand) {
                 commands.push(preBuildCommand);
+            }
+            if (useCcache) {
+                commands.push(isWindows() ? `set QMAKE_CXX=${ccachePath} g++` : `export QMAKE_CXX="${ccachePath} g++"`);
             }
             if (quickBuild && fs.existsSync(buildDir)) {
                 // Quick build: skip qmake, just run make
@@ -194,6 +199,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
             if (preBuildCommand) {
                 commands.push(preBuildCommand);
             }
+            const ccacheArg = useCcache ? `-DCMAKE_CXX_COMPILER_LAUNCHER=${ccachePath}` : '';
             if (quickBuild && fs.existsSync(buildDir)) {
                 // Quick build: skip cmake configure
                 commands.push(
@@ -202,7 +208,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
             } else {
                 commands.push(
                     mkdirCmd(buildDir),
-                    `cmake -B ${quotePath(buildDir)} -S ${quotePath(path.dirname(projectFile))} -DCMAKE_BUILD_TYPE=${buildType} ${additionalArgs}`,
+                    `cmake -B ${quotePath(buildDir)} -S ${quotePath(path.dirname(projectFile))} -DCMAKE_BUILD_TYPE=${buildType} ${additionalArgs} ${ccacheArg}`,
                     `cmake --build ${quotePath(buildDir)} ${cmakeBuildArgs}`
                 );
             }

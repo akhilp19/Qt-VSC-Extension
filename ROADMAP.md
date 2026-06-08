@@ -666,5 +666,5 @@
 3. Submit a PR referencing the roadmap item.
 
 > **Last updated:** June 9, 2026  
-> **v1.12.0 shipped:** CI/CD Integration for Qt Projects  
+> **v1.13.0 shipped:** Qt Installer Framework Integration  
 > For the latest status, check the [GitHub Issues](https://github.com/akhilp19/Qt-VSC-Extension/issues) page.

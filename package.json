@@ -2,7 +2,7 @@
   "name": "qt-vsc-extension",
   "displayName": "Qt C++ Tools",
   "description": "Build, run and manage Qt C++ projects in VS Code",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "publisher": "akhilp19",
   "author": {
     "name": "Akhil Pawar"
@@ -208,6 +208,21 @@
         "command": "qt.generateRcc",
         "title": "Qt: Generate RCC",
         "icon": "$(file-code)"
+      },
+      {
+        "command": "qt.goToGeneratedCode",
+        "title": "Qt: Go to Generated Code",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "qt.peekGeneratedCode",
+        "title": "Qt: Peek Generated Code",
+        "icon": "$(open-preview)"
+      },
+      {
+        "command": "qt.generatePch",
+        "title": "Qt: Generate Precompiled Header",
+        "icon": "$(rocket)"
       }
     ],
     "taskDefinitions": [
@@ -639,6 +654,18 @@
         {
           "command": "qt.generateRcc",
           "when": "resourceExtname == .qrc"
+        },
+        {
+          "command": "qt.goToGeneratedCode",
+          "when": "resourceExtname == .h || resourceExtname == .hpp || resourceExtname == .ui || resourceExtname == .qrc"
+        },
+        {
+          "command": "qt.peekGeneratedCode",
+          "when": "resourceExtname == .h || resourceExtname == .hpp || resourceExtname == .ui || resourceExtname == .qrc"
+        },
+        {
+          "command": "qt.generatePch",
+          "when": "workspaceFolderCount > 0"
         }
       ],
       "view/title": [
@@ -755,6 +782,36 @@
           "command": "qt.generateRcc",
           "when": "resourceExtname == .qrc",
           "group": "2_qt@4"
+        },
+        {
+          "command": "qt.goToGeneratedCode",
+          "when": "resourceExtname == .h || resourceExtname == .hpp",
+          "group": "2_qt@5"
+        },
+        {
+          "command": "qt.peekGeneratedCode",
+          "when": "resourceExtname == .h || resourceExtname == .hpp",
+          "group": "2_qt@6"
+        },
+        {
+          "command": "qt.goToGeneratedCode",
+          "when": "resourceExtname == .ui",
+          "group": "2_qt@5"
+        },
+        {
+          "command": "qt.peekGeneratedCode",
+          "when": "resourceExtname == .ui",
+          "group": "2_qt@6"
+        },
+        {
+          "command": "qt.goToGeneratedCode",
+          "when": "resourceExtname == .qrc",
+          "group": "2_qt@5"
+        },
+        {
+          "command": "qt.peekGeneratedCode",
+          "when": "resourceExtname == .qrc",
+          "group": "2_qt@6"
         }
       ],
       "view/item/context": [
@@ -769,7 +826,19 @@
           "group": "inline@2"
         }
       ]
-    }
+    },
+    "keybindings": [
+      {
+        "command": "qt.goToGeneratedCode",
+        "key": "alt+g",
+        "when": "editorTextFocus && (resourceExtname == .h || resourceExtname == .hpp || resourceExtname == .ui || resourceExtname == .qrc)"
+      },
+      {
+        "command": "qt.peekGeneratedCode",
+        "key": "alt+shift+g",
+        "when": "editorTextFocus && (resourceExtname == .h || resourceExtname == .hpp || resourceExtname == .ui || resourceExtname == .qrc)"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

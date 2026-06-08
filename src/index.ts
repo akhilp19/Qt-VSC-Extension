@@ -23,3 +23,5 @@ export * from './qtTestFramework';
 export * from './qtTranslation';
 export * from './qtPythonSupport';
 export * from './qtCodeGenerator';
+export * from './qtGeneratedCodeNavigation';
+export * from './qtPchSupport';

@@ -31,6 +31,8 @@ import { QtTestFramework } from './qtTestFramework';
 import { QtTranslationProvider } from './qtTranslation';
 import { QtPythonSupport } from './qtPythonSupport';
 import { QtCodeGenerator } from './qtCodeGenerator';
+import { QtGeneratedCodeNavigation } from './qtGeneratedCodeNavigation';
+import { QtPchSupport } from './qtPchSupport';
 
 let taskProvider: vscode.Disposable | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -364,6 +366,38 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         vscode.commands.registerCommand('qt.generateRcc', async (uri?: vscode.Uri) => {
             await qtCodeGenerator.runRcc(uri?.fsPath);
+        })
+    );
+    
+    // Qt Generated Code Navigation
+    const qtNav = new QtGeneratedCodeNavigation(outputChannel);
+    context.subscriptions.push(qtNav);
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.goToGeneratedCode', async (uri?: vscode.Uri) => {
+            await qtNav.goToGeneratedCode(uri?.fsPath);
+        })
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.peekGeneratedCode', async (uri?: vscode.Uri) => {
+            await qtNav.peekGeneratedCode(uri?.fsPath);
+        })
+    );
+    
+    context.subscriptions.push(
+        vscode.languages.registerDefinitionProvider(
+            { scheme: 'file', pattern: '**/*.{h,hpp}' },
+            qtNav.definitionProvider
+        )
+    );
+    
+    // Qt PCH Support
+    const qtPch = new QtPchSupport(outputChannel);
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.generatePch', async () => {
+            await qtPch.generatePch();
         })
     );
     

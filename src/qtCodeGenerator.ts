@@ -313,35 +313,46 @@ export class QtCodeGenerator implements vscode.Disposable {
      * Resolve output path for generated code.
      */
     private resolveOutputPath(inputPath: string, prefix: string, forceExt?: string): string {
-        const config = vscode.workspace.getConfiguration('qt');
-        const generatedDir = config.get<string>('generatedCodeDirectory') || '';
-
-        const inputDir = path.dirname(inputPath);
-        const baseName = path.basename(inputPath, path.extname(inputPath));
-        const ext = forceExt ?? '.cpp';
-        const fileName = `${prefix}${baseName}${ext}`;
-
-        if (generatedDir) {
-            // Resolve relative to workspace or as absolute path
-            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-            let resolvedDir = generatedDir;
-            if (workspaceFolder) {
-                resolvedDir = generatedDir.replace('${workspaceFolder}', workspaceFolder.uri.fsPath);
-            }
-            return path.resolve(resolvedDir, fileName);
-        }
-
-        return path.join(inputDir, fileName);
+        return resolveGeneratedOutputPath(inputPath, prefix, forceExt);
     }
 
     private ensureOutputDir(outputPath: string): void {
-        const dir = path.dirname(outputPath);
-        if (!fs.existsSync(dir)) {
-            fs.mkdirSync(dir, { recursive: true });
-        }
+        ensureOutputDirectory(outputPath);
     }
 
     private showStatus(message: string): void {
         void vscode.window.setStatusBarMessage(`$(sync~spin) ${message}`, 3000);
+    }
+}
+
+// ========================================================================
+// Shared Utilities (also used by qtGeneratedCodeNavigation.ts)
+// ========================================================================
+
+export function resolveGeneratedOutputPath(inputPath: string, prefix: string, forceExt?: string): string {
+    const config = vscode.workspace.getConfiguration('qt');
+    const generatedDir = config.get<string>('generatedCodeDirectory') || '';
+
+    const inputDir = path.dirname(inputPath);
+    const baseName = path.basename(inputPath, path.extname(inputPath));
+    const ext = forceExt ?? '.cpp';
+    const fileName = `${prefix}${baseName}${ext}`;
+
+    if (generatedDir) {
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        let resolvedDir = generatedDir;
+        if (workspaceFolder) {
+            resolvedDir = generatedDir.replace('${workspaceFolder}', workspaceFolder.uri.fsPath);
+        }
+        return path.resolve(resolvedDir, fileName);
+    }
+
+    return path.join(inputDir, fileName);
+}
+
+export function ensureOutputDirectory(outputPath: string): void {
+    const dir = path.dirname(outputPath);
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
     }
 }

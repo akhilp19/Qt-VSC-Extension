@@ -25,3 +25,5 @@ export * from './qtPythonSupport';
 export * from './qtCodeGenerator';
 export * from './qtGeneratedCodeNavigation';
 export * from './qtPchSupport';
+export * from './qtCustomBuildSystem';
+export * from './qtPchBuildIntegration';

@@ -2,7 +2,7 @@
   "name": "qt-vsc-extension",
   "displayName": "Qt C++ Tools",
   "description": "Build, run and manage Qt C++ projects in VS Code",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "publisher": "akhilp19",
   "author": {
     "name": "Akhil Pawar"
@@ -223,6 +223,16 @@
         "command": "qt.generatePch",
         "title": "Qt: Generate Precompiled Header",
         "icon": "$(rocket)"
+      },
+      {
+        "command": "qt.generateCustomMakefile",
+        "title": "Qt: Generate Custom Build Makefile",
+        "icon": "$(file-code)"
+      },
+      {
+        "command": "qt.integratePch",
+        "title": "Qt: Integrate Precompiled Header into Build",
+        "icon": "$(gear)"
       }
     ],
     "taskDefinitions": [
@@ -665,6 +675,14 @@
         },
         {
           "command": "qt.generatePch",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.generateCustomMakefile",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.integratePch",
           "when": "workspaceFolderCount > 0"
         }
       ],

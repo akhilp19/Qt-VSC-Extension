@@ -55,6 +55,10 @@ export class QtTaskProvider implements vscode.TaskProvider {
                 if (projectInfo.type === 'python') {
                     // Python Qt projects only need run tasks
                     tasks.push(await this.createRunTask(projectFile, projectInfo.type, folder));
+                } else if (projectInfo.type === 'raw') {
+                    tasks.push(await this.createRawBuildTask(projectInfo.directory, folder));
+                    tasks.push(await this.createRawCleanTask(projectInfo.directory, folder));
+                    tasks.push(await this.createRawRunTask(projectInfo.directory, folder));
                 } else {
                     tasks.push(await this.createBuildTask(projectFile, projectInfo.type, folder));
                     tasks.push(await this.createBuildTask(projectFile, projectInfo.type, folder, true));
@@ -130,7 +134,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
 
     private async createBuildTask(
         projectFile: string,
-        projectType: 'qmake' | 'cmake' | 'python',
+        projectType: 'qmake' | 'cmake' | 'python' | 'raw',
         workspaceFolder: vscode.WorkspaceFolder,
         quickBuild: boolean = false
     ): Promise<vscode.Task> {
@@ -239,7 +243,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
      */
     private async createCleanTask(
         projectFile: string,
-        projectType: 'qmake' | 'cmake' | 'python',
+        projectType: 'qmake' | 'cmake' | 'python' | 'raw',
         workspaceFolder: vscode.WorkspaceFolder
     ): Promise<vscode.Task> {
         const buildDir = this.qtConfigManager.getBuildDirectory();
@@ -292,7 +296,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
      */
     private async createRebuildTask(
         projectFile: string,
-        projectType: 'qmake' | 'cmake' | 'python',
+        projectType: 'qmake' | 'cmake' | 'python' | 'raw',
         workspaceFolder: vscode.WorkspaceFolder
     ): Promise<vscode.Task> {
         const qtInstallation = await this.qtConfigManager.getQtInstallation();
@@ -385,9 +389,12 @@ export class QtTaskProvider implements vscode.TaskProvider {
      */
     private async createRunTask(
         projectFile: string,
-        projectType: 'qmake' | 'cmake' | 'python',
+        projectType: 'qmake' | 'cmake' | 'python' | 'raw',
         workspaceFolder: vscode.WorkspaceFolder
     ): Promise<vscode.Task> {
+        if (projectType === 'raw') {
+            return this.createRawRunTask(projectFile, workspaceFolder);
+        }
         const buildDir = this.qtConfigManager.getBuildDirectory();
         const projectName = path.basename(projectFile, path.extname(projectFile));
         
@@ -437,6 +444,89 @@ export class QtTaskProvider implements vscode.TaskProvider {
         
         task.isBackground = false;
         
+        return task;
+    }
+
+    // ========================================================================
+    // Raw Project Tasks
+    // ========================================================================
+
+    private async createRawBuildTask(
+        projectDir: string,
+        workspaceFolder: vscode.WorkspaceFolder
+    ): Promise<vscode.Task> {
+        const projectName = path.basename(projectDir);
+        const makeCmd = process.platform === 'win32' ? 'mingw32-make' : 'make';
+
+        const execution = new vscode.ShellExecution(
+            `${makeCmd} -C "${projectDir}"`,
+            { cwd: workspaceFolder.uri.fsPath }
+        );
+
+        const task = new vscode.Task(
+            { type: 'qt', task: 'build', file: projectDir },
+            workspaceFolder,
+            `Build ${projectName}`,
+            'qt',
+            execution,
+            ['$msCompile', '$gcc']
+        );
+        task.group = vscode.TaskGroup.Build;
+        task.presentationOptions = { reveal: vscode.TaskRevealKind.Always, panel: vscode.TaskPanelKind.Dedicated, clear: true };
+        return task;
+    }
+
+    private async createRawCleanTask(
+        projectDir: string,
+        workspaceFolder: vscode.WorkspaceFolder
+    ): Promise<vscode.Task> {
+        const projectName = path.basename(projectDir);
+        const makeCmd = process.platform === 'win32' ? 'mingw32-make' : 'make';
+
+        const execution = new vscode.ShellExecution(
+            `${makeCmd} -C "${projectDir}" clean`,
+            { cwd: workspaceFolder.uri.fsPath }
+        );
+
+        const task = new vscode.Task(
+            { type: 'qt', task: 'clean', file: projectDir },
+            workspaceFolder,
+            `Clean ${projectName}`,
+            'qt',
+            execution
+        );
+        task.presentationOptions = { reveal: vscode.TaskRevealKind.Always, panel: vscode.TaskPanelKind.Dedicated, clear: true };
+        return task;
+    }
+
+    private async createRawRunTask(
+        projectDir: string,
+        workspaceFolder: vscode.WorkspaceFolder
+    ): Promise<vscode.Task> {
+        const projectName = path.basename(projectDir);
+        const exeName = process.platform === 'win32' ? `${projectName}.exe` : projectName;
+        const exePath = path.join(projectDir, exeName);
+
+        let command: string;
+        if (fs.existsSync(exePath)) {
+            command = `"${exePath}"`;
+        } else {
+            command = isWindows()
+                ? `Write-Host "Error: Executable not found at ${exePath}. Please build first." -ForegroundColor Red`
+                : `echo "Error: Executable not found at ${exePath}. Please build first."`;
+        }
+
+        const execution = new vscode.ShellExecution(command, { cwd: projectDir });
+
+        const task = new vscode.Task(
+            { type: 'qt', task: 'run', file: projectDir },
+            workspaceFolder,
+            `Run ${projectName}`,
+            'qt',
+            execution
+        );
+        task.presentationOptions = { reveal: vscode.TaskRevealKind.Always, panel: vscode.TaskPanelKind.Dedicated, clear: false, focus: true };
+        task.isBackground = false;
         return task;
     }
 }

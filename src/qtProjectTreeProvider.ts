@@ -9,12 +9,12 @@ export class QtProjectTreeItem extends vscode.TreeItem {
         public readonly label: string,
         public readonly collapsibleState: vscode.TreeItemCollapsibleState,
         public readonly projectFile: string,
-        public readonly projectType: 'qmake' | 'cmake' | 'python'
+        public readonly projectType: 'qmake' | 'cmake' | 'python' | 'raw'
     ) {
         super(label, collapsibleState);
         this.contextValue = 'qtProject';
         this.tooltip = projectFile;
-        this.description = projectType === 'qmake' ? '(QMake)' : '(CMake)';
+        this.description = projectType === 'qmake' ? '(QMake)' : projectType === 'cmake' ? '(CMake)' : projectType === 'python' ? '(Python)' : '(Raw)';
         this.iconPath = new vscode.ThemeIcon('project');
     }
 }

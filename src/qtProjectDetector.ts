@@ -2,10 +2,11 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { QtPythonSupport } from './qtPythonSupport';
+import { QtCustomBuildSystem } from './qtCustomBuildSystem';
 
 export interface QtProject {
     file: string;
-    type: 'qmake' | 'cmake' | 'python';
+    type: 'qmake' | 'cmake' | 'python' | 'raw';
     name: string;
     directory: string;
 }
@@ -66,6 +67,11 @@ export class QtProjectDetector {
         const pythonQtFiles = await this.detectPythonQtProjects(workspacePath);
         projects.push(...pythonQtFiles);
         
+        // Find raw Qt projects (no .pro or CMakeLists.txt)
+        const qtCustomBuild = new QtCustomBuildSystem(this.outputChannel);
+        const rawProjects = qtCustomBuild.detectRawQtProjects(workspacePath);
+        projects.push(...rawProjects);
+        
         this.outputChannel.appendLine(`Found ${projects.length} Qt project(s)`);
         for (const project of projects) {
             this.outputChannel.appendLine(`  - ${project}`);
@@ -86,6 +92,20 @@ export class QtProjectDetector {
         const directory = path.dirname(projectFile);
         const name = path.basename(projectFile, ext);
         
+        // Check if it's a raw project directory
+        try {
+            if (fs.statSync(projectFile).isDirectory()) {
+                return {
+                    file: projectFile,
+                    type: 'raw',
+                    name: path.basename(projectFile),
+                    directory: projectFile
+                };
+            }
+        } catch {
+            // not a directory, continue
+        }
+
         if (ext === '.pro') {
             return {
                 file: projectFile,

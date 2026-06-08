@@ -33,6 +33,8 @@ import { QtPythonSupport } from './qtPythonSupport';
 import { QtCodeGenerator } from './qtCodeGenerator';
 import { QtGeneratedCodeNavigation } from './qtGeneratedCodeNavigation';
 import { QtPchSupport } from './qtPchSupport';
+import { QtCustomBuildSystem } from './qtCustomBuildSystem';
+import { QtPchBuildIntegration } from './qtPchBuildIntegration';
 
 let taskProvider: vscode.Disposable | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -398,6 +400,24 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         vscode.commands.registerCommand('qt.generatePch', async () => {
             await qtPch.generatePch();
+        })
+    );
+    
+    // Qt Custom Build System
+    const qtCustomBuild = new QtCustomBuildSystem(outputChannel);
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.generateCustomMakefile', async (uri?: vscode.Uri) => {
+            await qtCustomBuild.generateMakefile(uri?.fsPath);
+        })
+    );
+    
+    // Qt PCH Build Integration
+    const qtPchIntegration = new QtPchBuildIntegration(outputChannel);
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.integratePch', async () => {
+            await qtPchIntegration.integratePch();
         })
     );
     

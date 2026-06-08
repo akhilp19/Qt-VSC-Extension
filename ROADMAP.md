@@ -493,7 +493,7 @@
 
 ---
 
-## ✅ Version 1.8.0 (Current — Shipped) — Advanced Code Generation (MOC, UIC, RCC Automation)
+## ✅ Version 1.8.0 (Released) — Advanced Code Generation (MOC, UIC, RCC Automation)
 
 **Theme:** Eliminate manual build steps for generated code.
 
@@ -525,12 +525,27 @@
 - [x] **`qt.autoRcc`** — toggle auto RCC on save (default: `false`)
 - [x] **`qt.generatedCodeDirectory`** — output directory for generated code (supports `${workspaceFolder}`)
 
-### Future (post-1.8.0)
-- [ ] **Peek Generated Code** — show `moc_*.cpp` / `ui_*.h` inline without leaving editor
-- [ ] **Go to MOC** from class definition
-- [ ] **Go to UI Header** from `.ui` file
+## ✅ Version 1.9.0 (Current — Shipped) — Generated Code Navigation & PCH Support
+
+**Theme:** Navigate between source and generated code, plus precompiled header generation.
+
+### Generated Code Navigation
+- [x] **Go to Generated Code** (`Alt+G`) — jump from `.h` → `moc_*.cpp`, `.ui` → `ui_*.h`, `.qrc` → `qrc_*.cpp`
+- [x] **Peek Generated Code** (`Alt+Shift+G`) — show generated file inline via VS Code peek widget
+- [x] **Definition Provider** — `F12` on a class in a `Q_OBJECT` header also offers the generated `moc_*.cpp`
+- [x] **Smart fallback** — if generated file is missing, prompts to run Generate MOC/UIC/RCC first
+- [x] **Explorer context menus** for `.h`/`.hpp`, `.ui`, and `.qrc` files
+
+### Precompiled Header (PCH) Support
+- [x] **`Qt: Generate Precompiled Header`** command
+- [x] Auto-detect Qt modules from `.pro` or `CMakeLists.txt`
+- [x] Interactive multi-select QuickPick with 50+ Qt headers grouped by module
+- [x] Generates `qt_pch.h` with `#pragma once`
+- [x] Build-system instructions (QMake, CMake, MSVC) with copy-to-clipboard
+
+### Future
 - [ ] **Auto-inject MOC/UIC/RCC steps** into custom build systems (non-CMake / non-QMake)
-- [ ] **Precompiled header (PCH) support** — generate and manage `.pch` / `.gch` for faster Qt builds
+- [ ] **Precompiled header build integration** — auto-configure compiler flags for PCH instead of just generating the header
 
 ---
 
@@ -612,4 +627,5 @@
 3. Submit a PR referencing the roadmap item.
 
 > **Last updated:** June 9, 2026  
+> **v1.9.0 shipped:** Generated Code Navigation & PCH Support  
 > For the latest status, check the [GitHub Issues](https://github.com/akhilp19/Qt-VSC-Extension/issues) page.

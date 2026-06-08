@@ -606,8 +606,8 @@
   - Artifact upload
 
 ### Qt Installer Framework
-- [ ] **Generate installer config** (`config.xml`, `package.xml`) for `binarycreator`
-- [ ] **Build installer** command — run `binarycreator` to produce `.exe` / `.dmg` / `.run` installer
+- [x] **Generate installer config** (`config.xml`, `package.xml`) for `binarycreator`
+- [x] **Build installer** command — run `binarycreator` to produce `.exe` / `.dmg` / `.run` installer
 
 ---
 

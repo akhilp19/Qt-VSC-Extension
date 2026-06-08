@@ -38,6 +38,7 @@ import { QtPchBuildIntegration } from './qtPchBuildIntegration';
 import { QtBuildScriptInjector } from './qtBuildScriptInjector';
 import { QtPchCompilerConfig } from './qtPchCompilerConfig';
 import { QtCiCdIntegration } from './qtCiCdIntegration';
+import { QtInstallerFramework } from './qtInstallerFramework';
 
 let taskProvider: vscode.Disposable | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -448,6 +449,21 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         vscode.commands.registerCommand('qt.setupCiCd', async () => {
             await qtCiCd.setupCiCd();
+        })
+    );
+    
+    // Qt Installer Framework
+    const qtInstaller = new QtInstallerFramework(outputChannel);
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.generateInstallerConfig', async () => {
+            await qtInstaller.generateInstallerConfig();
+        })
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.buildInstaller', async () => {
+            await qtInstaller.buildInstaller();
         })
     );
     

@@ -2,7 +2,7 @@
   "name": "qt-vsc-extension",
   "displayName": "Qt C++ Tools",
   "description": "Build, run and manage Qt C++ projects in VS Code",
-  "version": "1.12.0",
+  "version": "1.13.0",
   "publisher": "akhilp19",
   "author": {
     "name": "Akhil Pawar"
@@ -248,6 +248,16 @@
         "command": "qt.setupCiCd",
         "title": "Qt: Setup CI/CD Pipeline",
         "icon": "$(server-process)"
+      },
+      {
+        "command": "qt.generateInstallerConfig",
+        "title": "Qt: Generate Installer Framework Config",
+        "icon": "$(file-zip)"
+      },
+      {
+        "command": "qt.buildInstaller",
+        "title": "Qt: Build Installer",
+        "icon": "$(package)"
       }
     ],
     "taskDefinitions": [
@@ -710,6 +720,14 @@
         },
         {
           "command": "qt.setupCiCd",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.generateInstallerConfig",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.buildInstaller",
           "when": "workspaceFolderCount > 0"
         }
       ],

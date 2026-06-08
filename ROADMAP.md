@@ -450,7 +450,7 @@
 
 ---
 
-## ✅ Version 1.7.0 (Current — Shipped) — Qt for Python (PySide / PyQt) Support
+## ✅ Version 1.7.0 (Released) — Qt for Python (PySide / PyQt) Support
 
 **Theme:** Extend the extension to Python-based Qt projects.
 
@@ -493,31 +493,42 @@
 
 ---
 
-## 🚧 Version 1.8.0 — Advanced Code Generation (MOC, UIC, RCC Automation)
+## ✅ Version 1.8.0 (Current — Shipped) — Advanced Code Generation (MOC, UIC, RCC Automation)
 
 **Theme:** Eliminate manual build steps for generated code.
 
 ### Automatic Code Generation
-- [ ] **MOC file watching**
-  - Watch `.h` files containing `Q_OBJECT` macro
-  - Auto-run `moc` on save and generate `moc_*.cpp` in build dir
-  - Show MOC output in output channel
+- [x] **MOC file watching**
+  - Watch `.h` / `.hpp` files containing `Q_OBJECT` macro
+  - Auto-run `moc` on save and generate `moc_*.cpp`
+  - Configurable output directory via `qt.generatedCodeDirectory`
+  - 500ms debounce to prevent duplicate runs
 
-- [ ] **UIC file watching**
+- [x] **UIC file watching**
   - Watch `.ui` files
   - Auto-run `uic` to generate `ui_*.h` on save
-  - Show generated header inline or in build dir
 
-- [ ] **RCC file watching**
+- [x] **RCC file watching**
   - Watch `.qrc` files
   - Auto-run `rcc` to generate `qrc_*.cpp` on save
 
-### Generated Code Navigation
+### Manual Commands
+- [x] **`Qt: Generate MOC`** — manual MOC on selected header file
+- [x] **`Qt: Generate UIC`** — manual UIC on selected `.ui` file
+- [x] **`Qt: Generate RCC`** — manual RCC on selected `.qrc` file
+- [x] **Explorer context menu** entries for `.h`/`.hpp`, `.ui`, and `.qrc` files
+- [x] **Open generated file** notification after manual generation
+
+### Settings
+- [x] **`qt.autoMoc`** — toggle auto MOC on save (default: `false`)
+- [x] **`qt.autoUic`** — toggle auto UIC on save (default: `false`)
+- [x] **`qt.autoRcc`** — toggle auto RCC on save (default: `false`)
+- [x] **`qt.generatedCodeDirectory`** — output directory for generated code (supports `${workspaceFolder}`)
+
+### Future (post-1.8.0)
 - [ ] **Peek Generated Code** — show `moc_*.cpp` / `ui_*.h` inline without leaving editor
 - [ ] **Go to MOC** from class definition
 - [ ] **Go to UI Header** from `.ui` file
-
-### Build Integration
 - [ ] **Auto-inject MOC/UIC/RCC steps** into custom build systems (non-CMake / non-QMake)
 - [ ] **Precompiled header (PCH) support** — generate and manage `.pch` / `.gch` for faster Qt builds
 
@@ -600,5 +611,5 @@
 2. Open an issue to discuss design if it involves new UI or user-facing behavior.
 3. Submit a PR referencing the roadmap item.
 
-> **Last updated:** June 7, 2026  
+> **Last updated:** June 9, 2026  
 > For the latest status, check the [GitHub Issues](https://github.com/akhilp19/Qt-VSC-Extension/issues) page.

@@ -525,7 +525,7 @@
 - [x] **`qt.autoRcc`** — toggle auto RCC on save (default: `false`)
 - [x] **`qt.generatedCodeDirectory`** — output directory for generated code (supports `${workspaceFolder}`)
 
-## ✅ Version 1.9.0 (Current — Shipped) — Generated Code Navigation & PCH Support
+## ✅ Version 1.9.0 (Released) — Generated Code Navigation & PCH Support
 
 **Theme:** Navigate between source and generated code, plus precompiled header generation.
 
@@ -543,9 +543,27 @@
 - [x] Generates `qt_pch.h` with `#pragma once`
 - [x] Build-system instructions (QMake, CMake, MSVC) with copy-to-clipboard
 
+## ✅ Version 1.10.0 (Current — Shipped) — Custom Build System Integration & PCH Build Integration
+
+**Theme:** Support raw Qt projects without QMake/CMake, and auto-integrate PCH into build files.
+
+### Custom Build System Integration
+- [x] **Raw Qt project detection** — finds folders with Qt `#include`s but no `.pro` or `CMakeLists.txt`
+- [x] **Generate Custom Makefile** — interactive Makefile generation with MOC/UIC/RCC rules
+- [x] **Qt module detection** from `#include` patterns in source files
+- [x] **Task provider integration** — Build/Clean/Run tasks for raw projects
+- [x] **Smart exclusion** — skips directories inside existing QMake/CMake projects
+
+### Precompiled Header Build Integration
+- [x] **Integrate PCH into QMake** — auto-append `PRECOMPILED_HEADER` and `CONFIG += precompile_header` to `.pro`
+- [x] **Integrate PCH into CMake** — auto-insert `target_precompile_headers()` with target detection
+- [x] **Change preview** — shows additions before applying with confirmation dialog
+- [x] **Duplicate protection** — detects existing PCH config and aborts
+- [x] **CMake target name fallback** — manual input if auto-detection fails
+
 ### Future
-- [ ] **Auto-inject MOC/UIC/RCC steps** into custom build systems (non-CMake / non-QMake)
-- [ ] **Precompiled header build integration** — auto-configure compiler flags for PCH instead of just generating the header
+- [ ] **Auto-inject MOC/UIC/RCC steps** into custom build systems beyond Makefile generation
+- [ ] **PCH compiler flag auto-configuration** — update compiler settings directly instead of modifying project files
 
 ---
 
@@ -627,5 +645,5 @@
 3. Submit a PR referencing the roadmap item.
 
 > **Last updated:** June 9, 2026  
-> **v1.9.0 shipped:** Generated Code Navigation & PCH Support  
+> **v1.10.0 shipped:** Custom Build System Integration & PCH Build Integration  
 > For the latest status, check the [GitHub Issues](https://github.com/akhilp19/Qt-VSC-Extension/issues) page.

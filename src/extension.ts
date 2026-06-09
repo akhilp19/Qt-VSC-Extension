@@ -25,7 +25,7 @@ import { QtCodeActionProvider } from './qtCodeActionProvider';
 import { sourceDisplayName } from './packageManagerDetector';
 import { QmlSupport } from './qmlSupport';
 import { QmlCppBridgeIndexer } from './qmlCppBridge';
-import { QmlDefinitionProvider, QmlCompletionProvider as QmlBridgeCompletionProvider, CppReferenceProvider } from './qmlCppBridgeProviders';
+import { QmlDefinitionProvider, QmlCompletionProvider as QmlBridgeCompletionProvider, CppReferenceProvider, QmlTypeHoverProvider } from './qmlCppBridgeProviders';
 import { QtDebuggerIntegration } from './qtDebugger';
 import { QtTestFramework } from './qtTestFramework';
 import { QtTranslationProvider } from './qtTranslation';
@@ -41,6 +41,7 @@ import { QtCiCdIntegration } from './qtCiCdIntegration';
 import { QtInstallerFramework } from './qtInstallerFramework';
 import { QtBuildAnalytics } from './qtBuildAnalytics';
 import { QtBuildAnalyticsProvider } from './qtBuildAnalyticsProvider';
+import { QtProfiling } from './qtProfiling';
 
 let taskProvider: vscode.Disposable | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -165,6 +166,33 @@ export function activate(context: vscode.ExtensionContext): void {
         })
     );
     
+    // Qt Profiling & Diagnostics
+    const qtProfiling = new QtProfiling(qtConfigManager, qtProjectDetector, outputChannel);
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.launchQmlProfiler', async () => {
+            await qtProfiling.launchQmlProfiler();
+        })
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.launchCpuProfiler', async () => {
+            await qtProfiling.launchCpuProfiler();
+        })
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.launchMemoryProfiler', async () => {
+            await qtProfiling.launchMemoryProfiler();
+        })
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.detectSlowTargets', async () => {
+            await qtProfiling.detectSlowTargets();
+        })
+    );
+    
     context.subscriptions.push(
         vscode.commands.registerCommand('qt.buildProject', async (uri?: vscode.Uri) => {
             await executeQtTask('build', uri?.fsPath);
@@ -202,7 +230,14 @@ export function activate(context: vscode.ExtensionContext): void {
         })
     );
     
-    // Auto-format / auto-lint QML on save
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.stopQmlPreview', async () => {
+            qmlSupport.stopPreview();
+            void vscode.window.showInformationMessage('QML preview stopped');
+        })
+    );
+    
+    // Auto-format / auto-lint / hot-reload QML on save
     context.subscriptions.push(
         vscode.workspace.onDidSaveTextDocument(async (document) => {
             if (document.languageId !== 'qml') {
@@ -216,6 +251,11 @@ export function activate(context: vscode.ExtensionContext): void {
             
             if (config.get<boolean>('qmlLintOnSave') ?? true) {
                 await qmlSupport.lintQml(document.uri.fsPath);
+            }
+            
+            // Hot reload QML preview on save
+            if (config.get<boolean>('qmlPreviewHotReload') ?? false) {
+                await qmlSupport.hotReloadIfEnabled(document.uri.fsPath);
             }
         })
     );
@@ -231,6 +271,7 @@ export function activate(context: vscode.ExtensionContext): void {
     const qmlDefProvider = new QmlDefinitionProvider(qmlCppBridge, outputChannel);
     const qmlBridgeCompProvider = new QmlBridgeCompletionProvider(qmlCppBridge, outputChannel);
     const cppRefProvider = new CppReferenceProvider(qmlCppBridge, outputChannel);
+    const qmlTypeHoverProvider = new QmlTypeHoverProvider(qmlCppBridge, outputChannel);
     
     context.subscriptions.push(
         vscode.languages.registerDefinitionProvider(
@@ -251,6 +292,13 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.languages.registerReferenceProvider(
             { scheme: 'file', pattern: '**/*.{cpp,h,hpp}' },
             cppRefProvider
+        )
+    );
+    
+    context.subscriptions.push(
+        vscode.languages.registerHoverProvider(
+            { scheme: 'file', pattern: '**/*.qml' },
+            qmlTypeHoverProvider
         )
     );
     

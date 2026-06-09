@@ -9,6 +9,8 @@ export class QmlSupport {
     private qtConfigManager: QtConfigManager;
     private outputChannel: vscode.OutputChannel;
     private diagnosticCollection: vscode.DiagnosticCollection;
+    private activePreviewProcess?: import('child_process').ChildProcess;
+    private activePreviewFile?: string;
 
     constructor(qtConfigManager: QtConfigManager, outputChannel: vscode.OutputChannel) {
         this.qtConfigManager = qtConfigManager;
@@ -189,6 +191,7 @@ export class QmlSupport {
 
     /**
      * Preview the current QML file using qmlscene.
+     * If hot reload is enabled, tracks the process for restart on save.
      */
     async previewQml(filePath?: string): Promise<void> {
         const targetPath = filePath || vscode.window.activeTextEditor?.document.uri.fsPath;
@@ -205,6 +208,9 @@ export class QmlSupport {
             );
             return;
         }
+
+        // Stop any existing preview for this file
+        this.stopPreview();
 
         // Build arguments
         const config = vscode.workspace.getConfiguration('qt');
@@ -237,12 +243,20 @@ export class QmlSupport {
 
         try {
             const child = spawn(qmlscenePath, args, {
-                detached: true,
+                detached: false,
                 stdio: 'ignore',
                 env
             });
-            child.unref();
-            void vscode.window.showInformationMessage(`QML preview launched: ${path.basename(targetPath)}`);
+            this.activePreviewProcess = child;
+            this.activePreviewFile = targetPath;
+            void vscode.window.showInformationMessage(
+                `QML preview launched: ${path.basename(targetPath)}`,
+                'Stop Preview'
+            ).then(choice => {
+                if (choice === 'Stop Preview') {
+                    this.stopPreview();
+                }
+            });
         } catch (error) {
             this.outputChannel.appendLine(`qmlscene failed: ${error}`);
             void vscode.window.showErrorMessage(`Failed to launch QML preview: ${String(error)}`);
@@ -250,9 +264,57 @@ export class QmlSupport {
     }
 
     /**
-     * Dispose of the diagnostic collection.
+     * Stop the active QML preview process.
+     */
+    stopPreview(): void {
+        if (this.activePreviewProcess) {
+            try {
+                this.activePreviewProcess.kill();
+            } catch {
+                // process may already be dead
+            }
+            this.activePreviewProcess = undefined;
+            this.activePreviewFile = undefined;
+            this.outputChannel.appendLine('QML preview stopped');
+        }
+    }
+
+    /**
+     * Restart the preview for the given file if hot reload is enabled.
+     */
+    async hotReloadIfEnabled(filePath: string): Promise<void> {
+        const config = vscode.workspace.getConfiguration('qt');
+        const hotReload = config.get<boolean>('qmlPreviewHotReload') ?? false;
+        if (!hotReload) {
+            return;
+        }
+
+        // Only reload if this is the active preview file or if no specific file is tracked
+        if (this.activePreviewFile && this.activePreviewFile !== filePath) {
+            return;
+        }
+
+        if (!filePath.endsWith('.qml')) {
+            return;
+        }
+
+        this.outputChannel.appendLine(`[QML Hot Reload] Restarting preview for ${path.basename(filePath)}`);
+        this.stopPreview();
+        await this.previewQml(filePath);
+    }
+
+    /**
+     * Get the currently previewed file path, if any.
+     */
+    getActivePreviewFile(): string | undefined {
+        return this.activePreviewFile;
+    }
+
+    /**
+     * Dispose of the diagnostic collection and stop any running preview.
      */
     dispose(): void {
+        this.stopPreview();
         this.diagnosticCollection.dispose();
     }
 }

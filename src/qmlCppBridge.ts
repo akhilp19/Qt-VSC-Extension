@@ -18,6 +18,16 @@ export interface CppQmlSymbol {
     signature?: string;
 }
 
+export interface QmlTypeInfo {
+    filePath: string;
+    line: number;
+    character: number;
+    qmlTypeName: string;
+    cppClassName: string;
+    isSingleton: boolean;
+    hasQObject: boolean;
+}
+
 export interface QmlUsage {
     filePath: string;
     line: number;
@@ -42,6 +52,9 @@ export class QmlCppBridgeIndexer {
 
     // Map: QML type name → list of C++ symbols exposed to QML
     private symbolIndex = new Map<string, CppQmlSymbol[]>();
+
+    // Map: QML type name → C++ QML type declaration info
+    private qmlTypeIndex = new Map<string, QmlTypeInfo>();
 
     // Map: QML file path → list of id declarations in that file
     private idIndex = new Map<string, IdDeclaration[]>();
@@ -73,6 +86,7 @@ export class QmlCppBridgeIndexer {
 
         // Clear existing index
         this.symbolIndex.clear();
+        this.qmlTypeIndex.clear();
         this.idIndex.clear();
         this.usageIndex.clear();
         this.idToTypeMap.clear();
@@ -161,6 +175,28 @@ export class QmlCppBridgeIndexer {
         return this.idIndex.get(filePath) || [];
     }
 
+    /**
+     * Find QML type info by registered QML type name.
+     */
+    findQmlType(qmlTypeName: string): QmlTypeInfo | undefined {
+        return this.qmlTypeIndex.get(qmlTypeName);
+    }
+
+    /**
+     * Get all registered QML types.
+     */
+    getAllQmlTypes(): QmlTypeInfo[] {
+        return Array.from(this.qmlTypeIndex.values());
+    }
+
+    /**
+     * Check if a QML type is a singleton.
+     */
+    isQmlSingleton(qmlTypeName: string): boolean {
+        const info = this.qmlTypeIndex.get(qmlTypeName);
+        return info?.isSingleton ?? false;
+    }
+
     // -----------------------------------------------------------------------
     // Private scanning helpers
     // -----------------------------------------------------------------------
@@ -235,12 +271,17 @@ export class QmlCppBridgeIndexer {
                     hasQObject = true;
                 }
 
-                // QML_ELEMENT / QML_NAMED_ELEMENT
+                // QML_ELEMENT / QML_NAMED_ELEMENT / QML_SINGLETON
                 const namedElementMatch = trimmed.match(/QML_NAMED_ELEMENT\s*\(\s*"([^"]+)"\s*\)/);
                 if (namedElementMatch) {
                     currentQmlTypeName = namedElementMatch[1];
                 } else if (/\bQML_ELEMENT\b/.test(trimmed)) {
                     currentQmlTypeName = currentClassName;
+                }
+
+                const isSingleton = /\bQML_SINGLETON\b/.test(trimmed);
+                if (isSingleton) {
+                    // Mark as singleton when we register the type
                 }
 
                 // Q_PROPERTY
@@ -284,8 +325,23 @@ export class QmlCppBridgeIndexer {
                     this.symbolIndex.set(currentQmlTypeName, existing);
                 }
 
-                // Class ended
+                // Class ended — register the QML type if it has QML_ELEMENT or QML_NAMED_ELEMENT
                 if (braceDepth <= 0 && i > classStartLine) {
+                    if (hasQObject && currentQmlTypeName && currentQmlTypeName !== currentClassName) {
+                        // Also register if QML_ELEMENT was used (currentQmlTypeName == currentClassName)
+                    }
+                    if (hasQObject && currentQmlTypeName) {
+                        const isSingleton = /\bQML_SINGLETON\b/.test(content.substring(classStartLine, i + 1).replace(/\n/g, ' '));
+                        this.qmlTypeIndex.set(currentQmlTypeName, {
+                            filePath,
+                            line: classStartLine,
+                            character: lines[classStartLine].indexOf('class'),
+                            qmlTypeName: currentQmlTypeName,
+                            cppClassName: currentClassName,
+                            isSingleton,
+                            hasQObject
+                        });
+                    }
                     inClass = false;
                     currentClassName = '';
                     currentQmlTypeName = '';

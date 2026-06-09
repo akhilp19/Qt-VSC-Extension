@@ -244,7 +244,7 @@
   - Parses `file:line:column: severity: message` output format
   - Auto-lint on save (controlled by `qt.qmlLintOnSave`)
   - Diagnostic collection with Error/Warning/Info severity mapping
-- [ ] **QML type inference** — resolve custom QML types defined in C++ (`QML_ELEMENT`, `QML_SINGLETON`) *(future)*
+- [x] **QML type inference** — resolve custom QML types defined in C++ (`QML_ELEMENT`, `QML_SINGLETON`)
 
 ### QML Preview
 - [x] **QML Preview** command — `Qt: Preview QML File` launches `qmlscene` with the current `.qml` file
@@ -252,7 +252,7 @@
   - Sets `QML2_IMPORT_PATH` from active Qt installation
   - Supports additional args via `qt.qmlPreviewArgs` setting
   - Supports additional import paths via `qt.qmlPreviewImportPath` setting
-- [ ] **Hot reload** on save *(future — currently manual relaunch)*
+- [x] **Hot reload** on save — automatically restarts qmlscene when the QML file is saved
 
 ### QML Snippets
 - [x] **16 QML snippets** registered for `.qml` files:
@@ -611,11 +611,19 @@
 
 ---
 
-## 🚧 Version 2.0.0 — Performance Profiling & Build Analytics
+## ✅ Version 1.15.0 (Current — Shipped) — Profiling & Performance Diagnostics
+
+**Theme:** Runtime profiling and compile-time diagnostics for Qt applications.
+
+### Application Profiling
+- [x] **QML Profiler launcher** — run app with `-qmljsdebugger=port:3768,block` and show instructions to connect Qt Creator QML Profiler
+- [x] **CPU Profiler integration** — launch `perf` (Linux), `Instruments`/`sample` (macOS), or `VTune` (Windows/Linux) from VS Code
+- [x] **Memory leak detection** — integrate `valgrind` (Linux), `drmemory` (Windows), `leaks` (macOS) for Qt apps
+- [x] **Slow target detection** — analyze `.cpp` files by complexity heuristic (LOC, includes, templates) and show top slowest compilation targets
 
 ---
 
-## ✅ Version 1.14.0 (Current — Shipped) — Build Analytics & Compiler Cache Integration
+## ✅ Version 1.14.0 (Shipped) — Build Analytics & Compiler Cache Integration
 
 **Theme:** Help developers optimize their Qt builds with analytics and compiler caching.
 
@@ -627,10 +635,10 @@
   - Show cache hit/miss stats
 
 ### Application Profiling
-- [ ] **QML Profiler launcher** — run app with `-qmlprofiler` and open results in Qt Creator or basic viewer
-- [ ] **CPU Profiler integration** — launch `perf` / ` Instruments` / `VTune` from VS Code
-- [ ] **Memory leak detection** — integrate `valgrind` / `drmemory` / Xcode leaks for Qt apps
-- [ ] **Slow target detection** — identify which `.cpp` files take longest to compile
+- [x] **QML Profiler launcher** — run app with `-qmlprofiler` and open results in Qt Creator or basic viewer
+- [x] **CPU Profiler integration** — launch `perf` / ` Instruments` / `VTune` from VS Code
+- [x] **Memory leak detection** — integrate `valgrind` / `drmemory` / Xcode leaks for Qt apps
+- [x] **Slow target detection** — identify which `.cpp` files take longest to compile
 
 ---
 
@@ -665,6 +673,6 @@
 2. Open an issue to discuss design if it involves new UI or user-facing behavior.
 3. Submit a PR referencing the roadmap item.
 
-> **Last updated:** June 9, 2026  
-> **v1.14.0 shipped:** Build Analytics & Compiler Cache Integration  
+> **Last updated:** June 7, 2026  
+> **v1.15.0 shipped:** Profiling & Performance Diagnostics  
 > For the latest status, check the [GitHub Issues](https://github.com/akhilp19/Qt-VSC-Extension/issues) page.

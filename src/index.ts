@@ -33,3 +33,4 @@ export * from './qtCiCdIntegration';
 export * from './qtInstallerFramework';
 export * from './qtBuildAnalytics';
 export * from './qtBuildAnalyticsProvider';
+export * from './qtProfiling';

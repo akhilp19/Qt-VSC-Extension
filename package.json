@@ -2,7 +2,7 @@
   "name": "qt-vsc-extension",
   "displayName": "Qt C++ Tools",
   "description": "Build, run and manage Qt C++ projects in VS Code",
-  "version": "1.14.0",
+  "version": "1.16.0",
   "publisher": "akhilp19",
   "author": {
     "name": "Akhil Pawar"
@@ -140,6 +140,11 @@
         "icon": "$(play)"
       },
       {
+        "command": "qt.stopQmlPreview",
+        "title": "Qt: Stop QML Preview",
+        "icon": "$(debug-stop)"
+      },
+      {
         "command": "qt.rebuildQmlCppIndex",
         "title": "Qt: Rebuild QML-C++ Index",
         "icon": "$(refresh)"
@@ -273,6 +278,26 @@
         "command": "qt.showCcacheStats",
         "title": "Qt: Show ccache Stats",
         "icon": "$(output)"
+      },
+      {
+        "command": "qt.launchQmlProfiler",
+        "title": "Qt: Launch QML Profiler",
+        "icon": "$(debug-alt)"
+      },
+      {
+        "command": "qt.launchCpuProfiler",
+        "title": "Qt: Launch CPU Profiler",
+        "icon": "$(pulse)"
+      },
+      {
+        "command": "qt.launchMemoryProfiler",
+        "title": "Qt: Launch Memory Leak Detector",
+        "icon": "$(bug)"
+      },
+      {
+        "command": "qt.detectSlowTargets",
+        "title": "Qt: Detect Slow Compilation Targets",
+        "icon": "$(clock)"
       }
     ],
     "taskDefinitions": [
@@ -454,6 +479,11 @@
           "type": "string",
           "default": "",
           "description": "Additional command-line arguments to pass to qmlscene when previewing QML files."
+        },
+        "qt.qmlPreviewHotReload": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically restart QML preview (qmlscene) when the QML file is saved."
         },
         "qt.qmlCppBridgeEnabled": {
           "type": "boolean",
@@ -669,6 +699,10 @@
           "when": "editorLangId == qml"
         },
         {
+          "command": "qt.stopQmlPreview",
+          "when": "editorLangId == qml"
+        },
+        {
           "command": "qt.rebuildQmlCppIndex",
           "when": "workspaceFolderCount > 0"
         },
@@ -770,6 +804,22 @@
         },
         {
           "command": "qt.showCcacheStats",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.launchQmlProfiler",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.launchCpuProfiler",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.launchMemoryProfiler",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.detectSlowTargets",
           "when": "workspaceFolderCount > 0"
         }
       ],

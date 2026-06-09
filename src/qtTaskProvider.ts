@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { QtConfigManager } from './qtConfigManager';
 import { QtProjectDetector } from './qtProjectDetector';
+import { QtCMakePresets } from './qtCMakePresets';
 import {
     isWindows,
     mkdirCmd,
@@ -19,6 +20,7 @@ import {
 export class QtTaskProvider implements vscode.TaskProvider {
     private qtConfigManager: QtConfigManager;
     private qtProjectDetector: QtProjectDetector;
+    private qtCMakePresets: QtCMakePresets;
     private outputChannel: vscode.OutputChannel;
     
     constructor(
@@ -28,6 +30,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
     ) {
         this.qtConfigManager = qtConfigManager;
         this.qtProjectDetector = qtProjectDetector;
+        this.qtCMakePresets = new QtCMakePresets(outputChannel);
         this.outputChannel = outputChannel;
     }
     
@@ -194,13 +197,26 @@ export class QtTaskProvider implements vscode.TaskProvider {
             // CMake build
             const additionalArgs = config.get<string>('additionalCMakeArguments') || '';
             const cmakeBuildArgs = parallelFlag ? `--parallel ${jobs}` : '';
+            const presetArg = this.qtCMakePresets.getPresetArgs(projectFile);
             
             const commands: string[] = [];
             if (preBuildCommand) {
                 commands.push(preBuildCommand);
             }
             const ccacheArg = useCcache ? `-DCMAKE_CXX_COMPILER_LAUNCHER=${ccachePath}` : '';
-            if (quickBuild && fs.existsSync(buildDir)) {
+            if (presetArg) {
+                // Use CMake preset
+                if (quickBuild && fs.existsSync(buildDir)) {
+                    commands.push(
+                        `cmake --build ${quotePath(buildDir)} --preset ${this.qtCMakePresets.getPresetForProject(projectFile)?.build || this.qtCMakePresets.getPresetForProject(projectFile)?.configure || ''}`
+                    );
+                } else {
+                    commands.push(
+                        `cmake --preset ${this.qtCMakePresets.getPresetForProject(projectFile)?.configure || ''}`,
+                        `cmake --build ${quotePath(buildDir)} ${cmakeBuildArgs}`
+                    );
+                }
+            } else if (quickBuild && fs.existsSync(buildDir)) {
                 // Quick build: skip cmake configure
                 commands.push(
                     `cmake --build ${quotePath(buildDir)} ${cmakeBuildArgs}`
@@ -348,16 +364,25 @@ export class QtTaskProvider implements vscode.TaskProvider {
             // CMake rebuild
             const additionalArgs = config.get<string>('additionalCMakeArguments') || '';
             const cmakeBuildArgs = parallelFlag ? `--parallel ${jobs}` : '';
+            const preset = this.qtCMakePresets.getPresetForProject(projectFile);
             
             const commands: string[] = [];
             if (preBuildCommand) {
                 commands.push(preBuildCommand);
             }
-            commands.push(
-                rmDirCmd(buildDir),
-                `cmake -B ${quotePath(buildDir)} -S ${quotePath(path.dirname(projectFile))} -DCMAKE_BUILD_TYPE=${buildType} ${additionalArgs}`,
-                `cmake --build ${quotePath(buildDir)} ${cmakeBuildArgs}`
-            );
+            if (preset) {
+                commands.push(
+                    rmDirCmd(buildDir),
+                    `cmake --preset ${preset.configure}`,
+                    `cmake --build ${quotePath(buildDir)} ${cmakeBuildArgs}`
+                );
+            } else {
+                commands.push(
+                    rmDirCmd(buildDir),
+                    `cmake -B ${quotePath(buildDir)} -S ${quotePath(path.dirname(projectFile))} -DCMAKE_BUILD_TYPE=${buildType} ${additionalArgs}`,
+                    `cmake --build ${quotePath(buildDir)} ${cmakeBuildArgs}`
+                );
+            }
             if (postBuildCommand) {
                 commands.push(postBuildCommand);
             }

@@ -34,3 +34,5 @@ export * from './qtInstallerFramework';
 export * from './qtBuildAnalytics';
 export * from './qtBuildAnalyticsProvider';
 export * from './qtProfiling';
+export * from './qtQmlLanguageServer';
+export * from './qtCMakePresets';

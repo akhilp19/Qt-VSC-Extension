@@ -2,7 +2,7 @@
   "name": "qt-vsc-extension",
   "displayName": "Qt C++ Tools",
   "description": "Build, run and manage Qt C++ projects in VS Code",
-  "version": "1.16.0",
+  "version": "1.17.0",
   "publisher": "akhilp19",
   "author": {
     "name": "Akhil Pawar"
@@ -298,6 +298,16 @@
         "command": "qt.detectSlowTargets",
         "title": "Qt: Detect Slow Compilation Targets",
         "icon": "$(clock)"
+      },
+      {
+        "command": "qt.selectCMakePreset",
+        "title": "Qt: Select CMake Preset",
+        "icon": "$(list-selection)"
+      },
+      {
+        "command": "qt.clearCMakePreset",
+        "title": "Qt: Clear CMake Preset",
+        "icon": "$(clear-all)"
       }
     ],
     "taskDefinitions": [
@@ -492,7 +502,12 @@
         },
         "qt.qmlCppIndexExclude": {
           "type": "array",
-          "default": ["**/build/**", "**/out/**", "**/.git/**", "**/node_modules/**"],
+          "default": [
+            "**/build/**",
+            "**/out/**",
+            "**/.git/**",
+            "**/node_modules/**"
+          ],
           "description": "Glob patterns to exclude from QML-C++ bridge indexing.",
           "items": {
             "type": "string"
@@ -575,6 +590,11 @@
           "type": "string",
           "default": "",
           "description": "Custom path to ccache or sccache executable. Leave empty for auto-detection."
+        },
+        "qt.cmakePresets": {
+          "type": "object",
+          "default": {},
+          "description": "Per-project CMake preset selections. Managed by the extension."
         }
       }
     },
@@ -626,8 +646,14 @@
     "languages": [
       {
         "id": "qml",
-        "aliases": ["QML", "qml"],
-        "extensions": [".qml", ".qmltypes"],
+        "aliases": [
+          "QML",
+          "qml"
+        ],
+        "extensions": [
+          ".qml",
+          ".qmltypes"
+        ],
         "configuration": "./language-configuration.json"
       }
     ],
@@ -821,6 +847,14 @@
         {
           "command": "qt.detectSlowTargets",
           "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.selectCMakePreset",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.clearCMakePreset",
+          "when": "workspaceFolderCount > 0"
         }
       ],
       "view/title": [
@@ -852,24 +886,14 @@
       ],
       "view/item/context": [
         {
-          "command": "qt.buildProject",
-          "when": "view == qt-projects && viewItem == qtProject",
+          "command": "qt.openInLinguist",
+          "when": "view == qt-translations && viewItem == tsFile",
           "group": "inline@1"
         },
         {
-          "command": "qt.cleanProject",
-          "when": "view == qt-projects && viewItem == qtProject",
+          "command": "qt.lrelease",
+          "when": "view == qt-translations && viewItem == tsFile",
           "group": "inline@2"
-        },
-        {
-          "command": "qt.rebuildProject",
-          "when": "view == qt-projects && viewItem == qtProject",
-          "group": "inline@3"
-        },
-        {
-          "command": "qt.runProject",
-          "when": "view == qt-projects && viewItem == qtProject",
-          "group": "inline@4"
         }
       ],
       "explorer/context": [
@@ -968,18 +992,6 @@
           "when": "resourceExtname == .qrc",
           "group": "2_qt@6"
         }
-      ],
-      "view/item/context": [
-        {
-          "command": "qt.openInLinguist",
-          "when": "view == qt-translations && viewItem == tsFile",
-          "group": "inline@1"
-        },
-        {
-          "command": "qt.lrelease",
-          "when": "view == qt-translations && viewItem == tsFile",
-          "group": "inline@2"
-        }
       ]
     },
     "keybindings": [
@@ -1008,8 +1020,11 @@
     "@types/vscode": "^1.85.0",
     "@typescript-eslint/eslint-plugin": "^6.15.0",
     "@typescript-eslint/parser": "^6.15.0",
+    "@vscode/vsce": "^2.22.0",
     "eslint": "^8.56.0",
-    "typescript": "^5.3.3",
-    "@vscode/vsce": "^2.22.0"
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
   }
 }

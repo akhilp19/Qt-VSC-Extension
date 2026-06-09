@@ -11,11 +11,19 @@ export class QmlSupport {
     private diagnosticCollection: vscode.DiagnosticCollection;
     private activePreviewProcess?: import('child_process').ChildProcess;
     private activePreviewFile?: string;
+    private qmlImportPaths: string[] = [];
 
     constructor(qtConfigManager: QtConfigManager, outputChannel: vscode.OutputChannel) {
         this.qtConfigManager = qtConfigManager;
         this.outputChannel = outputChannel;
         this.diagnosticCollection = vscode.languages.createDiagnosticCollection('qml');
+    }
+
+    /**
+     * Update QML import paths (used for qmlscene preview and qmlls).
+     */
+    setQmlImportPaths(paths: string[]): void {
+        this.qmlImportPaths = paths;
     }
 
     /**
@@ -229,14 +237,19 @@ export class QmlSupport {
         // Set up environment with QML2_IMPORT_PATH if Qt installation is known
         const env = { ...process.env };
         const qtInstallation = await this.qtConfigManager.getQtInstallation();
+        const importPaths: string[] = [...this.qmlImportPaths];
         if (qtInstallation) {
             const qmlDir = path.join(qtInstallation.path, 'qml');
-            if (fs.existsSync(qmlDir)) {
-                const existingImportPath = env.QML2_IMPORT_PATH || '';
-                env.QML2_IMPORT_PATH = existingImportPath
-                    ? `${existingImportPath}${path.delimiter}${qmlDir}`
-                    : qmlDir;
+            if (fs.existsSync(qmlDir) && !importPaths.includes(qmlDir)) {
+                importPaths.push(qmlDir);
             }
+        }
+        if (importPaths.length > 0) {
+            const existingImportPath = env.QML2_IMPORT_PATH || '';
+            const newPaths = importPaths.join(path.delimiter);
+            env.QML2_IMPORT_PATH = existingImportPath
+                ? `${existingImportPath}${path.delimiter}${newPaths}`
+                : newPaths;
         }
 
         this.outputChannel.appendLine(`Launching QML preview: ${qmlscenePath} ${args.join(' ')}`);

@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { QmlCppBridgeIndexer, CppQmlSymbol, QmlTypeInfo } from './qmlCppBridge';
+import * as fs from 'fs';
+import { QmlCppBridgeIndexer, CppQmlSymbol, QmlTypeInfo, QmlDirEntry } from './qmlCppBridge';
 
 /**
  * Provides "Go to Definition" from QML property/method usages to C++ declarations.
@@ -45,15 +46,25 @@ export class QmlDefinitionProvider implements vscode.DefinitionProvider {
 
         // Look up the symbol
         const symbol = this.bridge.findSymbol(qmlTypeName, word);
-        if (!symbol) {
-            return undefined;
+        if (symbol) {
+            this.outputChannel.appendLine(`[QML-C++ Bridge] Definition: ${word} in ${qmlTypeName} → ${symbol.filePath}:${symbol.line + 1}`);
+            return new vscode.Location(
+                vscode.Uri.file(symbol.filePath),
+                new vscode.Position(symbol.line, symbol.character)
+            );
         }
 
-        this.outputChannel.appendLine(`[QML-C++ Bridge] Definition: ${word} in ${qmlTypeName} → ${symbol.filePath}:${symbol.line + 1}`);
-        return new vscode.Location(
-            vscode.Uri.file(symbol.filePath),
-            new vscode.Position(symbol.line, symbol.character)
-        );
+        // Fallback: check qmldir-registered QML types
+        const qmldirEntry = this.bridge.resolveQmlImport(word);
+        if (qmldirEntry && fs.existsSync(qmldirEntry.filePath)) {
+            this.outputChannel.appendLine(`[QML-C++ Bridge] Definition: ${word} → qmldir ${qmldirEntry.filePath}`);
+            return new vscode.Location(
+                vscode.Uri.file(qmldirEntry.filePath),
+                new vscode.Position(0, 0)
+            );
+        }
+
+        return undefined;
     }
 
     /**
@@ -197,6 +208,21 @@ export class QmlCompletionProvider implements vscode.CompletionItemProvider {
                     `\`\`\`cpp\n${symbol.signature || `${symbol.name}()`}\n\`\`\``
                 );
                 item.insertText = new vscode.SnippetString(`${symbol.name}(\${1})`);
+                items.push(item);
+            }
+        }
+
+        // Add qmldir-registered types as completions when in type context
+        if (isTypeContext) {
+            const qmldirTypes = this.bridge.getQmldirTypes();
+            for (const entry of qmldirTypes) {
+                const item = new vscode.CompletionItem(entry.typeName, vscode.CompletionItemKind.Class);
+                item.detail = `${entry.isSingleton ? 'Singleton' : 'Type'} — ${entry.moduleUri || 'QML module'}`;
+                item.documentation = new vscode.MarkdownString(
+                    `Defined in module \`${entry.moduleUri || 'unknown'}\` (v${entry.version})\n\n` +
+                    `File: \`${path.basename(entry.filePath)}\``
+                );
+                item.insertText = entry.typeName;
                 items.push(item);
             }
         }

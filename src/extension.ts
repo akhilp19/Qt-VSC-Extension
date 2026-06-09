@@ -42,6 +42,8 @@ import { QtInstallerFramework } from './qtInstallerFramework';
 import { QtBuildAnalytics } from './qtBuildAnalytics';
 import { QtBuildAnalyticsProvider } from './qtBuildAnalyticsProvider';
 import { QtProfiling } from './qtProfiling';
+import { QtQmlLanguageServer } from './qtQmlLanguageServer';
+import { QtCMakePresets } from './qtCMakePresets';
 
 let taskProvider: vscode.Disposable | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -80,6 +82,27 @@ export function activate(context: vscode.ExtensionContext): void {
     // Initialize QML support
     const qmlSupport = new QmlSupport(qtConfigManager, outputChannel);
     context.subscriptions.push(qmlSupport);
+    
+    // Initialize QML Language Server (qmlls) if available
+    const qmlLanguageServer = new QtQmlLanguageServer(qtConfigManager, outputChannel);
+    context.subscriptions.push(qmlLanguageServer);
+    
+    // Start qmlls after a short delay with detected QML import paths
+    setTimeout(async () => {
+        const importPaths = qmlCppBridge.getQmlImportPaths();
+        const qtInstallation = await qtConfigManager.getQtInstallation();
+        if (qtInstallation) {
+            const qtQmlDir = path.join(qtInstallation.path, 'qml');
+            if (!importPaths.includes(qtQmlDir)) {
+                importPaths.push(qtQmlDir);
+            }
+        }
+        qmlSupport.setQmlImportPaths(importPaths);
+        await qmlLanguageServer.start(importPaths);
+    }, 5000);
+    
+    // Initialize CMake Presets
+    const qtCMakePresets = new QtCMakePresets(outputChannel);
     
     // Initialize Qt Designer integration
     const qtDesigner = new QtDesignerIntegration(qtConfigManager, outputChannel);
@@ -190,6 +213,29 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         vscode.commands.registerCommand('qt.detectSlowTargets', async () => {
             await qtProfiling.detectSlowTargets();
+        })
+    );
+    
+    // CMake Preset commands
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.selectCMakePreset', async (uri?: vscode.Uri) => {
+            const projectFile = uri?.fsPath;
+            if (!projectFile) {
+                void vscode.window.showErrorMessage('No CMake project selected');
+                return;
+            }
+            await qtCMakePresets.selectPreset(projectFile);
+        })
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.clearCMakePreset', async (uri?: vscode.Uri) => {
+            const projectFile = uri?.fsPath;
+            if (!projectFile) {
+                void vscode.window.showErrorMessage('No CMake project selected');
+                return;
+            }
+            await qtCMakePresets.clearPreset(projectFile);
         })
     );
     

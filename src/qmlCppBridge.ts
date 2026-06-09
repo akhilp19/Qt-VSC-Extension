@@ -43,6 +43,14 @@ export interface IdDeclaration {
     line: number;
 }
 
+export interface QmlDirEntry {
+    typeName: string;
+    version: string;
+    filePath: string;
+    isSingleton: boolean;
+    moduleUri?: string;
+}
+
 /**
  * Indexes C++ headers for QML-relevant declarations (Q_PROPERTY, Q_INVOKABLE, QML_ELEMENT)
  * and QML files for property/method usages to enable cross-language navigation.
@@ -64,6 +72,12 @@ export class QmlCppBridgeIndexer {
 
     // Map: id → qmlType (global across workspace)
     private idToTypeMap = new Map<string, string>();
+
+    // Map: QML type name → qmldir entry (for QML modules)
+    private qmldirIndex = new Map<string, QmlDirEntry>();
+
+    // Set: directories containing qmldir files (for QML_IMPORT_PATH)
+    private qmlModulePaths = new Set<string>();
 
     private isIndexing = false;
     private debounceTimer?: NodeJS.Timeout;
@@ -87,6 +101,8 @@ export class QmlCppBridgeIndexer {
         // Clear existing index
         this.symbolIndex.clear();
         this.qmlTypeIndex.clear();
+        this.qmldirIndex.clear();
+        this.qmlModulePaths.clear();
         this.idIndex.clear();
         this.usageIndex.clear();
         this.idToTypeMap.clear();
@@ -197,6 +213,27 @@ export class QmlCppBridgeIndexer {
         return info?.isSingleton ?? false;
     }
 
+    /**
+     * Resolve a QML type from a qmldir module entry.
+     */
+    resolveQmlImport(typeName: string): QmlDirEntry | undefined {
+        return this.qmldirIndex.get(typeName);
+    }
+
+    /**
+     * Get all QML import paths detected from qmldir files.
+     */
+    getQmlImportPaths(): string[] {
+        return Array.from(this.qmlModulePaths);
+    }
+
+    /**
+     * Get all qmldir-registered types.
+     */
+    getQmldirTypes(): QmlDirEntry[] {
+        return Array.from(this.qmldirIndex.values());
+    }
+
     // -----------------------------------------------------------------------
     // Private scanning helpers
     // -----------------------------------------------------------------------
@@ -226,6 +263,8 @@ export class QmlCppBridgeIndexer {
                 await this.scanCppFile(fullPath);
             } else if (ext === '.qml') {
                 await this.scanQmlFile(fullPath);
+            } else if (entry.name === 'qmldir') {
+                await this.scanQmldirFile(fullPath);
             }
         }
     }
@@ -437,6 +476,48 @@ export class QmlCppBridgeIndexer {
             this.idIndex.set(filePath, fileIds);
         } catch (error) {
             // Ignore unreadable files
+        }
+    }
+
+    private async scanQmldirFile(filePath: string): Promise<void> {
+        try {
+            const content = await readFileAsync(filePath, 'utf-8');
+            const lines = content.split('\n');
+            const dirPath = path.dirname(filePath);
+            let moduleUri = '';
+
+            for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed || trimmed.startsWith('#')) { continue; }
+
+                // Parse module URI
+                const moduleMatch = trimmed.match(/^module\s+(\S+)/);
+                if (moduleMatch) {
+                    moduleUri = moduleMatch[1];
+                    this.qmlModulePaths.add(dirPath);
+                    continue;
+                }
+
+                // Parse type entry: TypeName 1.0 TypeName.qml
+                const typeMatch = trimmed.match(/^(singleton\s+)?(\w+)\s+(\d+\.\d+)\s+(\S+\.qml)$/);
+                if (typeMatch) {
+                    const isSingleton = !!typeMatch[1];
+                    const typeName = typeMatch[2];
+                    const version = typeMatch[3];
+                    const qmlFile = typeMatch[4];
+                    const fullQmlPath = path.join(dirPath, qmlFile);
+
+                    this.qmldirIndex.set(typeName, {
+                        typeName,
+                        version,
+                        filePath: fullQmlPath,
+                        isSingleton,
+                        moduleUri
+                    });
+                }
+            }
+        } catch (error) {
+            // Ignore unreadable qmldir files
         }
     }
 

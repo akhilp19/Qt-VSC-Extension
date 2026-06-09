@@ -39,12 +39,15 @@ Access these commands via Command Palette (`Ctrl+Shift+P`):
 - `Qt: Lint QML File` — Lint with `qmllint` (auto-lint on save)
 - `Qt: Preview QML File` — Launch `qmlscene` with the current file
 - `Qt: Stop QML Preview` — Stop the running QML preview
+- **QML Language Server (`qmlls`)** — Real QML IntelliSense via Qt 6.2+ LSP (completions, diagnostics, hover, rename)
+- **Hot reload** — Auto-restart `qmlscene` on QML file save (`qt.qmlPreviewHotReload`)
 
 **QML-C++ Bridge**
 - `Qt: Rebuild QML-C++ Index` — Rebuild cross-language index
 - **Go to Definition** (`F12`) from QML property/method to C++ declaration
 - **Find References** (`Shift+F12`) from C++ `Q_INVOKABLE` / `Q_PROPERTY` to QML usages
 - **QML Type Inference** — Resolve custom QML types defined in C++ via `QML_ELEMENT` / `QML_SINGLETON`
+- **QML Module Support** — Parse `qmldir` files, navigate to imported QML types, auto-configure `QML_IMPORT_PATH`
 
 **Code Generation**
 - `Qt: Generate MOC` / `Qt: Generate UIC` / `Qt: Generate RCC` — Manual code generation
@@ -81,6 +84,8 @@ Access these commands via Command Palette (`Ctrl+Shift+P`):
 - `Qt: Configure ccache/sccache` — Auto-detect and configure compiler cache
 - `Qt: Show ccache Stats` — View cache hit/miss statistics
 - `Qt: Detect Slow Compilation Targets` — Identify slowest `.cpp` files by complexity
+- `Qt: Select CMake Preset` — Use `CMakePresets.json` configure/build presets in tasks
+- `Qt: Clear CMake Preset` — Revert to default CMake behavior
 
 **Profiling & Diagnostics**
 - `Qt: Launch QML Profiler` — Run app with QML debugging and connect Qt Creator
@@ -307,7 +312,8 @@ See **[ROADMAP.md](ROADMAP.md)** for a detailed, versioned breakdown of complete
 - ✅ **v1.13.0** — Qt Installer Framework integration
 - ✅ **v1.14.0** — Build analytics & compiler cache (ccache/sccache)
 - ✅ **v1.15.0** — Profiling & performance diagnostics (QML Profiler, CPU Profiler, Memory Leak Detection, Slow Target Detection)
-- ✅ **v1.16.0 (Current)** — QML type inference (`QML_ELEMENT` / `QML_SINGLETON`) & hot reload on save
+- ✅ **v1.16.0 (Shipped)** — QML type inference (`QML_ELEMENT` / `QML_SINGLETON`) & hot reload on save
+- ✅ **v1.17.0 (Current)** — QML Language Server (`qmlls`) & Modern CMake Preset Support
 - 🚧 **v2.1.0** — LSP & advanced code intelligence (custom LSP server, rename refactoring, cross-reference)
 
 ## Contributing

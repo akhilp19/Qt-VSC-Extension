@@ -611,7 +611,45 @@
 
 ---
 
-## ✅ Version 1.15.0 (Current — Shipped) — Profiling & Performance Diagnostics
+## ✅ Version 1.17.0 (Current — Shipped) — QML Language Server & Modern CMake Support
+
+**Theme:** Real QML IntelliSense via Qt's official language server, and modern CMake preset workflows.
+
+### QML Language Server (`qmlls`)
+- [x] **Lightweight LSP client** for Qt 6.2+ `qmlls` shipped in `<Qt>/bin/`
+- [x] **Auto-detect and start** `qmlls` with detected `QML_IMPORT_PATH` from workspace modules + Qt installation
+- [x] **Graceful fallback** — if `qmlls` is not found (Qt5 or Qt6 < 6.2), existing regex-based QML providers continue unchanged
+- [x] **Real QML completions, diagnostics, hover, document symbols, rename** via LSP (augmenting existing providers)
+
+### CMake Preset Support
+- [x] **Parse `CMakePresets.json`** and `CMakeUserPresets.json` (version >= 2)
+- [x] **`Qt: Select CMake Preset`** command — interactive configure + build preset picker per project
+- [x] **`Qt: Clear CMake Preset`** command — revert to default hardcoded `cmake -B build -S .` behavior
+- [x] **Preset injection into build tasks** — CMake build/rebuild use `--preset <name>` when selected
+- [x] **QMake projects completely unaffected**
+
+### QML Module (`qmldir`) Support
+- [x] **Parse `qmldir` files** in workspace to build type index
+- [x] **QML import navigation** — Ctrl+Click on custom QML types defined in modules jumps to `.qml` file
+- [x] **Module type completions** — `qmldir`-registered types appear in QML completion lists
+- [x] **Auto-configure `QML_IMPORT_PATH`** for `qmlscene` preview and `qmlls`
+
+---
+
+## ✅ Version 1.16.0 (Shipped) — QML Type Inference & Hot Reload
+
+**Theme:** Resolve custom QML types from C++ and hot-reload QML previews.
+
+- [x] **QML type inference** — resolve custom QML types defined in C++ via `QML_ELEMENT`, `QML_NAMED_ELEMENT`, `QML_SINGLETON`
+- [x] **QML type completions** — C++-registered QML types offered in QML file completions
+- [x] **QML type definition** — Ctrl+Click on QML type name jumps to C++ class definition
+- [x] **QML type hover** — hover over QML type shows C++ class info and registration macro
+- [x] **Hot reload on save** — `qt.qmlPreviewHotReload` setting auto-restarts `qmlscene` when QML file is saved
+- [x] **Stop QML Preview** command — terminate running `qmlscene` process
+
+---
+
+## ✅ Version 1.15.0 (Shipped) — Profiling & Performance Diagnostics
 
 **Theme:** Runtime profiling and compile-time diagnostics for Qt applications.
 
@@ -633,14 +671,6 @@
 - [x] **`ccache` / `sccache` integration**
   - Auto-detect and configure compiler cache
   - Show cache hit/miss stats
-
-### Application Profiling
-- [x] **QML Profiler launcher** — run app with `-qmlprofiler` and open results in Qt Creator or basic viewer
-- [x] **CPU Profiler integration** — launch `perf` / ` Instruments` / `VTune` from VS Code
-- [x] **Memory leak detection** — integrate `valgrind` / `drmemory` / Xcode leaks for Qt apps
-- [x] **Slow target detection** — identify which `.cpp` files take longest to compile
-
----
 
 ## 🚧 Version 2.1.0 — LSP & Advanced Code Intelligence
 
@@ -673,6 +703,6 @@
 2. Open an issue to discuss design if it involves new UI or user-facing behavior.
 3. Submit a PR referencing the roadmap item.
 
-> **Last updated:** June 7, 2026  
-> **v1.15.0 shipped:** Profiling & Performance Diagnostics  
+> **Last updated:** June 10, 2026  
+> **v1.17.0 shipped:** QML Language Server & Modern CMake Support  
 > For the latest status, check the [GitHub Issues](https://github.com/akhilp19/Qt-VSC-Extension/issues) page.

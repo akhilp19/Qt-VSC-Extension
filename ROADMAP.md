@@ -672,6 +672,46 @@
   - Auto-detect and configure compiler cache
   - Show cache hit/miss stats
 
+## 🚧 Version 1.18.0 — QML Testing & Qt Code Quality *(Candidate)*
+
+**Theme:** Complete the QML testing story and add Qt-specific C++ static analysis.
+
+### QML Test Explorer (`qmltestrunner`)
+- [ ] **Discover `TestCase` items** in `.qml` files (regex scan for `TestCase { name: ... }` and `function test_*()`)
+- [ ] **Run via `qmltestrunner`** — ships with Qt, parses `PASS`/`FAIL`/`XPASS`/`XFAIL` output
+- [ ] **Test Explorer integration** — populate VS Code's native Testing sidebar alongside C++ tests
+- [ ] **Reuses `QtTestFramework.ts` architecture**
+
+### clazy / clang-tidy Integration
+- [ ] **Auto-detect `clazy-standalone`** or `run-clazy-tidy` in PATH / Qt installation
+- [ ] **Qt-specific static analysis** — detects old-style `connect()`, missing `tr()`, inefficient `QMap` iteration, etc.
+- [ ] **Diagnostics in Problems panel** — parse JSON/diagnostic output into `vscode.DiagnosticCollection`
+- [ ] **Settings:** `qt.clazyEnable`, `qt.clazyChecks`, `qt.clazyOnSave`
+
+### Qt Offline Documentation Viewer
+- [ ] **Detect local Qt docs** — `Docs/Qt-6.x.x/` or `.qch` files from active Qt installation
+- [ ] **`Qt: Open Qt Documentation`** command — lists installed modules, opens local HTML in VS Code webview
+- [ ] **Update hover provider** — fallback to local docs when offline, instead of hardcoded `doc.qt.io` links
+
+---
+
+## 🚧 Version 1.19.0 — Cross-Platform Mobile Deployment *(Candidate)*
+
+**Theme:** Extend deployment from desktop to mobile targets.
+
+### Android Deployment MVP
+- [ ] **Detect `androiddeployqt`** in Qt installation
+- [ ] **`Qt: Build Android APK`** command — wraps `androiddeployqt` with basic args
+- [ ] **Android SDK/NDK path configuration**
+- [ ] **Progress notification** during APK packaging
+
+### Build Kit Profiles
+- [ ] **Per-kit build directories** — `${workspaceFolder}/build-${QtVersion}-${Compiler}-${BuildType}`
+- [ ] **Environment variable profiles** per Qt version / project
+- [ ] **Qt Creator-style "Kit" concept** — atomic switch of Qt + compiler + debugger
+
+---
+
 ## 🚧 Version 2.1.0 — LSP & Advanced Code Intelligence
 
 **Theme:** A Qt Language Server Protocol (LSP) client for deep C++ Qt understanding.

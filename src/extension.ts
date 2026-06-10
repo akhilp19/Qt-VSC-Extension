@@ -44,6 +44,9 @@ import { QtBuildAnalyticsProvider } from './qtBuildAnalyticsProvider';
 import { QtProfiling } from './qtProfiling';
 import { QtQmlLanguageServer } from './qtQmlLanguageServer';
 import { QtCMakePresets } from './qtCMakePresets';
+import { QtQmlTestFramework } from './qtQmlTestFramework';
+import { QtClazyIntegration } from './qtClazyIntegration';
+import { QtDocViewer } from './qtDocViewer';
 
 let taskProvider: vscode.Disposable | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -118,7 +121,7 @@ export function activate(context: vscode.ExtensionContext): void {
     
     // Register Qt code intelligence providers
     const qtCompletionProvider = new QtCompletionProvider(outputChannel);
-    const qtHoverProvider = new QtHoverProvider(outputChannel);
+    const qtHoverProvider = new QtHoverProvider(qtConfigManager, outputChannel);
     const qtCodeActionProvider = new QtCodeActionProvider(outputChannel);
     
     context.subscriptions.push(
@@ -236,6 +239,37 @@ export function activate(context: vscode.ExtensionContext): void {
                 return;
             }
             await qtCMakePresets.clearPreset(projectFile);
+        })
+    );
+    
+    // Qt Clazy / clang-tidy integration
+    const qtClazy = new QtClazyIntegration(outputChannel);
+    context.subscriptions.push(qtClazy);
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.runClazy', async () => {
+            await qtClazy.runOnWorkspace();
+        })
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.runClazyOnFile', async (uri?: vscode.Uri) => {
+            const filePath = uri?.fsPath || vscode.window.activeTextEditor?.document.uri.fsPath;
+            if (!filePath) {
+                void vscode.window.showErrorMessage('No C++ file selected');
+                return;
+            }
+            await qtClazy.runOnFile(filePath);
+        })
+    );
+    
+    // Qt Documentation Viewer
+    const qtDocViewer = new QtDocViewer(qtConfigManager, outputChannel);
+    context.subscriptions.push(qtDocViewer);
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.openQtDocumentation', async () => {
+            await qtDocViewer.openDocViewer();
         })
     );
     
@@ -392,17 +426,25 @@ export function activate(context: vscode.ExtensionContext): void {
     const qtTestFramework = new QtTestFramework(qtConfigManager, qtProjectDetector, outputChannel);
     context.subscriptions.push(qtTestFramework);
     
+    // Qt QML Test Framework integration
+    const qtQmlTestFramework = new QtQmlTestFramework(qtConfigManager, outputChannel);
+    context.subscriptions.push(qtQmlTestFramework);
+    
     // Discover tests after a short delay
     setTimeout(() => {
         void qtTestFramework.discoverTests();
+        void qtQmlTestFramework.discoverTests();
     }, 4000);
     
-    // Re-discover tests on save of C++ files
+    // Re-discover tests on save of C++ or QML files
     context.subscriptions.push(
         vscode.workspace.onDidSaveTextDocument((document) => {
             const ext = path.extname(document.fileName).toLowerCase();
             if (ext === '.h' || ext === '.hpp' || ext === '.cpp') {
                 qtTestFramework.invalidateCache();
+            }
+            if (ext === '.qml') {
+                qtQmlTestFramework.invalidateCache();
             }
         })
     );

@@ -67,6 +67,7 @@ Access these commands via Command Palette (`Ctrl+Shift+P`):
 
 **Testing**
 - Auto-discover Qt Test classes and populate the native Test Explorer
+- Auto-discover QML `TestCase` items and run via `qmltestrunner`
 - Run and Debug Qt Tests directly from the sidebar
 
 **Internationalization**
@@ -86,6 +87,15 @@ Access these commands via Command Palette (`Ctrl+Shift+P`):
 - `Qt: Detect Slow Compilation Targets` — Identify slowest `.cpp` files by complexity
 - `Qt: Select CMake Preset` — Use `CMakePresets.json` configure/build presets in tasks
 - `Qt: Clear CMake Preset` — Revert to default CMake behavior
+
+**Code Quality**
+- `Qt: Run clazy / clang-tidy on Workspace` — Qt-specific static analysis
+- `Qt: Run clazy / clang-tidy on Current File` — Single-file analysis
+- Settings: `qt.clazyEnable`, `qt.clazyChecks`, `qt.clazyOnSave`
+
+**Qt Documentation**
+- `Qt: Open Qt Documentation` — Browse local Qt docs in VS Code webview
+- Hover fallback to offline docs when available, otherwise online `doc.qt.io`
 
 **Profiling & Diagnostics**
 - `Qt: Launch QML Profiler` — Run app with QML debugging and connect Qt Creator
@@ -313,8 +323,8 @@ See **[ROADMAP.md](ROADMAP.md)** for a detailed, versioned breakdown of complete
 - ✅ **v1.14.0** — Build analytics & compiler cache (ccache/sccache)
 - ✅ **v1.15.0** — Profiling & performance diagnostics (QML Profiler, CPU Profiler, Memory Leak Detection, Slow Target Detection)
 - ✅ **v1.16.0** — QML type inference (`QML_ELEMENT` / `QML_SINGLETON`) & hot reload on save
-- ✅ **v1.17.0 (Current)** — QML Language Server (`qmlls`) & Modern CMake Preset Support
-- 🚧 **v1.18.0 (Candidate)** — QML Testing (`qmltestrunner`) & Qt Code Quality (clazy, offline docs)
+- ✅ **v1.17.0 (Shipped)** — QML Language Server (`qmlls`) & Modern CMake Preset Support
+- ✅ **v1.18.0 (Current)** — QML Testing (`qmltestrunner`) & Qt Code Quality (clazy, offline docs)
 - 🚧 **v1.19.0 (Candidate)** — Cross-Platform Mobile Deployment (Android APK, build kits)
 - 🔮 **v2.1.0** — LSP & advanced code intelligence (custom LSP server, rename refactoring, cross-reference)
 

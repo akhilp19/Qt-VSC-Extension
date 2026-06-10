@@ -672,26 +672,26 @@
   - Auto-detect and configure compiler cache
   - Show cache hit/miss stats
 
-## 🚧 Version 1.18.0 — QML Testing & Qt Code Quality *(Candidate)*
+## ✅ Version 1.18.0 (Current — Shipped) — QML Testing & Qt Code Quality
 
 **Theme:** Complete the QML testing story and add Qt-specific C++ static analysis.
 
 ### QML Test Explorer (`qmltestrunner`)
-- [ ] **Discover `TestCase` items** in `.qml` files (regex scan for `TestCase { name: ... }` and `function test_*()`)
-- [ ] **Run via `qmltestrunner`** — ships with Qt, parses `PASS`/`FAIL`/`XPASS`/`XFAIL` output
-- [ ] **Test Explorer integration** — populate VS Code's native Testing sidebar alongside C++ tests
-- [ ] **Reuses `QtTestFramework.ts` architecture**
+- [x] **Discover `TestCase` items** in `.qml` files (regex scan for `TestCase { name: ... }` and `function test_*()`)
+- [x] **Run via `qmltestrunner`** — ships with Qt, parses `PASS`/`FAIL`/`XPASS`/`XFAIL` output
+- [x] **Test Explorer integration** — populate VS Code's native Testing sidebar alongside C++ tests
+- [x] **Reuses `QtTestFramework.ts` architecture**
 
 ### clazy / clang-tidy Integration
-- [ ] **Auto-detect `clazy-standalone`** or `run-clazy-tidy` in PATH / Qt installation
-- [ ] **Qt-specific static analysis** — detects old-style `connect()`, missing `tr()`, inefficient `QMap` iteration, etc.
-- [ ] **Diagnostics in Problems panel** — parse JSON/diagnostic output into `vscode.DiagnosticCollection`
-- [ ] **Settings:** `qt.clazyEnable`, `qt.clazyChecks`, `qt.clazyOnSave`
+- [x] **Auto-detect `clazy-standalone`** or `run-clazy-tidy` in PATH / Qt installation
+- [x] **Qt-specific static analysis** — detects old-style `connect()`, missing `tr()`, inefficient `QMap` iteration, etc.
+- [x] **Diagnostics in Problems panel** — parse JSON/diagnostic output into `vscode.DiagnosticCollection`
+- [x] **Settings:** `qt.clazyEnable`, `qt.clazyChecks`, `qt.clazyOnSave`
 
 ### Qt Offline Documentation Viewer
-- [ ] **Detect local Qt docs** — `Docs/Qt-6.x.x/` or `.qch` files from active Qt installation
-- [ ] **`Qt: Open Qt Documentation`** command — lists installed modules, opens local HTML in VS Code webview
-- [ ] **Update hover provider** — fallback to local docs when offline, instead of hardcoded `doc.qt.io` links
+- [x] **Detect local Qt docs** — `Docs/Qt-6.x.x/` or `.qch` files from active Qt installation
+- [x] **`Qt: Open Qt Documentation`** command — lists installed modules, opens local HTML in VS Code webview
+- [x] **Update hover provider** — fallback to local docs when offline, instead of hardcoded `doc.qt.io` links
 
 ---
 

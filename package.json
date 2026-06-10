@@ -2,7 +2,7 @@
   "name": "qt-vsc-extension",
   "displayName": "Qt C++ Tools",
   "description": "Build, run and manage Qt C++ projects in VS Code",
-  "version": "1.17.0",
+  "version": "1.18.0",
   "publisher": "akhilp19",
   "author": {
     "name": "Akhil Pawar"
@@ -308,6 +308,21 @@
         "command": "qt.clearCMakePreset",
         "title": "Qt: Clear CMake Preset",
         "icon": "$(clear-all)"
+      },
+      {
+        "command": "qt.runClazy",
+        "title": "Qt: Run clazy / clang-tidy on Workspace",
+        "icon": "$(search)"
+      },
+      {
+        "command": "qt.runClazyOnFile",
+        "title": "Qt: Run clazy / clang-tidy on Current File",
+        "icon": "$(search)"
+      },
+      {
+        "command": "qt.openQtDocumentation",
+        "title": "Qt: Open Qt Documentation",
+        "icon": "$(book)"
       }
     ],
     "taskDefinitions": [
@@ -595,6 +610,21 @@
           "type": "object",
           "default": {},
           "description": "Per-project CMake preset selections. Managed by the extension."
+        },
+        "qt.clazyEnable": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable clazy / clang-tidy static analysis for Qt C++ code."
+        },
+        "qt.clazyChecks": {
+          "type": "string",
+          "default": "",
+          "description": "Comma-separated list of clazy check names (e.g., 'level1,connect-by-name'). Leave empty for default checks."
+        },
+        "qt.clazyOnSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "Run clazy / clang-tidy automatically when C++ files are saved."
         }
       }
     },
@@ -855,6 +885,18 @@
         {
           "command": "qt.clearCMakePreset",
           "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.runClazy",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.runClazyOnFile",
+          "when": "editorLangId == cpp || editorLangId == c"
+        },
+        {
+          "command": "qt.openQtDocumentation",
+          "when": "true"
         }
       ],
       "view/title": [

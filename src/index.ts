@@ -36,3 +36,6 @@ export * from './qtBuildAnalyticsProvider';
 export * from './qtProfiling';
 export * from './qtQmlLanguageServer';
 export * from './qtCMakePresets';
+export * from './qtQmlTestFramework';
+export * from './qtClazyIntegration';
+export * from './qtDocViewer';

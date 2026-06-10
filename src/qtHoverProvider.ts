@@ -1,18 +1,40 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 import { findQtClass, searchQtMethods, QT_MACROS } from './qtApiData';
+import { QtConfigManager } from './qtConfigManager';
 
 export class QtHoverProvider implements vscode.HoverProvider {
     private outputChannel: vscode.OutputChannel;
+    private qtConfigManager: QtConfigManager;
 
-    constructor(outputChannel: vscode.OutputChannel) {
+    constructor(qtConfigManager: QtConfigManager, outputChannel: vscode.OutputChannel) {
+        this.qtConfigManager = qtConfigManager;
         this.outputChannel = outputChannel;
     }
 
-    provideHover(
+    private async detectLocalDoc(className: string): Promise<string | undefined> {
+        const qtInstallation = await this.qtConfigManager.getQtInstallation();
+        if (!qtInstallation) { return undefined; }
+
+        const candidates = [
+            path.join(qtInstallation.path, 'doc', 'qt', `${className.toLowerCase()}.html`),
+            path.join(qtInstallation.path, 'Docs', `Qt-${qtInstallation.version || ''}`, `${className.toLowerCase()}.html`),
+            path.join(qtInstallation.path, 'Docs', `Qt${(qtInstallation.version || '').split('.')[0]}`, `${className.toLowerCase()}.html`),
+            path.join(qtInstallation.path, 'docs', `${className.toLowerCase()}.html`),
+        ];
+
+        for (const p of candidates) {
+            if (fs.existsSync(p)) { return vscode.Uri.file(p).toString(); }
+        }
+        return undefined;
+    }
+
+    async provideHover(
         document: vscode.TextDocument,
         position: vscode.Position,
         token: vscode.CancellationToken
-    ): vscode.ProviderResult<vscode.Hover> {
+    ): Promise<vscode.Hover | undefined> {
         const wordRange = document.getWordRangeAtPosition(position, /[a-zA-Z0-9_]+/);
         if (!wordRange) {
             return undefined;
@@ -30,7 +52,12 @@ export class QtHoverProvider implements vscode.HoverProvider {
                 contents.appendMarkdown(` — inherits \`${cls.inherits}\``);
             }
             contents.appendMarkdown(`\n\n${cls.description}\n\n`);
-            contents.appendMarkdown(`[📖 View Qt Documentation](${cls.docUrl})`);
+            const localDoc = await this.detectLocalDoc(cls.name);
+            if (localDoc) {
+                contents.appendMarkdown(`[📖 View Local Documentation](${localDoc})`);
+            } else {
+                contents.appendMarkdown(`[📖 View Qt Documentation](${cls.docUrl})`);
+            }
             return new vscode.Hover(contents, wordRange);
         }
 
@@ -59,7 +86,12 @@ export class QtHoverProvider implements vscode.HoverProvider {
                 if (m.isStatic) { contents.appendMarkdown(` *(static)*`); }
                 contents.appendMarkdown(`\n\n${m.description}`);
                 if (cls) {
-                    contents.appendMarkdown(`\n\n[📖 View Documentation](${cls.docUrl}#${m.name})`);
+                    const localDoc = await this.detectLocalDoc(cls.name);
+                    if (localDoc) {
+                        contents.appendMarkdown(`\n\n[📖 View Local Documentation](${localDoc})`);
+                    } else {
+                        contents.appendMarkdown(`\n\n[📖 View Documentation](${cls.docUrl}#${m.name})`);
+                    }
                 }
                 return new vscode.Hover(contents, wordRange);
             }

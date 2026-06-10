@@ -312,7 +312,7 @@ See **[ROADMAP.md](ROADMAP.md)** for a detailed, versioned breakdown of complete
 - ✅ **v1.13.0** — Qt Installer Framework integration
 - ✅ **v1.14.0** — Build analytics & compiler cache (ccache/sccache)
 - ✅ **v1.15.0** — Profiling & performance diagnostics (QML Profiler, CPU Profiler, Memory Leak Detection, Slow Target Detection)
-- ✅ **v1.16.0 (Shipped)** — QML type inference (`QML_ELEMENT` / `QML_SINGLETON`) & hot reload on save
+- ✅ **v1.16.0** — QML type inference (`QML_ELEMENT` / `QML_SINGLETON`) & hot reload on save
 - ✅ **v1.17.0 (Current)** — QML Language Server (`qmlls`) & Modern CMake Preset Support
 - 🚧 **v1.18.0 (Candidate)** — QML Testing (`qmltestrunner`) & Qt Code Quality (clazy, offline docs)
 - 🚧 **v1.19.0 (Candidate)** — Cross-Platform Mobile Deployment (Android APK, build kits)

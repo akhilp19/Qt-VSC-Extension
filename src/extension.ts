@@ -47,6 +47,8 @@ import { QtCMakePresets } from './qtCMakePresets';
 import { QtQmlTestFramework } from './qtQmlTestFramework';
 import { QtClazyIntegration } from './qtClazyIntegration';
 import { QtDocViewer } from './qtDocViewer';
+import { QtAndroidDeployment } from './qtAndroidDeployment';
+import { QtBuildKitManager } from './qtBuildKit';
 
 let taskProvider: vscode.Disposable | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -146,8 +148,11 @@ export function activate(context: vscode.ExtensionContext): void {
         )
     );
     
+    // Build Kit Manager
+    const qtBuildKitManager = new QtBuildKitManager(qtConfigManager, outputChannel);
+    
     // Register task provider
-    const qtTaskProviderInstance = new QtTaskProvider(qtConfigManager, qtProjectDetector, outputChannel);
+    const qtTaskProviderInstance = new QtTaskProvider(qtConfigManager, qtProjectDetector, outputChannel, qtBuildKitManager);
     taskProvider = vscode.tasks.registerTaskProvider('qt', qtTaskProviderInstance);
     context.subscriptions.push(taskProvider);
     
@@ -270,6 +275,47 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         vscode.commands.registerCommand('qt.openQtDocumentation', async () => {
             await qtDocViewer.openDocViewer();
+        })
+    );
+    
+    // Qt Android Deployment
+    const qtAndroid = new QtAndroidDeployment(qtConfigManager, qtProjectDetector, outputChannel);
+    context.subscriptions.push(qtAndroid);
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.buildAndroidApk', async () => {
+            await qtAndroid.buildApk();
+        })
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.configureAndroidSdk', async () => {
+            await qtAndroid.configureAndroidSdk();
+        })
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.installAndroidApk', async () => {
+            await qtAndroid.installApk();
+        })
+    );
+    
+    // Build Kit commands
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.selectBuildKit', async (uri?: vscode.Uri) => {
+            await qtBuildKitManager.selectKit(uri?.fsPath);
+        })
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.configureBuildKit', async () => {
+            await qtBuildKitManager.configureKit();
+        })
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.detectBuildKits', async () => {
+            await qtBuildKitManager.saveDetectedKits();
         })
     );
     

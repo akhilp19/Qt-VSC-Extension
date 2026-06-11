@@ -39,3 +39,5 @@ export * from './qtCMakePresets';
 export * from './qtQmlTestFramework';
 export * from './qtClazyIntegration';
 export * from './qtDocViewer';
+export * from './qtAndroidDeployment';
+export * from './qtBuildKit';

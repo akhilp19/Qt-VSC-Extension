@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import { QtConfigManager } from './qtConfigManager';
 import { QtProjectDetector } from './qtProjectDetector';
 import { QtCMakePresets } from './qtCMakePresets';
+import { QtBuildKitManager } from './qtBuildKit';
 import {
     isWindows,
     mkdirCmd,
@@ -21,16 +22,19 @@ export class QtTaskProvider implements vscode.TaskProvider {
     private qtConfigManager: QtConfigManager;
     private qtProjectDetector: QtProjectDetector;
     private qtCMakePresets: QtCMakePresets;
+    private qtBuildKitManager?: QtBuildKitManager;
     private outputChannel: vscode.OutputChannel;
     
     constructor(
         qtConfigManager: QtConfigManager,
         qtProjectDetector: QtProjectDetector,
-        outputChannel: vscode.OutputChannel
+        outputChannel: vscode.OutputChannel,
+        qtBuildKitManager?: QtBuildKitManager
     ) {
         this.qtConfigManager = qtConfigManager;
         this.qtProjectDetector = qtProjectDetector;
         this.qtCMakePresets = new QtCMakePresets(outputChannel);
+        this.qtBuildKitManager = qtBuildKitManager;
         this.outputChannel = outputChannel;
     }
     
@@ -135,6 +139,28 @@ export class QtTaskProvider implements vscode.TaskProvider {
         return `-j${jobs}`;
     }
 
+    private getBuildDir(projectFile: string, buildType: string): string {
+        if (this.qtBuildKitManager) {
+            return this.qtBuildKitManager.getBuildDirForProject(projectFile, buildType);
+        }
+        return this.qtConfigManager.getBuildDirectory();
+    }
+
+    private getKitEnvVars(projectFile: string): Record<string, string> {
+        if (this.qtBuildKitManager) {
+            return this.qtBuildKitManager.getKitEnvVars(projectFile);
+        }
+        return {};
+    }
+
+    private getKitExtraArgs(projectFile: string, projectType: 'qmake' | 'cmake'): string {
+        if (!this.qtBuildKitManager) { return ''; }
+        if (projectType === 'qmake') {
+            return this.qtBuildKitManager.getKitQMakeArgs(projectFile);
+        }
+        return this.qtBuildKitManager.getKitCMakeArgs(projectFile);
+    }
+
     private async createBuildTask(
         projectFile: string,
         projectType: 'qmake' | 'cmake' | 'python' | 'raw',
@@ -142,7 +168,9 @@ export class QtTaskProvider implements vscode.TaskProvider {
         quickBuild: boolean = false
     ): Promise<vscode.Task> {
         const qtInstallation = await this.qtConfigManager.getQtInstallation();
-        const buildDir = this.qtConfigManager.getBuildDirectory();
+        const buildType = this.qtConfigManager.getProjectBuildType(projectFile);
+        const buildDir = this.getBuildDir(projectFile, buildType);
+        const kitEnv = this.getKitEnvVars(projectFile);
         const makeCmd = this.qtConfigManager.getMakeCommand(qtInstallation);
         const buildType = this.qtConfigManager.getProjectBuildType(projectFile);
         const jobs = this.qtConfigManager.getParallelJobs();
@@ -158,10 +186,12 @@ export class QtTaskProvider implements vscode.TaskProvider {
         
         let execution: vscode.ShellExecution;
         
+        const kitExtraArgs = this.getKitExtraArgs(projectFile, projectType);
+
         if (projectType === 'qmake') {
             // QMake build: qmake -> make
             const qmakePath = qtInstallation?.qmakePath || 'qmake';
-            const additionalArgs = config.get<string>('additionalQMakeArguments') || '';
+            const additionalArgs = [config.get<string>('additionalQMakeArguments') || '', kitExtraArgs].filter(Boolean).join(' ');
             const buildTypeArg = buildType === 'release' ? 'CONFIG+=release' : 'CONFIG+=debug';
             const makeArgs = parallelFlag ? `${makeCmd} ${parallelFlag}` : makeCmd;
             
@@ -191,11 +221,12 @@ export class QtTaskProvider implements vscode.TaskProvider {
             }
             
             execution = new vscode.ShellExecution(joinCmds(...commands), {
-                cwd: workspaceFolder.uri.fsPath
+                cwd: workspaceFolder.uri.fsPath,
+                env: kitEnv
             });
         } else {
             // CMake build
-            const additionalArgs = config.get<string>('additionalCMakeArguments') || '';
+            const additionalArgs = [config.get<string>('additionalCMakeArguments') || '', kitExtraArgs].filter(Boolean).join(' ');
             const cmakeBuildArgs = parallelFlag ? `--parallel ${jobs}` : '';
             const presetArg = this.qtCMakePresets.getPresetArgs(projectFile);
             
@@ -233,7 +264,8 @@ export class QtTaskProvider implements vscode.TaskProvider {
             }
             
             execution = new vscode.ShellExecution(joinCmds(...commands), {
-                cwd: workspaceFolder.uri.fsPath
+                cwd: workspaceFolder.uri.fsPath,
+                env: kitEnv
             });
         }
         
@@ -268,7 +300,8 @@ export class QtTaskProvider implements vscode.TaskProvider {
         projectType: 'qmake' | 'cmake' | 'python' | 'raw',
         workspaceFolder: vscode.WorkspaceFolder
     ): Promise<vscode.Task> {
-        const buildDir = this.qtConfigManager.getBuildDirectory();
+        const buildType = this.qtConfigManager.getProjectBuildType(projectFile);
+        const buildDir = this.getBuildDir(projectFile, buildType);
         const makeCmd = this.qtConfigManager.getMakeCommand();
         const projectName = path.basename(projectFile, path.extname(projectFile));
         
@@ -322,7 +355,8 @@ export class QtTaskProvider implements vscode.TaskProvider {
         workspaceFolder: vscode.WorkspaceFolder
     ): Promise<vscode.Task> {
         const qtInstallation = await this.qtConfigManager.getQtInstallation();
-        const buildDir = this.qtConfigManager.getBuildDirectory();
+        const buildType = this.qtConfigManager.getProjectBuildType(projectFile);
+        const buildDir = this.getBuildDir(projectFile, buildType);
         const makeCmd = this.qtConfigManager.getMakeCommand(qtInstallation);
         const buildType = this.qtConfigManager.getProjectBuildType(projectFile);
         const jobs = this.qtConfigManager.getParallelJobs();
@@ -426,7 +460,8 @@ export class QtTaskProvider implements vscode.TaskProvider {
         if (projectType === 'raw') {
             return this.createRawRunTask(projectFile, workspaceFolder);
         }
-        const buildDir = this.qtConfigManager.getBuildDirectory();
+        const buildType = this.qtConfigManager.getProjectBuildType(projectFile);
+        const buildDir = this.getBuildDir(projectFile, buildType);
         const projectName = path.basename(projectFile, path.extname(projectFile));
         
         // Try to find the executable

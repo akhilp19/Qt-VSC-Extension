@@ -33,6 +33,15 @@ Access these commands via Command Palette (`Ctrl+Shift+P`):
 - `Qt: Validate Resource File` — Validate `.qrc` files
 - `Qt: Compile Resource File (rcc)` — Run `rcc` manually
 - `Qt: Deploy Application` — Run `windeployqt` / `macdeployqt` / `linuxdeployqt`
+- `Qt: Build Android APK` — Build Android APK via `androiddeployqt`
+- `Qt: Configure Android SDK` — Set Android SDK/NDK paths
+- `Qt: Install Android APK` — Install APK to connected device via `adb`
+
+**Build Kits**
+- `Qt: Detect Build Kits` — Auto-generate kits from Qt installations
+- `Qt: Select Build Kit` — Per-project kit selection
+- `Qt: Configure Build Kit` — Edit kit build directory template and extra args
+- Per-kit build directories with variable substitution
 
 **QML Support**
 - `Qt: Format QML File` — Format with `qmlformat`
@@ -324,8 +333,9 @@ See **[ROADMAP.md](ROADMAP.md)** for a detailed, versioned breakdown of complete
 - ✅ **v1.15.0** — Profiling & performance diagnostics (QML Profiler, CPU Profiler, Memory Leak Detection, Slow Target Detection)
 - ✅ **v1.16.0** — QML type inference (`QML_ELEMENT` / `QML_SINGLETON`) & hot reload on save
 - ✅ **v1.17.0 (Shipped)** — QML Language Server (`qmlls`) & Modern CMake Preset Support
-- ✅ **v1.18.0 (Current)** — QML Testing (`qmltestrunner`) & Qt Code Quality (clazy, offline docs)
-- 🚧 **v1.19.0 (Candidate)** — Cross-Platform Mobile Deployment (Android APK, build kits)
+- ✅ **v1.18.0 (Shipped)** — QML Testing (`qmltestrunner`) & Qt Code Quality (clazy, offline docs)
+- ✅ **v1.19.0 (Current)** — Android Deployment & Build Kit Profiles
+- 🚧 **v1.20.0 (Candidate)** — iOS Deployment & Qt for WebAssembly
 - 🔮 **v2.1.0** — LSP & advanced code intelligence (custom LSP server, rename refactoring, cross-reference)
 
 ## Contributing

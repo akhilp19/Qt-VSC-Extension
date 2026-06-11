@@ -2,7 +2,7 @@
   "name": "qt-vsc-extension",
   "displayName": "Qt C++ Tools",
   "description": "Build, run and manage Qt C++ projects in VS Code",
-  "version": "1.18.0",
+  "version": "1.19.0",
   "publisher": "akhilp19",
   "author": {
     "name": "Akhil Pawar"
@@ -323,6 +323,36 @@
         "command": "qt.openQtDocumentation",
         "title": "Qt: Open Qt Documentation",
         "icon": "$(book)"
+      },
+      {
+        "command": "qt.buildAndroidApk",
+        "title": "Qt: Build Android APK",
+        "icon": "$(device-mobile)"
+      },
+      {
+        "command": "qt.configureAndroidSdk",
+        "title": "Qt: Configure Android SDK",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "qt.installAndroidApk",
+        "title": "Qt: Install Android APK",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "qt.selectBuildKit",
+        "title": "Qt: Select Build Kit",
+        "icon": "$(list-selection)"
+      },
+      {
+        "command": "qt.configureBuildKit",
+        "title": "Qt: Configure Build Kit",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "qt.detectBuildKits",
+        "title": "Qt: Detect Build Kits",
+        "icon": "$(search)"
       }
     ],
     "taskDefinitions": [
@@ -625,6 +655,31 @@
           "type": "boolean",
           "default": false,
           "description": "Run clazy / clang-tidy automatically when C++ files are saved."
+        },
+        "qt.androidSdkPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to Android SDK directory."
+        },
+        "qt.androidNdkPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to Android NDK directory."
+        },
+        "qt.androidPlatform": {
+          "type": "string",
+          "default": "android-34",
+          "description": "Android platform level for APK builds (e.g., android-34)."
+        },
+        "qt.buildKits": {
+          "type": "array",
+          "default": [],
+          "description": "Array of build kit definitions. Managed by the extension."
+        },
+        "qt.activeKit": {
+          "type": "object",
+          "default": {},
+          "description": "Per-project active build kit map. Managed by the extension."
         }
       }
     },
@@ -897,6 +952,30 @@
         {
           "command": "qt.openQtDocumentation",
           "when": "true"
+        },
+        {
+          "command": "qt.buildAndroidApk",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.configureAndroidSdk",
+          "when": "true"
+        },
+        {
+          "command": "qt.installAndroidApk",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.selectBuildKit",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.configureBuildKit",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.detectBuildKits",
+          "when": "workspaceFolderCount > 0"
         }
       ],
       "view/title": [

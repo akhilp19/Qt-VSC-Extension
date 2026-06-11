@@ -26,6 +26,10 @@ export class QtAndroidDeployment {
         this.outputChannel = outputChannel;
     }
 
+    dispose(): void {
+        // No resources to clean up
+    }
+
     // ─────────────────────────────────────────────────────────────
     // Android SDK / NDK Configuration
     // ─────────────────────────────────────────────────────────────

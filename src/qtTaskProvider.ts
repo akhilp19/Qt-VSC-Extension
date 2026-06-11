@@ -153,12 +153,15 @@ export class QtTaskProvider implements vscode.TaskProvider {
         return {};
     }
 
-    private getKitExtraArgs(projectFile: string, projectType: 'qmake' | 'cmake'): string {
+    private getKitExtraArgs(projectFile: string, projectType: 'qmake' | 'cmake' | 'python' | 'raw'): string {
         if (!this.qtBuildKitManager) { return ''; }
         if (projectType === 'qmake') {
             return this.qtBuildKitManager.getKitQMakeArgs(projectFile);
         }
-        return this.qtBuildKitManager.getKitCMakeArgs(projectFile);
+        if (projectType === 'cmake') {
+            return this.qtBuildKitManager.getKitCMakeArgs(projectFile);
+        }
+        return '';
     }
 
     private async createBuildTask(
@@ -172,7 +175,6 @@ export class QtTaskProvider implements vscode.TaskProvider {
         const buildDir = this.getBuildDir(projectFile, buildType);
         const kitEnv = this.getKitEnvVars(projectFile);
         const makeCmd = this.qtConfigManager.getMakeCommand(qtInstallation);
-        const buildType = this.qtConfigManager.getProjectBuildType(projectFile);
         const jobs = this.qtConfigManager.getParallelJobs();
         const parallelFlag = this.getParallelFlag(makeCmd, jobs);
         
@@ -358,7 +360,6 @@ export class QtTaskProvider implements vscode.TaskProvider {
         const buildType = this.qtConfigManager.getProjectBuildType(projectFile);
         const buildDir = this.getBuildDir(projectFile, buildType);
         const makeCmd = this.qtConfigManager.getMakeCommand(qtInstallation);
-        const buildType = this.qtConfigManager.getProjectBuildType(projectFile);
         const jobs = this.qtConfigManager.getParallelJobs();
         const parallelFlag = this.getParallelFlag(makeCmd, jobs);
         const projectName = path.basename(projectFile, path.extname(projectFile));

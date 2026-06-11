@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
 import { QtConfigManager, QtInstallation } from './qtConfigManager';
 
 export interface BuildKit {
@@ -11,6 +12,7 @@ export interface BuildKit {
     buildDirTemplate: string;
     envVars?: Record<string, string>;
     cmakeToolchainFile?: string;
+    crossCompilePrefix?: string;
     additionalQMakeArgs?: string;
     additionalCMakeArgs?: string;
 }
@@ -162,10 +164,147 @@ export class QtBuildKitManager {
             kit.additionalCMakeArgs = newCmakeArgs;
         }
 
+        // Edit cross-compile prefix
+        const newCrossPrefix = await vscode.window.showInputBox({
+            prompt: 'Cross-compile prefix (e.g., aarch64-linux-gnu-)',
+            value: kit.crossCompilePrefix || ''
+        });
+        if (newCrossPrefix !== undefined) {
+            kit.crossCompilePrefix = newCrossPrefix || undefined;
+        }
+
         // Save back
         const updatedKits = kits.map(k => k.name === kit.name ? kit : k);
         await config.update('buildKits', updatedKits, vscode.ConfigurationTarget.Workspace);
         void vscode.window.showInformationMessage(`Kit "${kit.name}" updated.`);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Toolchain File Management
+    // ─────────────────────────────────────────────────────────────
+
+    async configureKitToolchain(): Promise<void> {
+        const config = vscode.workspace.getConfiguration('qt');
+        const kits = config.get<BuildKit[]>('buildKits') || [];
+
+        if (kits.length === 0) {
+            void vscode.window.showWarningMessage('No build kits to configure. Run "Detect Build Kits" first.');
+            return;
+        }
+
+        const selected = await vscode.window.showQuickPick(
+            kits.map(k => ({ label: k.name, description: `${k.qtVersion} • ${k.compiler}`, kit: k })),
+            { placeHolder: 'Select kit to configure toolchain' }
+        );
+
+        if (!selected) { return; }
+
+        const kit = selected.kit;
+
+        const fileUri = await vscode.window.showOpenDialog({
+            canSelectFiles: true,
+            canSelectFolders: false,
+            canSelectMany: false,
+            openLabel: 'Select CMake Toolchain File',
+            filters: { 'CMake': ['cmake'], 'All Files': ['*'] }
+        });
+
+        if (!fileUri || !fileUri[0]) { return; }
+
+        kit.cmakeToolchainFile = fileUri[0].fsPath;
+
+        const updatedKits = kits.map(k => k.name === kit.name ? kit : k);
+        await config.update('buildKits', updatedKits, vscode.ConfigurationTarget.Workspace);
+        void vscode.window.showInformationMessage(`Toolchain file set for "${kit.name}": ${kit.cmakeToolchainFile}`);
+        this.outputChannel.appendLine(`[Build Kits] Toolchain for ${kit.name}: ${kit.cmakeToolchainFile}`);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Kit Export / Import
+    // ─────────────────────────────────────────────────────────────
+
+    async exportKits(): Promise<void> {
+        const config = vscode.workspace.getConfiguration('qt');
+        const kits = config.get<BuildKit[]>('buildKits') || [];
+
+        if (kits.length === 0) {
+            void vscode.window.showWarningMessage('No build kits to export. Run "Detect Build Kits" first.');
+            return;
+        }
+
+        const saveUri = await vscode.window.showSaveDialog({
+            defaultUri: vscode.Uri.file('qt-build-kits.json'),
+            filters: { 'JSON': ['json'] }
+        });
+
+        if (!saveUri) { return; }
+
+        fs.writeFileSync(saveUri.fsPath, JSON.stringify(kits, null, 2), 'utf-8');
+        void vscode.window.showInformationMessage(`Exported ${kits.length} kit(s) to ${path.basename(saveUri.fsPath)}`);
+        this.outputChannel.appendLine(`[Build Kits] Exported ${kits.length} kit(s) to ${saveUri.fsPath}`);
+    }
+
+    async importKits(): Promise<void> {
+        const fileUri = await vscode.window.showOpenDialog({
+            canSelectFiles: true,
+            canSelectFolders: false,
+            canSelectMany: false,
+            openLabel: 'Import Build Kits',
+            filters: { 'JSON': ['json'] }
+        });
+
+        if (!fileUri || !fileUri[0]) { return; }
+
+        let imported: unknown;
+        try {
+            imported = JSON.parse(fs.readFileSync(fileUri[0].fsPath, 'utf-8'));
+        } catch {
+            void vscode.window.showErrorMessage('Failed to parse JSON file.');
+            return;
+        }
+
+        if (!Array.isArray(imported)) {
+            void vscode.window.showErrorMessage('Invalid kit file: expected an array of kits.');
+            return;
+        }
+
+        const validKits: BuildKit[] = [];
+        for (const item of imported) {
+            if (typeof item === 'object' && item !== null &&
+                'name' in item && typeof item.name === 'string' &&
+                'qtPath' in item && typeof item.qtPath === 'string') {
+                validKits.push(item as BuildKit);
+            }
+        }
+
+        if (validKits.length === 0) {
+            void vscode.window.showErrorMessage('No valid kits found in the file.');
+            return;
+        }
+
+        const config = vscode.workspace.getConfiguration('qt');
+        const existing = config.get<BuildKit[]>('buildKits') || [];
+        const existingNames = new Set(existing.map(k => k.name));
+
+        let importedCount = 0;
+        let skippedCount = 0;
+        const merged = [...existing];
+
+        for (const kit of validKits) {
+            if (existingNames.has(kit.name)) {
+                skippedCount++;
+            } else {
+                merged.push(kit);
+                existingNames.add(kit.name);
+                importedCount++;
+            }
+        }
+
+        await config.update('buildKits', merged, vscode.ConfigurationTarget.Workspace);
+        void vscode.window.showInformationMessage(
+            `Imported ${importedCount} kit(s). Skipped ${skippedCount} duplicate(s).`
+        );
+        this.outputChannel.appendLine(`[Build Kits] Imported ${importedCount}, skipped ${skippedCount} from ${fileUri[0].fsPath}`);
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -213,6 +352,16 @@ export class QtBuildKitManager {
     getKitCMakeArgs(projectFile: string): string {
         const kit = this.getActiveKit(projectFile);
         return kit?.additionalCMakeArgs || '';
+    }
+
+    getKitToolchainFile(projectFile: string): string | undefined {
+        const kit = this.getActiveKit(projectFile);
+        return kit?.cmakeToolchainFile;
+    }
+
+    getCrossCompilePrefix(projectFile: string): string | undefined {
+        const kit = this.getActiveKit(projectFile);
+        return kit?.crossCompilePrefix;
     }
 
     // ─────────────────────────────────────────────────────────────

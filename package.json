@@ -2,7 +2,7 @@
   "name": "qt-vsc-extension",
   "displayName": "Qt C++ Tools",
   "description": "Build, run and manage Qt C++ projects in VS Code",
-  "version": "1.19.0",
+  "version": "1.20.0",
   "publisher": "akhilp19",
   "author": {
     "name": "Akhil Pawar"
@@ -353,6 +353,61 @@
         "command": "qt.detectBuildKits",
         "title": "Qt: Detect Build Kits",
         "icon": "$(search)"
+      },
+      {
+        "command": "qt.buildAndroidAab",
+        "title": "Qt: Build Android AAB",
+        "icon": "$(package)"
+      },
+      {
+        "command": "qt.validateAndroidManifest",
+        "title": "Qt: Validate Android Manifest",
+        "icon": "$(check)"
+      },
+      {
+        "command": "qt.buildIOSApp",
+        "title": "Qt: Build iOS App",
+        "icon": "$(device-mobile)"
+      },
+      {
+        "command": "qt.selectIOSSimulator",
+        "title": "Qt: Select iOS Simulator",
+        "icon": "$(list-selection)"
+      },
+      {
+        "command": "qt.runIOSOnSimulator",
+        "title": "Qt: Run iOS App on Simulator",
+        "icon": "$(run)"
+      },
+      {
+        "command": "qt.buildWebAssembly",
+        "title": "Qt: Build for WebAssembly",
+        "icon": "$(globe)"
+      },
+      {
+        "command": "qt.configureEmscripten",
+        "title": "Qt: Configure Emscripten SDK",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "qt.serveWebAssembly",
+        "title": "Qt: Serve WebAssembly Preview",
+        "icon": "$(preview)"
+      },
+      {
+        "command": "qt.configureKitToolchain",
+        "title": "Qt: Configure Kit Toolchain",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "qt.exportBuildKits",
+        "title": "Qt: Export Build Kits",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "qt.importBuildKits",
+        "title": "Qt: Import Build Kits",
+        "icon": "$(cloud-upload)"
       }
     ],
     "taskDefinitions": [
@@ -680,6 +735,31 @@
           "type": "object",
           "default": {},
           "description": "Per-project active build kit map. Managed by the extension."
+        },
+        "qt.iosSelectedSimulator": {
+          "type": "string",
+          "default": "",
+          "description": "UDID of the selected iOS simulator for deployment."
+        },
+        "qt.iosBuildForDevice": {
+          "type": "boolean",
+          "default": false,
+          "description": "Build iOS app for physical device instead of simulator."
+        },
+        "qt.emscriptenPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the Emscripten SDK root directory."
+        },
+        "qt.wasmBuildDirectory": {
+          "type": "string",
+          "default": "${workspaceFolder}/build-wasm",
+          "description": "Build directory for WebAssembly builds."
+        },
+        "qt.wasmServePort": {
+          "type": "number",
+          "default": 8080,
+          "description": "Port for the WebAssembly preview HTTP server."
         }
       }
     },

@@ -716,28 +716,56 @@
 
 ---
 
-## 🚧 Version 1.20.0 — iOS & WebAssembly *(Candidate)*
+## ✅ Version 1.20.0 (Current — Shipped) — iOS, WebAssembly & Build Kit Tools
 
-**Theme:** Extend mobile deployment to iOS and add WebAssembly support.
+**Theme:** Extend mobile deployment to iOS and WebAssembly, enhance Android and build kit management.
 
 ### iOS Deployment MVP *(macOS only)*
-- [ ] **Detect `macdeployqt` iOS mode** — `macdeployqt` with `-dmg` for iOS app bundles
-- [ ] **Xcode project generation** — wrap `qmake -spec macx-ios-clang` or CMake iOS toolchain
-- [ ] **Simulator target selection** — pick iPhone/iPad simulator from `xcrun simctl list`
+- [x] **`Qt: Build iOS App`** — qmake (`-spec macx-ios-clang`) and CMake iOS toolchain builds
+- [x] **`Qt: Select iOS Simulator`** — pick from `xcrun simctl list` with UDID persistence
+- [x] **`Qt: Run iOS App on Simulator`** — build, install (`simctl install`), and launch (`simctl launch`)
+- [x] Platform guard: graceful errors on Windows/Linux
 
 ### Qt for WebAssembly
-- [ ] **Detect Emscripten SDK** — find `emsdk` in common paths
-- [ ] **`Qt: Build for WebAssembly`** — wrap `qt-cmake` with wasm toolchain, `emmake make`
-- [ ] **Serve wasm output** — simple HTTP server to preview the built `.html`
+- [x] **Detect Emscripten SDK** — search common paths + PATH fallback
+- [x] **`Qt: Configure Emscripten SDK`** — interactive path picker with `emcc` version check
+- [x] **`Qt: Build for WebAssembly`** — qmake with `wasm-emscripten` spec or `emcmake` + `emmake make`
+- [x] **`Qt: Serve WebAssembly Preview`** — built-in Node.js HTTP server with MIME types for `.wasm`
 
 ### Android Enhancements
-- [ ] **AAB (Android App Bundle) support** — `androiddeployqt --android-app` with bundle args
-- [ ] **Android manifest validation** — check `AndroidManifest.xml` for common Qt issues
+- [x] **`Qt: Build Android AAB`** — `androiddeployqt` with `--aab` flag
+- [x] **`Qt: Validate Android Manifest`** — regex-based checks for Qt app class, configChanges, permissions, minSdkVersion
 
 ### Build Kit Enhancements
-- [ ] **CMake toolchain file management** — pick/apply `CMAKE_TOOLCHAIN_FILE` per kit
-- [ ] **Cross-compilation preset** — store compiler prefix (e.g., `aarch64-linux-gnu-g++`)
-- [ ] **Kit export/import** — share kit definitions as JSON between team members
+- [x] **Cross-compile prefix** — per-kit `crossCompilePrefix` (e.g., `aarch64-linux-gnu-`)
+- [x] **CMake toolchain file management** — `Qt: Configure Kit Toolchain` via file picker
+- [x] **Kit export/import** — `Qt: Export Build Kits` / `Qt: Import Build Kits` as JSON with deduplication
+- [x] **Task provider integration** — toolchain file and cross-compile args injected into CMake/qmake build & rebuild tasks
+- [x] **Fix:** Kit environment variables now passed to rebuild tasks
+
+---
+
+## 🚧 Version 1.21.0 — Advanced Mobile & Cross-Compile *(Candidate)*
+
+**Theme:** Deeper mobile integration and advanced cross-compilation workflows.
+
+### iOS Enhancements
+- [ ] **Device provisioning profile detection** — find signing certificates and provisioning profiles
+- [ ] **Archive & export IPA** — `xcodebuild archive` + `xcodebuild -exportArchive`
+- [ ] **TestFlight upload** — wrap `altool` or `xcrun altool` for App Store Connect
+
+### WebAssembly Enhancements
+- [ ] **WASM debug source maps** — configure `-g` and source map generation
+- [ ] **Qt for WASM threading** — detect and configure pthread support
+
+### Android Enhancements
+- [ ] **AAB install & test** — `bundletool` integration for local AAB testing
+- [ ] **Gradle wrapper support** — use project's own Gradle instead of bundled
+
+### Cross-Compilation
+- [ ] **Sysroot management** — per-kit sysroot path for embedded Linux
+- [ ] **Remote deployment** — SCP/RSYNC built artifacts to target device
+- [ ] **Remote debugging** — GDB server / LLDB remote setup
 
 ---
 

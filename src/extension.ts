@@ -49,6 +49,8 @@ import { QtClazyIntegration } from './qtClazyIntegration';
 import { QtDocViewer } from './qtDocViewer';
 import { QtAndroidDeployment } from './qtAndroidDeployment';
 import { QtBuildKitManager } from './qtBuildKit';
+import { QtIOSDeployment } from './qtIOSDeployment';
+import { QtWebAssembly } from './qtWebAssembly';
 
 let taskProvider: vscode.Disposable | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -281,6 +283,14 @@ export function activate(context: vscode.ExtensionContext): void {
     // Qt Android Deployment
     const qtAndroid = new QtAndroidDeployment(qtConfigManager, qtProjectDetector, outputChannel);
     context.subscriptions.push(qtAndroid);
+
+    // Qt iOS Deployment
+    const qtIOS = new QtIOSDeployment(qtConfigManager, qtProjectDetector, outputChannel);
+    context.subscriptions.push(qtIOS);
+
+    // Qt WebAssembly
+    const qtWasm = new QtWebAssembly(qtConfigManager, qtProjectDetector, outputChannel);
+    context.subscriptions.push(qtWasm);
     
     context.subscriptions.push(
         vscode.commands.registerCommand('qt.buildAndroidApk', async () => {
@@ -297,6 +307,56 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         vscode.commands.registerCommand('qt.installAndroidApk', async () => {
             await qtAndroid.installApk();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.buildAndroidAab', async () => {
+            await qtAndroid.buildAab();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.validateAndroidManifest', async () => {
+            await qtAndroid.validateManifest();
+        })
+    );
+
+    // iOS commands
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.buildIOSApp', async () => {
+            await qtIOS.buildIOSApp();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.selectIOSSimulator', async () => {
+            await qtIOS.selectSimulator();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.runIOSOnSimulator', async () => {
+            await qtIOS.runOnSimulator();
+        })
+    );
+
+    // WebAssembly commands
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.buildWebAssembly', async () => {
+            await qtWasm.buildWebAssembly();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.configureEmscripten', async () => {
+            await qtWasm.configureEmscripten();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.serveWebAssembly', async () => {
+            await qtWasm.serveWebAssembly();
         })
     );
     
@@ -316,6 +376,24 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         vscode.commands.registerCommand('qt.detectBuildKits', async () => {
             await qtBuildKitManager.saveDetectedKits();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.configureKitToolchain', async () => {
+            await qtBuildKitManager.configureKitToolchain();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.exportBuildKits', async () => {
+            await qtBuildKitManager.exportKits();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.importBuildKits', async () => {
+            await qtBuildKitManager.importKits();
         })
     );
     

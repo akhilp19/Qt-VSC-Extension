@@ -175,6 +175,200 @@ export class QtAndroidDeployment {
     }
 
     // ─────────────────────────────────────────────────────────────
+    // Build AAB (Android App Bundle)
+    // ─────────────────────────────────────────────────────────────
+
+    async buildAab(projectFile?: string): Promise<void> {
+        const androidDeployQt = await this.findAndroidDeployQt();
+        if (!androidDeployQt) {
+            void vscode.window.showErrorMessage('androiddeployqt not found. Ensure Qt for Android is installed.');
+            return;
+        }
+
+        const sdkPath = this.getAndroidSdkPath();
+        if (!sdkPath) {
+            const choice = await vscode.window.showWarningMessage(
+                'Android SDK not configured.',
+                'Configure SDK'
+            );
+            if (choice === 'Configure SDK') {
+                await this.configureAndroidSdk();
+            }
+            return;
+        }
+
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        if (!workspaceFolder) {
+            void vscode.window.showErrorMessage('No workspace folder open');
+            return;
+        }
+
+        // Find project
+        let targetProject = projectFile;
+        if (!targetProject) {
+            const projects = await this.qtProjectDetector.detectProjects(workspaceFolder.uri.fsPath);
+            if (projects.length === 0) {
+                void vscode.window.showErrorMessage('No Qt project found');
+                return;
+            }
+            if (projects.length === 1) {
+                targetProject = projects[0];
+            } else {
+                const selected = await vscode.window.showQuickPick(
+                    projects.map(p => ({ label: path.basename(p), description: p, value: p })),
+                    { placeHolder: 'Select project to build AAB for' }
+                );
+                if (!selected) { return; }
+                targetProject = selected.value;
+            }
+        }
+
+        const buildDir = this.qtConfigManager.getBuildDirectory();
+        const projectName = path.basename(targetProject, path.extname(targetProject));
+        const aabOutputDir = path.join(buildDir, `${projectName}_aab`);
+
+        if (!fs.existsSync(buildDir)) {
+            void vscode.window.showErrorMessage('Build directory not found. Build the project first.');
+            return;
+        }
+
+        const deploymentSettings = this.findDeploymentSettings(buildDir, projectName);
+        if (!deploymentSettings) {
+            void vscode.window.showErrorMessage(
+                'android_deployment_settings.json not found. Build the project for Android first.'
+            );
+            return;
+        }
+
+        const config = vscode.workspace.getConfiguration('qt');
+        const platform = config.get<string>('androidPlatform') || 'android-34';
+
+        if (!fs.existsSync(aabOutputDir)) {
+            fs.mkdirSync(aabOutputDir, { recursive: true });
+        }
+
+        const args = [
+            '--input', deploymentSettings,
+            '--output', aabOutputDir,
+            '--android-platform', platform,
+            '--gradle',
+            '--aab'
+        ];
+
+        this.outputChannel.appendLine(`[Android] Building AAB...`);
+        this.outputChannel.appendLine(`  androiddeployqt: ${androidDeployQt}`);
+        this.outputChannel.appendLine(`  Output: ${aabOutputDir}`);
+
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: `Building Android AAB for ${projectName}...`,
+            cancellable: false
+        }, async () => {
+            return this.runAndroidDeployQt(androidDeployQt!, args, aabOutputDir);
+        });
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Validate AndroidManifest.xml
+    // ─────────────────────────────────────────────────────────────
+
+    async validateManifest(projectFile?: string): Promise<void> {
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        if (!workspaceFolder) {
+            void vscode.window.showErrorMessage('No workspace folder open');
+            return;
+        }
+
+        let targetProject = projectFile;
+        if (!targetProject) {
+            const projects = await this.qtProjectDetector.detectProjects(workspaceFolder.uri.fsPath);
+            if (projects.length === 0) {
+                void vscode.window.showErrorMessage('No Qt project found');
+                return;
+            }
+            if (projects.length === 1) {
+                targetProject = projects[0];
+            } else {
+                const selected = await vscode.window.showQuickPick(
+                    projects.map(p => ({ label: path.basename(p), description: p, value: p })),
+                    { placeHolder: 'Select project to validate manifest for' }
+                );
+                if (!selected) { return; }
+                targetProject = selected.value;
+            }
+        }
+
+        const projectDir = path.dirname(targetProject);
+        const buildDir = this.qtConfigManager.getBuildDirectory();
+        const projectName = path.basename(targetProject, path.extname(targetProject));
+
+        // Search for AndroidManifest.xml
+        const candidates = [
+            path.join(projectDir, 'android', 'AndroidManifest.xml'),
+            path.join(projectDir, 'AndroidManifest.xml'),
+            path.join(buildDir, 'android-build', 'AndroidManifest.xml'),
+            path.join(buildDir, 'android_build', 'AndroidManifest.xml'),
+            path.join(buildDir, projectName, 'AndroidManifest.xml')
+        ];
+
+        let manifestPath: string | undefined;
+        for (const p of candidates) {
+            if (fs.existsSync(p)) {
+                manifestPath = p;
+                break;
+            }
+        }
+
+        if (!manifestPath) {
+            void vscode.window.showErrorMessage('AndroidManifest.xml not found.');
+            return;
+        }
+
+        const content = fs.readFileSync(manifestPath, 'utf-8');
+        const issues: string[] = [];
+
+        // Check for Qt application class
+        const hasQt5App = content.includes('org.qtproject.qt5.android.bindings.QtApplication');
+        const hasQt6App = content.includes('org.qtproject.qt6.android.bindings.QtApplication');
+        if (!hasQt5App && !hasQt6App) {
+            issues.push('Missing Qt application class in <application android:name>. Expected org.qtproject.qt5/6.android.bindings.QtApplication');
+        }
+
+        // Check configChanges
+        if (!content.includes('android:configChanges')) {
+            issues.push('Missing android:configChanges attribute. Qt apps should handle orientation|screenSize|smallestScreenSize|locale changes.');
+        }
+
+        // Check INTERNET permission (commonly needed)
+        if (!content.includes('android.permission.INTERNET')) {
+            issues.push('Missing INTERNET permission. Most Qt apps need <uses-permission android:name="android.permission.INTERNET" />');
+        }
+
+        // Check minSdkVersion compatibility
+        const minSdkMatch = content.match(/android:minSdkVersion="(\d+)"/);
+        if (minSdkMatch) {
+            const minSdk = parseInt(minSdkMatch[1], 10);
+            if (minSdk < 21) {
+                issues.push(`minSdkVersion (${minSdk}) may be too low for modern Qt. Qt 6 recommends API 23+.`);
+            }
+        } else {
+            issues.push('Missing android:minSdkVersion. Qt apps should declare a minimum SDK version.');
+        }
+
+        // Report results
+        this.outputChannel.appendLine(`[Android] Manifest validation: ${manifestPath}`);
+        if (issues.length === 0) {
+            void vscode.window.showInformationMessage('AndroidManifest.xml looks good!');
+            this.outputChannel.appendLine('[Android] No issues found.');
+        } else {
+            void vscode.window.showWarningMessage(`AndroidManifest.xml: ${issues.length} issue(s) found. See Output → Qt C++ Tools.`);
+            for (const issue of issues) {
+                this.outputChannel.appendLine(`  ⚠ ${issue}`);
+            }
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
     // Install APK
     // ─────────────────────────────────────────────────────────────
 
@@ -350,6 +544,28 @@ export class QtAndroidDeployment {
                 const entries = fs.readdirSync(dir, { recursive: true }) as string[];
                 for (const entry of entries) {
                     if (entry.endsWith('.apk')) {
+                        return path.join(dir, entry);
+                    }
+                }
+            } catch {
+                // ignore
+            }
+        }
+        return undefined;
+    }
+
+    private findAabFile(buildDir: string): string | undefined {
+        const searchDirs = [
+            buildDir,
+            path.join(buildDir, 'android_build'),
+            path.join(buildDir, 'android-build')
+        ];
+        for (const dir of searchDirs) {
+            if (!fs.existsSync(dir)) { continue; }
+            try {
+                const entries = fs.readdirSync(dir, { recursive: true }) as string[];
+                for (const entry of entries) {
+                    if (entry.endsWith('.aab')) {
                         return path.join(dir, entry);
                     }
                 }

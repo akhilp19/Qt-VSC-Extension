@@ -164,6 +164,20 @@ export class QtTaskProvider implements vscode.TaskProvider {
         return '';
     }
 
+    private getKitToolchainFile(projectFile: string): string | undefined {
+        if (this.qtBuildKitManager) {
+            return this.qtBuildKitManager.getKitToolchainFile(projectFile);
+        }
+        return undefined;
+    }
+
+    private getCrossCompilePrefix(projectFile: string): string | undefined {
+        if (this.qtBuildKitManager) {
+            return this.qtBuildKitManager.getCrossCompilePrefix(projectFile);
+        }
+        return undefined;
+    }
+
     private async createBuildTask(
         projectFile: string,
         projectType: 'qmake' | 'cmake' | 'python' | 'raw',
@@ -193,7 +207,9 @@ export class QtTaskProvider implements vscode.TaskProvider {
         if (projectType === 'qmake') {
             // QMake build: qmake -> make
             const qmakePath = qtInstallation?.qmakePath || 'qmake';
-            const additionalArgs = [config.get<string>('additionalQMakeArguments') || '', kitExtraArgs].filter(Boolean).join(' ');
+            const crossPrefix = this.getCrossCompilePrefix(projectFile);
+            const crossCompileArg = crossPrefix ? `-device-option CROSS_COMPILE=${crossPrefix}` : '';
+            const additionalArgs = [config.get<string>('additionalQMakeArguments') || '', kitExtraArgs, crossCompileArg].filter(Boolean).join(' ');
             const buildTypeArg = buildType === 'release' ? 'CONFIG+=release' : 'CONFIG+=debug';
             const makeArgs = parallelFlag ? `${makeCmd} ${parallelFlag}` : makeCmd;
             
@@ -228,7 +244,13 @@ export class QtTaskProvider implements vscode.TaskProvider {
             });
         } else {
             // CMake build
-            const additionalArgs = [config.get<string>('additionalCMakeArguments') || '', kitExtraArgs].filter(Boolean).join(' ');
+            const toolchainFile = this.getKitToolchainFile(projectFile);
+            const toolchainArg = toolchainFile ? `-DCMAKE_TOOLCHAIN_FILE=${quotePath(toolchainFile)}` : '';
+            const crossPrefix = this.getCrossCompilePrefix(projectFile);
+            const crossCompileArg = crossPrefix && !toolchainFile
+                ? `-DCMAKE_C_COMPILER=${quotePath(crossPrefix + 'gcc')} -DCMAKE_CXX_COMPILER=${quotePath(crossPrefix + 'g++')}`
+                : '';
+            const additionalArgs = [config.get<string>('additionalCMakeArguments') || '', kitExtraArgs, toolchainArg, crossCompileArg].filter(Boolean).join(' ');
             const cmakeBuildArgs = parallelFlag ? `--parallel ${jobs}` : '';
             const presetArg = this.qtCMakePresets.getPresetArgs(projectFile);
             
@@ -373,9 +395,12 @@ export class QtTaskProvider implements vscode.TaskProvider {
         if (projectType === 'qmake') {
             // QMake rebuild: clean -> qmake -> make
             const qmakePath = qtInstallation?.qmakePath || 'qmake';
-            const additionalArgs = config.get<string>('additionalQMakeArguments') || '';
+            const crossPrefix = this.getCrossCompilePrefix(projectFile);
+            const crossCompileArg = crossPrefix ? `-device-option CROSS_COMPILE=${crossPrefix}` : '';
+            const additionalArgs = [config.get<string>('additionalQMakeArguments') || '', crossCompileArg].filter(Boolean).join(' ');
             const buildTypeArg = buildType === 'release' ? 'CONFIG+=release' : 'CONFIG+=debug';
             const makeArgs = parallelFlag ? `${makeCmd} ${parallelFlag}` : makeCmd;
+            const kitEnv = this.getKitEnvVars(projectFile);
             
             const commands: string[] = [];
             if (preBuildCommand) {
@@ -393,13 +418,21 @@ export class QtTaskProvider implements vscode.TaskProvider {
             }
             
             execution = new vscode.ShellExecution(joinCmds(...commands), {
-                cwd: workspaceFolder.uri.fsPath
+                cwd: workspaceFolder.uri.fsPath,
+                env: kitEnv
             });
         } else {
             // CMake rebuild
-            const additionalArgs = config.get<string>('additionalCMakeArguments') || '';
+            const toolchainFile = this.getKitToolchainFile(projectFile);
+            const toolchainArg = toolchainFile ? `-DCMAKE_TOOLCHAIN_FILE=${quotePath(toolchainFile)}` : '';
+            const crossPrefix = this.getCrossCompilePrefix(projectFile);
+            const crossCompileArg = crossPrefix && !toolchainFile
+                ? `-DCMAKE_C_COMPILER=${quotePath(crossPrefix + 'gcc')} -DCMAKE_CXX_COMPILER=${quotePath(crossPrefix + 'g++')}`
+                : '';
+            const additionalArgs = [config.get<string>('additionalCMakeArguments') || '', toolchainArg, crossCompileArg].filter(Boolean).join(' ');
             const cmakeBuildArgs = parallelFlag ? `--parallel ${jobs}` : '';
             const preset = this.qtCMakePresets.getPresetForProject(projectFile);
+            const kitEnv = this.getKitEnvVars(projectFile);
             
             const commands: string[] = [];
             if (preBuildCommand) {
@@ -423,7 +456,8 @@ export class QtTaskProvider implements vscode.TaskProvider {
             }
             
             execution = new vscode.ShellExecution(joinCmds(...commands), {
-                cwd: workspaceFolder.uri.fsPath
+                cwd: workspaceFolder.uri.fsPath,
+                env: kitEnv
             });
         }
         

@@ -41,3 +41,5 @@ export * from './qtClazyIntegration';
 export * from './qtDocViewer';
 export * from './qtAndroidDeployment';
 export * from './qtBuildKit';
+export * from './qtIOSDeployment';
+export * from './qtWebAssembly';

@@ -34,14 +34,27 @@ Access these commands via Command Palette (`Ctrl+Shift+P`):
 - `Qt: Compile Resource File (rcc)` — Run `rcc` manually
 - `Qt: Deploy Application` — Run `windeployqt` / `macdeployqt` / `linuxdeployqt`
 - `Qt: Build Android APK` — Build Android APK via `androiddeployqt`
+- `Qt: Build Android AAB` — Build Android App Bundle
+- `Qt: Validate Android Manifest` — Check `AndroidManifest.xml` for common Qt issues
 - `Qt: Configure Android SDK` — Set Android SDK/NDK paths
 - `Qt: Install Android APK` — Install APK to connected device via `adb`
+- `Qt: Build iOS App` — Build iOS app for simulator or device (macOS only)
+- `Qt: Select iOS Simulator` — Pick iPhone/iPad simulator from `xcrun simctl`
+- `Qt: Run iOS App on Simulator` — Build, install, and launch on selected simulator
+- `Qt: Build for WebAssembly` — Build Qt app for WASM via Emscripten
+- `Qt: Configure Emscripten SDK` — Set Emscripten path for WASM builds
+- `Qt: Serve WebAssembly Preview` — Start local HTTP server for WASM output
 
 **Build Kits**
 - `Qt: Detect Build Kits` — Auto-generate kits from Qt installations
 - `Qt: Select Build Kit` — Per-project kit selection
 - `Qt: Configure Build Kit` — Edit kit build directory template and extra args
+- `Qt: Configure Kit Toolchain` — Assign CMake toolchain file to a kit
+- `Qt: Export Build Kits` — Save kit definitions as JSON
+- `Qt: Import Build Kits` — Load kit definitions from JSON
 - Per-kit build directories with variable substitution
+- Cross-compile prefix support per kit
+- CMake toolchain file injection into build tasks
 
 **QML Support**
 - `Qt: Format QML File` — Format with `qmlformat`

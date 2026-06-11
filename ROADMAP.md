@@ -561,7 +561,7 @@
 - [x] **Duplicate protection** — detects existing PCH config and aborts
 - [x] **CMake target name fallback** — manual input if auto-detection fails
 
-## ✅ Version 1.11.0 (Current — Shipped) — Advanced Build Script Injection & Direct PCH Compiler Configuration
+## ✅ Version 1.11.0 (Shipped) — Advanced Build Script Injection & Direct PCH Compiler Configuration
 
 **Theme:** Inject code generation into existing build scripts and configure PCH compiler flags without modifying project files.
 
@@ -584,7 +584,7 @@
 
 ---
 
-## ✅ Version 1.12.0 (Current — Shipped) — CI/CD Integration
+## ✅ Version 1.12.0 (Shipped) — CI/CD Integration
 
 **Theme:** One-click setup for building Qt projects in CI/CD pipelines.
 
@@ -611,7 +611,7 @@
 
 ---
 
-## ✅ Version 1.17.0 (Current — Shipped) — QML Language Server & Modern CMake Support
+## ✅ Version 1.17.0 (Shipped) — QML Language Server & Modern CMake Support
 
 **Theme:** Real QML IntelliSense via Qt's official language server, and modern CMake preset workflows.
 
@@ -672,7 +672,7 @@
   - Auto-detect and configure compiler cache
   - Show cache hit/miss stats
 
-## ✅ Version 1.18.0 (Current — Shipped) — QML Testing & Qt Code Quality
+## ✅ Version 1.18.0 (Shipped) — QML Testing & Qt Code Quality
 
 **Theme:** Complete the QML testing story and add Qt-specific C++ static analysis.
 
@@ -695,7 +695,7 @@
 
 ---
 
-## ✅ Version 1.19.0 (Current — Shipped) — Android Deployment & Build Kit Profiles
+## ✅ Version 1.19.0 (Shipped) — Android Deployment & Build Kit Profiles
 
 **Theme:** Extend deployment from desktop to mobile targets, and add Qt Creator-style build kit management.
 

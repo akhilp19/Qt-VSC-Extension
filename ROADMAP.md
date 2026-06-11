@@ -109,7 +109,6 @@
 - [x] **Qt class and method autocomplete**
   - Parse Qt headers to provide `CompletionItemProvider` for Qt classes
   - Suggest methods, enums, and constants from `QObject`, `QWidget`, `QString`, etc.
-  - Context-aware suggestions (e.g., only `QWidget` methods when inside a widget class)
 
 - [x] **Signal / Slot helper**
   - Autocomplete for `connect(sender, SIGNAL(...), receiver, SLOT(...))`
@@ -130,6 +129,8 @@
   - Recognize `Q_PROPERTY`, `Q_INVOKABLE`, `Q_ENUM` macros
   - Provide completions for QML-exposed C++ properties
 
+> **Note:** Context-aware suggestions (e.g., only `QWidget` methods when inside a widget class) are deferred to v2.0.0.
+
 ---
 
 ## ✅ Version 0.5.0 (Released) — Enhanced Sidebar & Project Import
@@ -147,11 +148,11 @@
 - [x] **Build history / status indicator**
   - Show last build result (success/failure) per project
   - Timestamp of last build
-  - One-click re-build from status indicator
 
 - [x] **Qt Creator project import**
-  - Import `.pro.user` settings (build steps, run configs)
-  - Import `.qbs` project metadata where possible
+  - Import `.pro.user` settings (build steps)
+
+> **Note:** One-click re-build from status indicator and `.pro.user` run configuration import are deferred to v2.0.0.
 
 ---
 
@@ -164,12 +165,13 @@
   - Configurable job count for `make` / `mingw32-make`
 
 - [x] **Incremental build optimization**
-  - Detect unnecessary rebuilds and warn
   - Suggest `ccache` integration for faster compiles
 
 - [x] **Build error quick-fix suggestions**
   - Offer common fixes in the Problems panel (e.g., missing `#include`, undeclared `Q_OBJECT`)
   - One-click apply via Code Actions
+
+> **Note:** Automatic unnecessary-rebuild detection with warnings and proactive post-build ccache suggestions are deferred to v2.0.0.
 
 ---
 
@@ -296,11 +298,12 @@
 - `src/qmlCppBridgeProviders.ts` — `QmlDefinitionProvider`, `QmlCompletionProvider`, `CppReferenceProvider`
 - Index stores: `Map<qmlTypeName, CppQmlSymbol[]>`, `Map<symbolName, QmlUsage[]>`, `Map<id, qmlType>`
 
-**Known limitations:**
+**Known limitations (fixed in v1.16.0):**
+- ✅ `QML_SINGLETON` — now fully supported
+- ❌ `QML_ATTACHED` — deferred to v2.0.0
 - Regex-based C++ parsing (not a full AST) — may miss complex template types in Q_PROPERTY, multiline macros, or preprocessor conditionals
 - Only scans workspace folders (not system includes) — Qt built-in QML types are not indexed
 - ReferenceProvider matches by symbol name only, not type-qualified name
-- Does not yet support `QML_SINGLETON` or `QML_ATTACHED` special resolution rules
 
 ---
 
@@ -375,6 +378,7 @@
 - [x] **Debug profile** — `Debug Qt Tests` via Test Explorer
   - Launches test binary under VS Code debugger
   - Uses auto-detected debugger (cppvsdbg / gdb / lldb)
+  - Individual method filtering supported (args passed to debug session)
 - [x] **Real-time output parsing** — parses QTest text output as it arrives
   - `PASS   : ClassName::methodName()`
   - `FAIL!  : ClassName::methodName() message (file.cpp:42)`
@@ -398,7 +402,6 @@
 - Test executable found via same heuristic as debugger. Projects with separate test targets may need manual configuration.
 - Regex-based discovery may miss test classes inside complex preprocessor conditionals or namespaces.
 - Only discovers `private slots:` test methods; `public slots:` not detected.
-- Debug profile launches whole test binary; individual method filtering in debug session not yet supported.
 
 ---
 
@@ -525,6 +528,8 @@
 - [x] **`qt.autoRcc`** — toggle auto RCC on save (default: `false`)
 - [x] **`qt.generatedCodeDirectory`** — output directory for generated code (supports `${workspaceFolder}`)
 
+---
+
 ## ✅ Version 1.9.0 (Released) — Generated Code Navigation & PCH Support
 
 **Theme:** Navigate between source and generated code, plus precompiled header generation.
@@ -543,6 +548,8 @@
 - [x] Generates `qt_pch.h` with `#pragma once`
 - [x] Build-system instructions (QMake, CMake, MSVC) with copy-to-clipboard
 
+---
+
 ## ✅ Version 1.10.0 (Released) — Custom Build System Integration & PCH Build Integration
 
 **Theme:** Support raw Qt projects without QMake/CMake, and auto-integrate PCH into build files.
@@ -560,6 +567,8 @@
 - [x] **Change preview** — shows additions before applying with confirmation dialog
 - [x] **Duplicate protection** — detects existing PCH config and aborts
 - [x] **CMake target name fallback** — manual input if auto-detection fails
+
+---
 
 ## ✅ Version 1.11.0 (Shipped) — Advanced Build Script Injection & Direct PCH Compiler Configuration
 
@@ -605,9 +614,54 @@
   - Linux build with `aqtinstall`
   - Artifact upload
 
-### Qt Installer Framework
+---
+
+## ✅ Version 1.13.0 (Shipped) — Qt Installer Framework
+
+**Theme:** Generate and build native installers for Qt applications.
+
 - [x] **Generate installer config** (`config.xml`, `package.xml`) for `binarycreator`
 - [x] **Build installer** command — run `binarycreator` to produce `.exe` / `.dmg` / `.run` installer
+
+---
+
+## ✅ Version 1.14.0 (Shipped) — Build Analytics & Compiler Cache Integration
+
+**Theme:** Help developers optimize their Qt builds with analytics and compiler caching.
+
+### Build Performance
+- [x] **Build time tracker** — logs per-project build durations with persistent history
+- [x] **Build analytics dashboard** — sidebar tree view with build history, durations, success rates
+- [x] **`ccache` / `sccache` integration**
+  - Auto-detect and configure compiler cache
+  - Show cache hit/miss stats
+
+> **Note:** Build time regression alerts and per-file compilation time breakdown are deferred to v2.0.0.
+
+---
+
+## ✅ Version 1.15.0 (Shipped) — Profiling & Performance Diagnostics
+
+**Theme:** Runtime profiling and compile-time diagnostics for Qt applications.
+
+### Application Profiling
+- [x] **QML Profiler launcher** — run app with `-qmljsdebugger=port:3768,block` and show instructions to connect Qt Creator QML Profiler
+- [x] **CPU Profiler integration** — launch `perf` (Linux), `Instruments`/`sample` (macOS), or `VTune` (Windows/Linux) from VS Code
+- [x] **Memory leak detection** — integrate `valgrind` (Linux), `drmemory` (Windows), `leaks` (macOS) for Qt apps
+- [x] **Slow target detection** — analyze `.cpp` files by complexity heuristic (LOC, includes, templates) and show top slowest compilation targets
+
+---
+
+## ✅ Version 1.16.0 (Shipped) — QML Type Inference & Hot Reload
+
+**Theme:** Resolve custom QML types from C++ and hot-reload QML previews.
+
+- [x] **QML type inference** — resolve custom QML types defined in C++ via `QML_ELEMENT`, `QML_NAMED_ELEMENT`, `QML_SINGLETON`
+- [x] **QML type completions** — C++-registered QML types offered in QML file completions
+- [x] **QML type definition** — Ctrl+Click on QML type name jumps to C++ class definition
+- [x] **QML type hover** — hover over QML type shows C++ class info and registration macro
+- [x] **Hot reload on save** — `qt.qmlPreviewHotReload` setting auto-restarts `qmlscene` when QML file is saved
+- [x] **Stop QML Preview** command — terminate running `qmlscene` process
 
 ---
 
@@ -636,42 +690,6 @@
 
 ---
 
-## ✅ Version 1.16.0 (Shipped) — QML Type Inference & Hot Reload
-
-**Theme:** Resolve custom QML types from C++ and hot-reload QML previews.
-
-- [x] **QML type inference** — resolve custom QML types defined in C++ via `QML_ELEMENT`, `QML_NAMED_ELEMENT`, `QML_SINGLETON`
-- [x] **QML type completions** — C++-registered QML types offered in QML file completions
-- [x] **QML type definition** — Ctrl+Click on QML type name jumps to C++ class definition
-- [x] **QML type hover** — hover over QML type shows C++ class info and registration macro
-- [x] **Hot reload on save** — `qt.qmlPreviewHotReload` setting auto-restarts `qmlscene` when QML file is saved
-- [x] **Stop QML Preview** command — terminate running `qmlscene` process
-
----
-
-## ✅ Version 1.15.0 (Shipped) — Profiling & Performance Diagnostics
-
-**Theme:** Runtime profiling and compile-time diagnostics for Qt applications.
-
-### Application Profiling
-- [x] **QML Profiler launcher** — run app with `-qmljsdebugger=port:3768,block` and show instructions to connect Qt Creator QML Profiler
-- [x] **CPU Profiler integration** — launch `perf` (Linux), `Instruments`/`sample` (macOS), or `VTune` (Windows/Linux) from VS Code
-- [x] **Memory leak detection** — integrate `valgrind` (Linux), `drmemory` (Windows), `leaks` (macOS) for Qt apps
-- [x] **Slow target detection** — analyze `.cpp` files by complexity heuristic (LOC, includes, templates) and show top slowest compilation targets
-
----
-
-## ✅ Version 1.14.0 (Shipped) — Build Analytics & Compiler Cache Integration
-
-**Theme:** Help developers optimize their Qt builds with analytics and compiler caching.
-
-### Build Performance
-- [x] **Build time tracker** — logs per-project build durations with persistent history
-- [x] **Build analytics dashboard** — sidebar tree view with build history, durations, success rates
-- [x] **`ccache` / `sccache` integration**
-  - Auto-detect and configure compiler cache
-  - Show cache hit/miss stats
-
 ## ✅ Version 1.18.0 (Shipped) — QML Testing & Qt Code Quality
 
 **Theme:** Complete the QML testing story and add Qt-specific C++ static analysis.
@@ -692,6 +710,8 @@
 - [x] **Detect local Qt docs** — `Docs/Qt-6.x.x/` or `.qch` files from active Qt installation
 - [x] **`Qt: Open Qt Documentation`** command — lists installed modules, opens local HTML in VS Code webview
 - [x] **Update hover provider** — fallback to local docs when offline, instead of hardcoded `doc.qt.io` links
+
+> **Note:** clazy auto-fix quick actions and `.clang-tidy` config file detection are deferred to v2.0.0.
 
 ---
 
@@ -745,31 +765,74 @@
 
 ---
 
-## 🚧 Version 1.21.0 — Advanced Mobile & Cross-Compile *(Candidate)*
+## 🚧 Version 2.0.0 — Completeness & Polish *(Next)*
 
-**Theme:** Deeper mobile integration and advanced cross-compilation workflows.
+**Theme:** Implement everything that was claimed but missing, fix known limitations, and round out the extension into a truly complete Qt development environment.
+
+### Code Intelligence (v0.4.0 gaps)
+- [ ] **Context-aware Qt completions** — infer enclosing C++ class and suggest only that class's methods/signals/slots
+- [ ] **MOC-aware IntelliSense v2** — resolve `Q_PROPERTY` types for property-specific completions (e.g., `QString` properties offer string methods)
+
+### Sidebar & Import (v0.5.0 gaps)
+- [ ] **One-click rebuild from status indicator** — add `command` to `QtStatusGroupItem` tree nodes
+- [ ] **Qt Creator `.pro.user` run config import** — complete `runConfiguration` parsing (executable, workingDirectory, arguments)
+
+### Build Features (v0.6.0 gaps)
+- [ ] **Unnecessary rebuild detection** — compare source timestamps vs object file timestamps; warn when `make` would rebuild unchanged files
+- [ ] **Proactive ccache suggestion** — after a slow build, suggest enabling ccache if not already configured
+
+### QML-C++ Bridge (v1.3.0 limitation)
+- [ ] **`QML_ATTACHED` support** — detect `QML_ATTACHED` macros, index attached properties, offer completions for `Type.attachedProperty` patterns
+
+### Build Analytics (v1.14.0 gaps)
+- [ ] **Build time regression alerts** — compare current build time to trailing average; show warning if > 1.5x
+- [ ] **Per-file compilation time breakdown** — parse build output to attribute time to individual `.cpp` files; show slowest files in analytics tree
+
+### Code Quality (v1.18.0 gaps)
+- [ ] **clazy auto-fix quick actions** — `CodeActionProvider` that offers "Modernize connect()", "Add missing tr()", etc. with one-click apply
+- [ ] **`.clang-tidy` / `_clang-tidy` config detection** — read project-level config and pass `--config-file=` to clazy invocation
+
+### Mobile & Deployment (v1.19.0–1.20.0 gaps)
+- [ ] **Android NDK auto-detection** — detect NDK from `ndk-bundle` inside SDK, `ANDROID_NDK_HOME`, or common paths
+- [ ] **iOS device deployment** — provisioning profile detection, code signing, `xcodebuild archive`, export IPA
+- [ ] **WebAssembly source maps** — configure `-g` and serve `.wasm.map` files from preview server
+- [ ] **WebAssembly threading** — detect pthread-enabled Qt WASM and configure `-sUSE_PTHREADS`
+
+### Build Kits (v1.20.0 gaps)
+- [ ] **Kit validation** — `Qt: Validate Build Kit` command checks Qt path, compiler, toolchain file all exist and are compatible
+- [ ] **Default kit per workspace** — "Set as default for this workspace" option in kit selector
+- [ ] **Kit-specific deploy directories** — extend `${kitName}` variable substitution to `qt.deployDirectory`
+- [ ] **Kit env var editor UI** — interactive key/value editor instead of raw JSON
+
+### General Polish
+- [ ] **Extension health check** — `Qt: Run Health Check` command validates Qt, compiler, debugger, and kit configs; produces a diagnostic report
+- [ ] **Settings migration** — auto-migrate old setting names/structures on extension update
+- [ ] **Telemetry opt-in** — anonymous usage metrics (command invocations, build times) to guide future development
+
+---
+
+## 🚧 Version 2.1.0 — Advanced Mobile & Embedded *(Candidate)*
+
+**Theme:** Deeper mobile integration and embedded cross-compilation workflows.
 
 ### iOS Enhancements
-- [ ] **Device provisioning profile detection** — find signing certificates and provisioning profiles
-- [ ] **Archive & export IPA** — `xcodebuild archive` + `xcodebuild -exportArchive`
-- [ ] **TestFlight upload** — wrap `altool` or `xcrun altool` for App Store Connect
-
-### WebAssembly Enhancements
-- [ ] **WASM debug source maps** — configure `-g` and source map generation
-- [ ] **Qt for WASM threading** — detect and configure pthread support
+- [ ] **TestFlight upload** — wrap `xcrun altool` for App Store Connect uploads
+- [ ] **Simulator screenshot/recording** — `xcrun simctl io` integration
 
 ### Android Enhancements
 - [ ] **AAB install & test** — `bundletool` integration for local AAB testing
 - [ ] **Gradle wrapper support** — use project's own Gradle instead of bundled
+- [ ] **Android logcat viewer** — stream `adb logcat` filtered by Qt app PID in output channel
 
-### Cross-Compilation
+### Cross-Compilation & Embedded
 - [ ] **Sysroot management** — per-kit sysroot path for embedded Linux
 - [ ] **Remote deployment** — SCP/RSYNC built artifacts to target device
-- [ ] **Remote debugging** — GDB server / LLDB remote setup
+- [ ] **Remote debugging** — GDB server / LLDB remote setup with launch config generation
+- [ ] **Yocto SDK detection** — auto-detect Qt installations inside Yocto SDK sysroots
 
 ---
 
-## 🚧 Version 2.1.0 — LSP & Advanced Code Intelligence
+## 🚧 Version 2.2.0 — LSP & Deep Code Intelligence *(Candidate)*
 
 **Theme:** A Qt Language Server Protocol (LSP) client for deep C++ Qt understanding.
 
@@ -783,7 +846,6 @@
 - [ ] **Rename refactoring** across signal/slot connections
   - Rename a signal → update all `connect()` calls and `.qml` bindings
   - Rename a `Q_PROPERTY` → update QML usages
-
 - [ ] **Find all signal emitters** — find every `emit mySignal()` call site
 - [ ] **Find all slot connections** — find every `connect(..., SLOT(mySlot()))` call
 
@@ -800,6 +862,6 @@
 2. Open an issue to discuss design if it involves new UI or user-facing behavior.
 3. Submit a PR referencing the roadmap item.
 
-> **Last updated:** June 10, 2026  
-> **v1.17.0 shipped:** QML Language Server & Modern CMake Support  
+> **Last updated:** June 11, 2026
+> **Current version:** v1.20.0 — iOS, WebAssembly & Build Kit Tools
 > For the latest status, check the [GitHub Issues](https://github.com/akhilp19/Qt-VSC-Extension/issues) page.

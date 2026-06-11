@@ -704,11 +704,27 @@
 - [ ] **`Qt: Build Android APK`** command — wraps `androiddeployqt` with basic args
 - [ ] **Android SDK/NDK path configuration**
 - [ ] **Progress notification** during APK packaging
+- [ ] **AAB (Android App Bundle) support** — `androiddeployqt --android-app` with bundle args
+- [ ] **ADB device detection & install** — list connected devices, `adb install` the built APK
+- [ ] **Android manifest validation** — check `AndroidManifest.xml` for common Qt issues
+
+### iOS Deployment MVP *(macOS only)*
+- [ ] **Detect `macdeployqt` iOS mode** — `macdeployqt` with `-dmg` for iOS app bundles
+- [ ] **Xcode project generation** — wrap `qmake -spec macx-ios-clang` or CMake iOS toolchain
+- [ ] **Simulator target selection** — pick iPhone/iPad simulator from `xcrun simctl list`
+
+### Qt for WebAssembly
+- [ ] **Detect Emscripten SDK** — find `emsdk` in common paths
+- [ ] **`Qt: Build for WebAssembly`** — wrap `qt-cmake` with wasm toolchain, `emmake make`
+- [ ] **Serve wasm output** — simple HTTP server to preview the built `.html`
 
 ### Build Kit Profiles
 - [ ] **Per-kit build directories** — `${workspaceFolder}/build-${QtVersion}-${Compiler}-${BuildType}`
 - [ ] **Environment variable profiles** per Qt version / project
 - [ ] **Qt Creator-style "Kit" concept** — atomic switch of Qt + compiler + debugger
+- [ ] **CMake toolchain file management** — pick/apply `CMAKE_TOOLCHAIN_FILE` per kit
+- [ ] **Cross-compilation preset** — store compiler prefix (e.g., `aarch64-linux-gnu-g++`)
+- [ ] **Kit export/import** — share kit definitions as JSON between team members
 
 ---
 

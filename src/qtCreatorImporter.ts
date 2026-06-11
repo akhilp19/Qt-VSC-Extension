@@ -98,6 +98,20 @@ export class QtCreatorImporter {
             });
         }
 
+        // Extract run configuration
+        const execMatch = content.match(/<variable>RunConfiguration\.\d+\.Executable<\/variable>\s*<value[^>]*>([^<]*)<\/value>/i);
+        const wdMatch = content.match(/<variable>RunConfiguration\.\d+\.WorkingDirectory<\/variable>\s*<value[^>]*>([^<]*)<\/value>/i);
+        const argsMatch = content.match(/<variable>RunConfiguration\.\d+\.CommandLineArguments<\/variable>\s*<value[^>]*>([^<]*)<\/value>/i);
+
+        if (execMatch) {
+            result.runConfiguration = {
+                executable: this.expandQtCreatorPath(execMatch[1], projectFile),
+                workingDirectory: wdMatch ? this.expandQtCreatorPath(wdMatch[1], projectFile) : path.dirname(projectFile),
+                arguments: argsMatch ? argsMatch[1] : ''
+            };
+            this.outputChannel.appendLine(`[QtCreatorImport] Run config: ${result.runConfiguration.executable}`);
+        }
+
         this.outputChannel.appendLine(`[QtCreatorImport] Found ${result.buildConfigs.length} build config(s)`);
         return result;
     }
@@ -185,6 +199,49 @@ export class QtCreatorImporter {
                 void vscode.commands.executeCommand('workbench.action.openWorkspaceSettings', 'qt');
             }
         });
+
+        // Import run configuration if available
+        if (result.runConfiguration) {
+            const run = result.runConfiguration;
+            const launchJsonPath = path.join(path.dirname(projectFile), '.vscode', 'launch.json');
+            let launchConfig: { version: string; configurations: unknown[] } = { version: '0.2.0', configurations: [] };
+
+            if (fs.existsSync(launchJsonPath)) {
+                try {
+                    launchConfig = JSON.parse(fs.readFileSync(launchJsonPath, 'utf-8'));
+                } catch {
+                    // ignore parse errors
+                }
+            }
+
+            const configName = `Debug ${path.basename(projectFile, path.extname(projectFile))}`;
+            const existingIndex = launchConfig.configurations.findIndex((c: any) => c.name === configName);
+            const newConfig = {
+                name: configName,
+                type: 'cppdbg',
+                request: 'launch',
+                program: run.executable,
+                args: run.arguments ? run.arguments.split(' ') : [],
+                stopAtEntry: false,
+                cwd: run.workingDirectory,
+                environment: [],
+                externalConsole: false,
+                MIMode: process.platform === 'win32' ? 'gdb' : process.platform === 'darwin' ? 'lldb' : 'gdb'
+            };
+
+            if (existingIndex >= 0) {
+                launchConfig.configurations[existingIndex] = newConfig;
+            } else {
+                launchConfig.configurations.push(newConfig);
+            }
+
+            if (!fs.existsSync(path.dirname(launchJsonPath))) {
+                fs.mkdirSync(path.dirname(launchJsonPath), { recursive: true });
+            }
+            fs.writeFileSync(launchJsonPath, JSON.stringify(launchConfig, null, 2), 'utf-8');
+            void vscode.window.showInformationMessage(`Imported run configuration into launch.json: ${path.basename(run.executable)}`);
+            this.outputChannel.appendLine(`[QtCreatorImport] Updated launch.json with run config`);
+        }
 
         this.outputChannel.appendLine(`[QtCreatorImport] Imported config: ${selected.label} → ${selected.config.buildDirectory}`);
     }

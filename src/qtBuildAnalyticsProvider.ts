@@ -47,12 +47,17 @@ export class QtBuildAnalyticsProvider implements vscode.TreeDataProvider<Analyti
                 return new vscode.TreeItem('Build Analytics', vscode.TreeItemCollapsibleState.Expanded);
 
             case 'project': {
+                const analytics = element.analytics;
                 const item = new vscode.TreeItem(
-                    element.analytics.projectName,
+                    analytics.projectName,
                     vscode.TreeItemCollapsibleState.Expanded
                 );
-                item.iconPath = new vscode.ThemeIcon('project');
+                item.iconPath = new vscode.ThemeIcon(analytics.isRegression ? 'warning' : 'project');
                 item.contextValue = 'analyticsProject';
+                if (analytics.isRegression && analytics.lastBuild) {
+                    const ratio = (analytics.lastBuild.durationMs / analytics.averageDurationMs).toFixed(1);
+                    item.tooltip = `⚠ Build regression detected: last build took ${ratio}x longer than average (${QtBuildAnalytics.formatDuration(analytics.lastBuild.durationMs)} vs avg ${QtBuildAnalytics.formatDuration(analytics.averageDurationMs)})`;
+                }
                 return item;
             }
 

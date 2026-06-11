@@ -43,3 +43,5 @@ export * from './qtAndroidDeployment';
 export * from './qtBuildKit';
 export * from './qtIOSDeployment';
 export * from './qtWebAssembly';
+export * from './qtHealthCheck';
+export * from './qtSettingsMigration';

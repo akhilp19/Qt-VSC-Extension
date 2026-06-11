@@ -36,25 +36,31 @@ Access these commands via Command Palette (`Ctrl+Shift+P`):
 - `Qt: Build Android APK` — Build Android APK via `androiddeployqt`
 - `Qt: Build Android AAB` — Build Android App Bundle
 - `Qt: Validate Android Manifest` — Check `AndroidManifest.xml` for common Qt issues
+- Android NDK auto-detection from SDK `ndk/` or `ndk-bundle/` directories
 - `Qt: Configure Android SDK` — Set Android SDK/NDK paths
 - `Qt: Install Android APK` — Install APK to connected device via `adb`
 - `Qt: Build iOS App` — Build iOS app for simulator or device (macOS only)
 - `Qt: Select iOS Simulator` — Pick iPhone/iPad simulator from `xcrun simctl`
 - `Qt: Run iOS App on Simulator` — Build, install, and launch on selected simulator
-- `Qt: Build for WebAssembly` — Build Qt app for WASM via Emscripten
+- `Qt: Archive iOS App` — `xcodebuild archive` for device distribution
+- `Qt: Export iOS IPA` — `xcodebuild -exportArchive` with ExportOptions.plist
+- `Qt: Build for WebAssembly` — Build Qt app for WASM via Emscripten (with source maps in debug, pthread detection)
 - `Qt: Configure Emscripten SDK` — Set Emscripten path for WASM builds
 - `Qt: Serve WebAssembly Preview` — Start local HTTP server for WASM output
 
 **Build Kits**
 - `Qt: Detect Build Kits` — Auto-generate kits from Qt installations
 - `Qt: Select Build Kit` — Per-project kit selection
-- `Qt: Configure Build Kit` — Edit kit build directory template and extra args
+- `Qt: Configure Build Kit` — Edit kit build directory template, extra args, env vars, cross-compile prefix
 - `Qt: Configure Kit Toolchain` — Assign CMake toolchain file to a kit
+- `Qt: Validate Build Kit` — Verify kit paths, qmake, compiler, toolchain compatibility
 - `Qt: Export Build Kits` — Save kit definitions as JSON
 - `Qt: Import Build Kits` — Load kit definitions from JSON
 - Per-kit build directories with variable substitution
+- Kit-specific deploy directories
 - Cross-compile prefix support per kit
 - CMake toolchain file injection into build tasks
+- Workspace default kit fallback
 
 **QML Support**
 - `Qt: Format QML File` — Format with `qmlformat`
@@ -68,6 +74,7 @@ Access these commands via Command Palette (`Ctrl+Shift+P`):
 - `Qt: Rebuild QML-C++ Index` — Rebuild cross-language index
 - **Go to Definition** (`F12`) from QML property/method to C++ declaration
 - **Find References** (`Shift+F12`) from C++ `Q_INVOKABLE` / `Q_PROPERTY` to QML usages
+- **QML_ATTACHED support** — Attached property completions and hover
 - **QML Type Inference** — Resolve custom QML types defined in C++ via `QML_ELEMENT` / `QML_SINGLETON`
 - **QML Module Support** — Parse `qmldir` files, navigate to imported QML types, auto-configure `QML_IMPORT_PATH`
 
@@ -104,6 +111,8 @@ Access these commands via Command Palette (`Ctrl+Shift+P`):
 
 **Build Analytics & Optimization**
 - `Qt: Show Build Analytics` — Sidebar with build history, durations, success rates
+- **Build regression alerts** — Warning icon when last build is > 1.5x average duration
+- **Proactive ccache suggestion** — Auto-suggests enabling ccache after slow builds
 - `Qt: Configure ccache/sccache` — Auto-detect and configure compiler cache
 - `Qt: Show ccache Stats` — View cache hit/miss statistics
 - `Qt: Detect Slow Compilation Targets` — Identify slowest `.cpp` files by complexity
@@ -111,8 +120,11 @@ Access these commands via Command Palette (`Ctrl+Shift+P`):
 - `Qt: Clear CMake Preset` — Revert to default CMake behavior
 
 **Code Quality**
+- `Qt: Run Health Check` — Validate Qt, compiler, debugger, kits, Android/iOS/WASM configs, IntelliSense
 - `Qt: Run clazy / clang-tidy on Workspace` — Qt-specific static analysis
 - `Qt: Run clazy / clang-tidy on Current File` — Single-file analysis
+- **clazy quick fixes** — One-click Code Actions for `clazy-old-style-connect`, `clazy-missing-tr`, and more
+- **`.clang-tidy` config detection** — Automatically reads project-level `.clang-tidy` / `_clang-tidy`
 - Settings: `qt.clazyEnable`, `qt.clazyChecks`, `qt.clazyOnSave`
 
 **Qt Documentation**

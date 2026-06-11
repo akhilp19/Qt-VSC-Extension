@@ -2,7 +2,7 @@
   "name": "qt-vsc-extension",
   "displayName": "Qt C++ Tools",
   "description": "Build, run and manage Qt C++ projects in VS Code",
-  "version": "1.20.0",
+  "version": "2.0.0",
   "publisher": "akhilp19",
   "author": {
     "name": "Akhil Pawar"
@@ -408,6 +408,26 @@
         "command": "qt.importBuildKits",
         "title": "Qt: Import Build Kits",
         "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "qt.runHealthCheck",
+        "title": "Qt: Run Health Check",
+        "icon": "$(pass)"
+      },
+      {
+        "command": "qt.archiveIOSApp",
+        "title": "Qt: Archive iOS App",
+        "icon": "$(archive)"
+      },
+      {
+        "command": "qt.exportIOSIpa",
+        "title": "Qt: Export iOS IPA",
+        "icon": "$(package)"
+      },
+      {
+        "command": "qt.validateBuildKit",
+        "title": "Qt: Validate Build Kit",
+        "icon": "$(check)"
       }
     ],
     "taskDefinitions": [
@@ -760,6 +780,11 @@
           "type": "number",
           "default": 8080,
           "description": "Port for the WebAssembly preview HTTP server."
+        },
+        "qt.defaultKit": {
+          "type": "string",
+          "default": "",
+          "description": "Default build kit name for the workspace. Used when no per-project kit is selected."
         }
       }
     },

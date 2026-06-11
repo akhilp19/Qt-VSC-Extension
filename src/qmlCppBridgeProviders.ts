@@ -184,11 +184,28 @@ export class QmlCompletionProvider implements vscode.CompletionItemProvider {
         }
 
         const symbols = this.bridge.findSymbolsForType(enclosingType);
-        if (symbols.length === 0) {
-            return [];
-        }
-
         const items: vscode.CompletionItem[] = [];
+
+        // Attached property support: if enclosingType has QML_ATTACHED, suggest attached type's symbols
+        const enclosingTypeInfo = this.bridge.findQmlType(enclosingType);
+        if (enclosingTypeInfo?.isAttached && enclosingTypeInfo.attachedType) {
+            const attachedSymbols = this.bridge.findSymbolsForType(enclosingTypeInfo.attachedType);
+            for (const symbol of attachedSymbols) {
+                if (symbol.kind === 'property') {
+                    const item = new vscode.CompletionItem(symbol.name, vscode.CompletionItemKind.Property);
+                    item.detail = `${enclosingTypeInfo.attachedType} attached property`;
+                    item.documentation = new vscode.MarkdownString(
+                        `**Attached property** declared in C++ class \`${symbol.cppClassName}\`
+
+\`\`\`cpp
+${symbol.signature || symbol.name}
+\`\`\``
+                    );
+                    item.insertText = new vscode.SnippetString(`${symbol.name}: \${1:value}`);
+                    items.push(item);
+                }
+            }
+        }
 
         for (const symbol of symbols) {
             if (symbol.kind === 'property') {
@@ -343,17 +360,25 @@ export class QmlTypeHoverProvider implements vscode.HoverProvider {
         }
 
         const md = new vscode.MarkdownString();
+        const registration = typeInfo.isSingleton
+            ? 'QML_SINGLETON'
+            : typeInfo.isAttached
+                ? 'QML_ATTACHED'
+                : 'QML_ELEMENT';
         md.appendCodeblock(
             `${typeInfo.isSingleton ? 'singleton ' : ''}${typeInfo.qmlTypeName} /* C++: ${typeInfo.cppClassName} */`,
             'qml'
         );
         md.appendMarkdown(
-            `Registered in C++ via **${typeInfo.isSingleton ? 'QML_SINGLETON' : 'QML_ELEMENT'}**\n\n` +
+            `Registered in C++ via **${registration}**\n\n` +
             `- **File:** \`${path.basename(typeInfo.filePath)}\`\n` +
             `- **Line:** ${typeInfo.line + 1}\n`
         );
         if (typeInfo.isSingleton) {
             md.appendMarkdown('\n*Use as a singleton via `import` or direct property access.*');
+        }
+        if (typeInfo.isAttached && typeInfo.attachedType) {
+            md.appendMarkdown(`\n*Attached type: \`${typeInfo.attachedType}\` — access properties via \`${typeInfo.qmlTypeName}.propertyName\`*`);
         }
 
         return new vscode.Hover(md, wordRange);

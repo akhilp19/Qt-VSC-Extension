@@ -45,12 +45,14 @@ import { QtProfiling } from './qtProfiling';
 import { QtQmlLanguageServer } from './qtQmlLanguageServer';
 import { QtCMakePresets } from './qtCMakePresets';
 import { QtQmlTestFramework } from './qtQmlTestFramework';
-import { QtClazyIntegration } from './qtClazyIntegration';
+import { QtClazyIntegration, QtClazyCodeActionProvider } from './qtClazyIntegration';
 import { QtDocViewer } from './qtDocViewer';
 import { QtAndroidDeployment } from './qtAndroidDeployment';
 import { QtBuildKitManager } from './qtBuildKit';
 import { QtIOSDeployment } from './qtIOSDeployment';
 import { QtWebAssembly } from './qtWebAssembly';
+import { QtHealthCheck } from './qtHealthCheck';
+import { QtSettingsMigration } from './qtSettingsMigration';
 
 let taskProvider: vscode.Disposable | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -252,6 +254,15 @@ export function activate(context: vscode.ExtensionContext): void {
     // Qt Clazy / clang-tidy integration
     const qtClazy = new QtClazyIntegration(outputChannel);
     context.subscriptions.push(qtClazy);
+
+    // Clazy quick-fix code actions
+    context.subscriptions.push(
+        vscode.languages.registerCodeActionsProvider(
+            { scheme: 'file', pattern: '**/*.{cpp,h,hpp,c}' },
+            new QtClazyCodeActionProvider(),
+            { providedCodeActionKinds: [vscode.CodeActionKind.QuickFix] }
+        )
+    );
     
     context.subscriptions.push(
         vscode.commands.registerCommand('qt.runClazy', async () => {
@@ -359,6 +370,29 @@ export function activate(context: vscode.ExtensionContext): void {
             await qtWasm.serveWebAssembly();
         })
     );
+
+    // Health Check
+    const qtHealthCheck = new QtHealthCheck(qtConfigManager, outputChannel);
+    context.subscriptions.push(qtHealthCheck);
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.runHealthCheck', async () => {
+            await qtHealthCheck.run();
+        })
+    );
+
+    // iOS Archive & Export
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.archiveIOSApp', async () => {
+            await qtIOS.archiveIOSApp();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.exportIOSIpa', async () => {
+            await qtIOS.exportIOSIpa();
+        })
+    );
     
     // Build Kit commands
     context.subscriptions.push(
@@ -394,6 +428,12 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         vscode.commands.registerCommand('qt.importBuildKits', async () => {
             await qtBuildKitManager.importKits();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.validateBuildKit', async () => {
+            await qtBuildKitManager.validateActiveKit();
         })
     );
     

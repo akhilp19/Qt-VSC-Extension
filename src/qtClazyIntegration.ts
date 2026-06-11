@@ -87,6 +87,12 @@ export class QtClazyIntegration implements vscode.Disposable {
                 args.push('-p', compileDb);
             }
 
+            // Check for .clang-tidy config file
+            const clangTidyConfig = this.findClangTidyConfig(workspaceFolder?.uri.fsPath || process.cwd());
+            if (clangTidyConfig && linter.name === 'clang-tidy') {
+                args.push(`--config-file=${clangTidyConfig}`);
+            }
+
             const child = spawn(linter.command, args, {
                 cwd: workspaceFolder?.uri.fsPath || process.cwd()
             });
@@ -169,6 +175,21 @@ export class QtClazyIntegration implements vscode.Disposable {
         return undefined;
     }
 
+    private findClangTidyConfig(startDir: string): string | undefined {
+        const candidates = ['.clang-tidy', '_clang-tidy'];
+        let dir = startDir;
+        for (let i = 0; i < 10; i++) {
+            for (const name of candidates) {
+                const p = path.join(dir, name);
+                if (fs.existsSync(p)) { return p; }
+            }
+            const parent = path.dirname(dir);
+            if (parent === dir) { break; }
+            dir = parent;
+        }
+        return undefined;
+    }
+
     private parseDiagnostics(output: string, _filePath: string): vscode.Diagnostic[] {
         const diagnostics: vscode.Diagnostic[] = [];
         const lines = output.split('\n');
@@ -210,5 +231,69 @@ export class QtClazyIntegration implements vscode.Disposable {
         for (const d of this.disposables) {
             d.dispose();
         }
+    }
+}
+
+/**
+ * Code Action Provider for clazy diagnostic quick-fixes.
+ */
+export class QtClazyCodeActionProvider implements vscode.CodeActionProvider {
+    provideCodeActions(
+        document: vscode.TextDocument,
+        _range: vscode.Range,
+        context: vscode.CodeActionContext,
+        _token: vscode.CancellationToken
+    ): vscode.ProviderResult<(vscode.CodeAction | vscode.Command)[]> {
+        const actions: vscode.CodeAction[] = [];
+
+        for (const diagnostic of context.diagnostics) {
+            if (diagnostic.source !== 'clazy' && !String(diagnostic.code || '').startsWith('clazy-')) {
+                continue;
+            }
+            const code = String(diagnostic.code || '');
+
+            if (code === 'clazy-old-style-connect') {
+                const action = new vscode.CodeAction('Modernize connect() to function pointer', vscode.CodeActionKind.QuickFix);
+                action.diagnostics = [diagnostic];
+                action.isPreferred = true;
+                // Simplified: just document the fix; full implementation would parse and rewrite
+                action.command = {
+                    command: 'qt.showInfoMessage',
+                    title: 'Modernize connect',
+                    arguments: ['Replace SIGNAL()/SLOT() macros with function pointers for type-safe connections.']
+                };
+                actions.push(action);
+            }
+
+            if (code === 'clazy-missing-tr') {
+                const action = new vscode.CodeAction('Wrap in tr()', vscode.CodeActionKind.QuickFix);
+                action.diagnostics = [diagnostic];
+                action.isPreferred = true;
+                const edit = new vscode.WorkspaceEdit();
+                const line = document.lineAt(diagnostic.range.start.line);
+                const quoteMatch = line.text.match(/("[^"]*")/);
+                if (quoteMatch) {
+                    const start = line.text.indexOf(quoteMatch[1]);
+                    const end = start + quoteMatch[1].length;
+                    edit.replace(document.uri, new vscode.Range(diagnostic.range.start.line, start, diagnostic.range.start.line, end), `tr(${quoteMatch[1]})`);
+                    action.edit = edit;
+                }
+                actions.push(action);
+            }
+
+            if (code === 'clazy-inefficient-qlist') {
+                const action = new vscode.CodeAction('Use QVector instead of QList', vscode.CodeActionKind.QuickFix);
+                action.diagnostics = [diagnostic];
+                action.isPreferred = false;
+                action.command = {
+                    command: 'qt.showInfoMessage',
+                    title: 'Use QVector',
+                    arguments: ['For large or non-trivially-copyable types, QVector provides better performance than QList.']
+                };
+                actions.push(action);
+            }
+        }
+
+        return actions;
     }
 }

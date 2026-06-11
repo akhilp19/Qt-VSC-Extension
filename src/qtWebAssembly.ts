@@ -229,17 +229,27 @@ export class QtWebAssembly {
             return new Promise<void>((resolve, reject) => {
                 const commands: string[] = [];
 
+                const extraFlags: string[] = [];
+                if (buildType === 'debug') {
+                    extraFlags.push('-g', '-gsource-map');
+                }
+                if (this.detectWasmThreading(qtWasm.qmakePath)) {
+                    extraFlags.push('-sUSE_PTHREADS', '-pthread');
+                }
+
                 if (isCMake && emscripten.emcmakePath) {
+                    const extraCmake = extraFlags.length > 0 ? `-DCMAKE_CXX_FLAGS="${extraFlags.join(' ')}"` : '';
                     commands.push(
                         `cd "${wasmBuildDir}"`,
-                        `"${emscripten.emcmakePath}" cmake -B . -S "${path.dirname(targetProject)}" -DCMAKE_BUILD_TYPE=${buildType}`,
+                        `"${emscripten.emcmakePath}" cmake -B . -S "${path.dirname(targetProject)}" -DCMAKE_BUILD_TYPE=${buildType} ${extraCmake}`,
                         `"${emscripten.emmakePath || 'make'}" make`
                     );
                 } else {
                     const buildTypeArg = buildType === 'release' ? 'CONFIG+=release' : 'CONFIG+=debug';
+                    const extraQmake = extraFlags.length > 0 ? `QMAKE_CXXFLAGS+="${extraFlags.join(' ')}"` : '';
                     commands.push(
                         `cd "${wasmBuildDir}"`,
-                        `"${qtWasm.qmakePath}" -spec wasm-emscripten "${targetProject}" ${buildTypeArg}`,
+                        `"${qtWasm.qmakePath}" -spec wasm-emscripten "${targetProject}" ${buildTypeArg} ${extraQmake}`,
                         `${emscripten.emmakePath || 'make'} make`
                     );
                 }
@@ -310,6 +320,8 @@ export class QtWebAssembly {
                 '.html': 'text/html',
                 '.js': 'application/javascript',
                 '.wasm': 'application/wasm',
+                '.wasm.map': 'application/json',
+                '.map': 'application/json',
                 '.css': 'text/css',
                 '.json': 'application/json',
                 '.png': 'image/png',
@@ -333,6 +345,21 @@ export class QtWebAssembly {
             void vscode.window.showInformationMessage(`WASM preview server running at ${url}`, 'Open Browser');
             this.outputChannel.appendLine(`[WASM] Preview server: ${url}`);
         });
+    }
+
+    private detectWasmThreading(qmakePath?: string): boolean {
+        if (!qmakePath) { return false; }
+        try {
+            const qtPath = path.dirname(path.dirname(qmakePath));
+            const libDir = path.join(qtPath, 'lib');
+            if (fs.existsSync(libDir)) {
+                const libs = fs.readdirSync(libDir);
+                return libs.some(l => l.includes('pthread') || l.includes('thread'));
+            }
+        } catch {
+            // ignore
+        }
+        return false;
     }
 
     private findHtmlFile(buildDir: string): string | undefined {

@@ -21,6 +21,7 @@ export interface ProjectAnalytics {
     failedBuilds: number;
     averageDurationMs: number;
     lastBuild?: PersistedBuildRecord;
+    isRegression?: boolean;
 }
 
 export interface CcacheInfo {
@@ -87,6 +88,27 @@ export class QtBuildAnalytics {
         this.records.push(record);
         this.saveHistory();
         this.outputChannel.appendLine(`[BuildAnalytics] Recorded ${record.taskType} for ${path.basename(record.projectFile)} (${record.durationMs}ms)`);
+
+        // Proactive ccache suggestion after slow builds
+        if (record.taskType === 'build' || record.taskType === 'rebuild') {
+            const analytics = this.getProjectAnalytics(record.projectFile);
+            const config = vscode.workspace.getConfiguration('qt');
+            const useCcache = config.get<boolean>('useCcache') ?? false;
+            if (!useCcache && analytics.totalBuilds >= 3 && analytics.lastBuild) {
+                const ratio = analytics.lastBuild.durationMs / analytics.averageDurationMs;
+                if (ratio > 1.5) {
+                    void vscode.window.showInformationMessage(
+                        `Build for ${analytics.projectName} took ${ratio.toFixed(1)}x longer than average. Enable ccache?`,
+                        'Configure ccache',
+                        'Dismiss'
+                    ).then(choice => {
+                        if (choice === 'Configure ccache') {
+                            void vscode.commands.executeCommand('qt.configureCcache');
+                        }
+                    });
+                }
+            }
+        }
     }
 
     getRecords(projectFile?: string): PersistedBuildRecord[] {
@@ -102,16 +124,23 @@ export class QtBuildAnalytics {
         const successful = projectRecords.filter(r => r.success);
         const totalDuration = projectRecords.reduce((sum, r) => sum + r.durationMs, 0);
 
+        const averageDurationMs = projectRecords.length > 0 ? Math.round(totalDuration / projectRecords.length) : 0;
+        const lastBuild = projectRecords.length > 0
+            ? [...projectRecords].sort((a, b) => b.endTime - a.endTime)[0]
+            : undefined;
+        const isRegression = lastBuild && projectRecords.length >= 3
+            ? lastBuild.durationMs > (averageDurationMs * 1.5)
+            : false;
+
         return {
             projectFile,
             projectName: path.basename(projectFile, path.extname(projectFile)),
             totalBuilds: projectRecords.length,
             successfulBuilds: successful.length,
             failedBuilds: projectRecords.length - successful.length,
-            averageDurationMs: projectRecords.length > 0 ? Math.round(totalDuration / projectRecords.length) : 0,
-            lastBuild: projectRecords.length > 0
-                ? [...projectRecords].sort((a, b) => b.endTime - a.endTime)[0]
-                : undefined
+            averageDurationMs,
+            lastBuild,
+            isRegression
         };
     }
 

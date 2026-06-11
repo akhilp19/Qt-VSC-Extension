@@ -25,6 +25,8 @@ export interface QmlTypeInfo {
     qmlTypeName: string;
     cppClassName: string;
     isSingleton: boolean;
+    isAttached: boolean;
+    attachedType?: string;
     hasQObject: boolean;
 }
 
@@ -323,6 +325,12 @@ export class QmlCppBridgeIndexer {
                     // Mark as singleton when we register the type
                 }
 
+                // QML_ATTACHED
+                const attachedMatch = trimmed.match(/QML_ATTACHED\s*\(\s*(\w+)\s*\)/);
+                if (attachedMatch) {
+                    // Will be registered when class ends
+                }
+
                 // Q_PROPERTY
                 const propMatch = trimmed.match(/Q_PROPERTY\s*\(\s*([^)]+)\)/);
                 if (propMatch && hasQObject) {
@@ -370,7 +378,9 @@ export class QmlCppBridgeIndexer {
                         // Also register if QML_ELEMENT was used (currentQmlTypeName == currentClassName)
                     }
                     if (hasQObject && currentQmlTypeName) {
-                        const isSingleton = /\bQML_SINGLETON\b/.test(content.substring(classStartLine, i + 1).replace(/\n/g, ' '));
+                        const classBody = content.substring(classStartLine, i + 1).replace(/\n/g, ' ');
+                        const isSingleton = /\bQML_SINGLETON\b/.test(classBody);
+                        const attachedMatch = classBody.match(/QML_ATTACHED\s*\(\s*(\w+)\s*\)/);
                         this.qmlTypeIndex.set(currentQmlTypeName, {
                             filePath,
                             line: classStartLine,
@@ -378,6 +388,8 @@ export class QmlCppBridgeIndexer {
                             qmlTypeName: currentQmlTypeName,
                             cppClassName: currentClassName,
                             isSingleton,
+                            isAttached: !!attachedMatch,
+                            attachedType: attachedMatch ? attachedMatch[1] : undefined,
                             hasQObject
                         });
                     }

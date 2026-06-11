@@ -46,6 +46,16 @@ export class QtCompletionProvider implements vscode.CompletionItemProvider {
             items.push(...this.getClassDeclarationCompletions());
         }
 
+        // Context-aware: if inside a class body, suggest base-class methods
+        const baseClass = this.getEnclosingClassBase(document, position);
+        if (baseClass && findQtClass(baseClass)) {
+            const wordMatch = textBeforeCursor.match(/\b([a-zA-Z_]*)$/);
+            const prefix = wordMatch ? wordMatch[1] : '';
+            if (prefix || textBeforeCursor.endsWith('->') || textBeforeCursor.endsWith('.')) {
+                items.push(...this.getMethodCompletions(baseClass, prefix));
+            }
+        }
+
         // General Qt class and macro completions
         const wordMatch = textBeforeCursor.match(/\b([a-zA-Z_]*)$/);
         const prefix = wordMatch ? wordMatch[1] : '';
@@ -73,6 +83,31 @@ export class QtCompletionProvider implements vscode.CompletionItemProvider {
             }
         }
         return false;
+    }
+
+    private getEnclosingClassBase(document: vscode.TextDocument, position: vscode.Position): string | undefined {
+        // Find the nearest class declaration above the cursor and extract its base class
+        let braceDepth = 0;
+        for (let i = position.line; i >= 0 && i >= position.line - 100; i--) {
+            const line = document.lineAt(i).text;
+            // Track braces to know when we've exited the class body
+            for (const char of line) {
+                if (char === '}') { braceDepth++; }
+                if (char === '{') { braceDepth--; }
+            }
+            if (braceDepth < 0) {
+                // We crossed a closing brace, likely exited the class
+                const classMatch = line.match(/^\s*class\s+(\w+)\s*(?::\s*(?:public|protected|private)\s+(\w+))?/);
+                if (classMatch) {
+                    return classMatch[2];
+                }
+            }
+            const classMatch = line.match(/^\s*class\s+(\w+)\s*(?::\s*(?:public|protected|private)\s+(\w+))?/);
+            if (classMatch) {
+                return classMatch[2];
+            }
+        }
+        return undefined;
     }
 
     private getConnectCompletions(): vscode.CompletionItem[] {

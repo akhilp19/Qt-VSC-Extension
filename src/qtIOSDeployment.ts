@@ -309,6 +309,123 @@ export class QtIOSDeployment {
     }
 
     // ─────────────────────────────────────────────────────────────
+    // iOS Device Deployment
+    // ─────────────────────────────────────────────────────────────
+
+    async archiveIOSApp(projectFile?: string): Promise<void> {
+        if (!this.checkMacOS()) { return; }
+
+        const xcodebuild = this.findTool('xcodebuild');
+        if (!xcodebuild) {
+            void vscode.window.showErrorMessage('xcodebuild not found. Install Xcode.');
+            return;
+        }
+
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        if (!workspaceFolder) { return; }
+
+        let targetProject = projectFile || (await this.pickProject(workspaceFolder.uri.fsPath));
+        if (!targetProject) { return; }
+
+        const projectName = path.basename(targetProject, path.extname(targetProject));
+        const archivePath = path.join(workspaceFolder.uri.fsPath, 'build-ios', `${projectName}.xcarchive`);
+
+        this.outputChannel.appendLine(`[iOS] Archiving ${projectName}...`);
+
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: `Archiving iOS app: ${projectName}...`,
+            cancellable: false
+        }, async () => {
+            return new Promise<void>((resolve, reject) => {
+                const scheme = projectName;
+                const cmd = `"${xcodebuild}" archive -project "${targetProject}" -scheme "${scheme}" -archivePath "${archivePath}" -destination 'generic/platform=iOS'`;
+                const child = spawn(cmd, { shell: true });
+                child.stdout?.on('data', (data: Buffer) => this.outputChannel.append(data.toString('utf-8')));
+                child.stderr?.on('data', (data: Buffer) => this.outputChannel.append(data.toString('utf-8')));
+                child.on('close', (code) => {
+                    if (code === 0) {
+                        void vscode.window.showInformationMessage(`Archive created: ${path.basename(archivePath)}`);
+                        resolve();
+                    } else {
+                        reject(new Error(`xcodebuild archive failed (code ${code})`));
+                    }
+                });
+                child.on('error', (err) => reject(err));
+            });
+        });
+    }
+
+    async exportIOSIpa(projectFile?: string): Promise<void> {
+        if (!this.checkMacOS()) { return; }
+
+        const xcodebuild = this.findTool('xcodebuild');
+        if (!xcodebuild) {
+            void vscode.window.showErrorMessage('xcodebuild not found. Install Xcode.');
+            return;
+        }
+
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        if (!workspaceFolder) { return; }
+
+        let targetProject = projectFile || (await this.pickProject(workspaceFolder.uri.fsPath));
+        if (!targetProject) { return; }
+
+        const projectName = path.basename(targetProject, path.extname(targetProject));
+        const archivePath = path.join(workspaceFolder.uri.fsPath, 'build-ios', `${projectName}.xcarchive`);
+        const exportPath = path.join(workspaceFolder.uri.fsPath, 'build-ios', 'ipa');
+        const optionsPath = path.join(exportPath, 'ExportOptions.plist');
+
+        if (!fs.existsSync(archivePath)) {
+            void vscode.window.showErrorMessage('No archive found. Run "Archive iOS App" first.');
+            return;
+        }
+
+        if (!fs.existsSync(exportPath)) {
+            fs.mkdirSync(exportPath, { recursive: true });
+        }
+
+        // Generate minimal ExportOptions.plist
+        const plistContent = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>method</key>
+    <string>development</string>
+    <key>stripSwiftSymbols</key>
+    <false/>
+    <key> thinning</key>
+    <string>&lt;none&gt;</string>
+</dict>
+</plist>`;
+        fs.writeFileSync(optionsPath, plistContent, 'utf-8');
+
+        this.outputChannel.appendLine(`[iOS] Exporting IPA...`);
+
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: `Exporting IPA for ${projectName}...`,
+            cancellable: false
+        }, async () => {
+            return new Promise<void>((resolve, reject) => {
+                const cmd = `"${xcodebuild}" -exportArchive -archivePath "${archivePath}" -exportPath "${exportPath}" -exportOptionsPlist "${optionsPath}"`;
+                const child = spawn(cmd, { shell: true });
+                child.stdout?.on('data', (data: Buffer) => this.outputChannel.append(data.toString('utf-8')));
+                child.stderr?.on('data', (data: Buffer) => this.outputChannel.append(data.toString('utf-8')));
+                child.on('close', (code) => {
+                    if (code === 0) {
+                        void vscode.window.showInformationMessage(`IPA exported to ${exportPath}`);
+                        resolve();
+                    } else {
+                        reject(new Error(`xcodebuild export failed (code ${code})`));
+                    }
+                });
+                child.on('error', (err) => reject(err));
+            });
+        });
+    }
+
+    // ─────────────────────────────────────────────────────────────
     // Helpers
     // ─────────────────────────────────────────────────────────────
 
@@ -336,6 +453,17 @@ export class QtIOSDeployment {
             // ignore
         }
         return undefined;
+    }
+
+    private async pickProject(workspacePath: string): Promise<string | undefined> {
+        const projects = await this.qtProjectDetector.detectProjects(workspacePath);
+        if (projects.length === 0) { return undefined; }
+        if (projects.length === 1) { return projects[0]; }
+        const selected = await vscode.window.showQuickPick(
+            projects.map(p => ({ label: path.basename(p), description: p, value: p })),
+            { placeHolder: 'Select project' }
+        );
+        return selected?.value;
     }
 
     private extractBundleId(appBundle: string): string | undefined {

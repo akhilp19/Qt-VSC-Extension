@@ -48,6 +48,14 @@ export class QtAndroidDeployment {
         if (sdkPath && sdkPath[0]) {
             await config.update('androidSdkPath', sdkPath[0].fsPath, vscode.ConfigurationTarget.Workspace);
             this.outputChannel.appendLine(`Android SDK: ${sdkPath[0].fsPath}`);
+
+            // Auto-detect NDK inside the selected SDK
+            const autoNdk = this.findNdkInSdk(sdkPath[0].fsPath);
+            if (autoNdk) {
+                await config.update('androidNdkPath', autoNdk, vscode.ConfigurationTarget.Workspace);
+                this.outputChannel.appendLine(`Auto-detected NDK: ${autoNdk}`);
+                void vscode.window.showInformationMessage(`Auto-detected Android NDK: ${path.basename(autoNdk)}`);
+            }
         }
 
         const ndkPath = await vscode.window.showOpenDialog({
@@ -161,6 +169,11 @@ export class QtAndroidDeployment {
             '--gradle'
         ];
 
+        const ndkPath = this.getAndroidNdkPath();
+        if (ndkPath) {
+            args.push('--ndk-path', ndkPath);
+        }
+
         this.outputChannel.appendLine(`[Android] Building APK...`);
         this.outputChannel.appendLine(`  androiddeployqt: ${androidDeployQt}`);
         this.outputChannel.appendLine(`  Output: ${apkOutputDir}`);
@@ -254,6 +267,11 @@ export class QtAndroidDeployment {
             '--gradle',
             '--aab'
         ];
+
+        const ndkPath = this.getAndroidNdkPath();
+        if (ndkPath) {
+            args.push('--ndk-path', ndkPath);
+        }
 
         this.outputChannel.appendLine(`[Android] Building AAB...`);
         this.outputChannel.appendLine(`  androiddeployqt: ${androidDeployQt}`);
@@ -471,6 +489,56 @@ export class QtAndroidDeployment {
             if (p && fs.existsSync(p)) { return p; }
         }
 
+        return undefined;
+    }
+
+    getAndroidNdkPath(): string | undefined {
+        const config = vscode.workspace.getConfiguration('qt');
+        const ndkPath = config.get<string>('androidNdkPath');
+        if (ndkPath && fs.existsSync(ndkPath)) { return ndkPath; }
+
+        // Check env var
+        const envNdk = process.env.ANDROID_NDK_HOME || process.env.ANDROID_NDK;
+        if (envNdk && fs.existsSync(envNdk)) { return envNdk; }
+
+        // Try to find inside SDK
+        const sdkPath = this.getAndroidSdkPath();
+        if (sdkPath) {
+            const ndkBundle = path.join(sdkPath, 'ndk-bundle');
+            if (fs.existsSync(ndkBundle)) { return ndkBundle; }
+            const ndkDir = path.join(sdkPath, 'ndk');
+            if (fs.existsSync(ndkDir)) {
+                const versions = fs.readdirSync(ndkDir).filter(d => /^\d/.test(d));
+                if (versions.length > 0) {
+                    return path.join(ndkDir, versions.sort().reverse()[0]);
+                }
+            }
+        }
+
+        // Common paths
+        const commonPaths = [
+            path.join(process.env.HOME || '', 'Android', 'ndk'),
+            path.join(process.env.USERPROFILE || '', 'AppData', 'Local', 'Android', 'ndk'),
+            '/usr/lib/android-ndk',
+            '/opt/android-ndk'
+        ];
+        for (const p of commonPaths) {
+            if (p && fs.existsSync(p)) { return p; }
+        }
+
+        return undefined;
+    }
+
+    private findNdkInSdk(sdkPath: string): string | undefined {
+        const ndkBundle = path.join(sdkPath, 'ndk-bundle');
+        if (fs.existsSync(ndkBundle)) { return ndkBundle; }
+        const ndkDir = path.join(sdkPath, 'ndk');
+        if (fs.existsSync(ndkDir)) {
+            const versions = fs.readdirSync(ndkDir).filter(d => /^\d/.test(d));
+            if (versions.length > 0) {
+                return path.join(ndkDir, versions.sort().reverse()[0]);
+            }
+        }
         return undefined;
     }
 

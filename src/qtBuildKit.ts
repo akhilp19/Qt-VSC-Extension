@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { execSync } from 'child_process';
 import { QtConfigManager, QtInstallation } from './qtConfigManager';
 
 export interface BuildKit {
@@ -173,10 +174,50 @@ export class QtBuildKitManager {
             kit.crossCompilePrefix = newCrossPrefix || undefined;
         }
 
+        // Edit environment variables
+        kit.envVars = await this.editEnvVars(kit.envVars || {});
+
         // Save back
         const updatedKits = kits.map(k => k.name === kit.name ? kit : k);
         await config.update('buildKits', updatedKits, vscode.ConfigurationTarget.Workspace);
         void vscode.window.showInformationMessage(`Kit "${kit.name}" updated.`);
+    }
+
+    private async editEnvVars(current: Record<string, string>): Promise<Record<string, string>> {
+        const envVars = { ...current };
+        while (true) {
+            const items = Object.entries(envVars).map(([key, value]) => ({
+                label: `${key}=${value}`,
+                key,
+                value
+            }));
+            items.push({ label: '$(add) Add Variable', key: '__add__', value: '' });
+            if (items.length > 1) {
+                items.push({ label: '$(trash) Remove Variable...', key: '__remove__', value: '' });
+            }
+            items.push({ label: '$(check) Done', key: '__done__', value: '' });
+
+            const selected = await vscode.window.showQuickPick(items, {
+                placeHolder: 'Edit kit environment variables'
+            });
+            if (!selected || selected.key === '__done__') { break; }
+
+            if (selected.key === '__add__') {
+                const key = await vscode.window.showInputBox({ prompt: 'Variable name' });
+                if (!key) { continue; }
+                const value = await vscode.window.showInputBox({ prompt: `Value for ${key}` });
+                envVars[key] = value || '';
+            } else if (selected.key === '__remove__') {
+                const removeItems = Object.keys(envVars).map(k => ({ label: k, key: k }));
+                const toRemove = await vscode.window.showQuickPick(removeItems, {
+                    placeHolder: 'Select variable to remove'
+                });
+                if (toRemove) {
+                    delete envVars[toRemove.key];
+                }
+            }
+        }
+        return envVars;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -315,10 +356,17 @@ export class QtBuildKitManager {
         const config = vscode.workspace.getConfiguration('qt');
         const activeKits = config.get<Record<string, string>>('activeKit') || {};
         const kitName = activeKits[projectFile];
-        if (!kitName) { return undefined; }
-
-        const kits = config.get<BuildKit[]>('buildKits') || [];
-        return kits.find(k => k.name === kitName);
+        if (kitName) {
+            const kits = config.get<BuildKit[]>('buildKits') || [];
+            return kits.find(k => k.name === kitName);
+        }
+        // Fall back to workspace default kit
+        const defaultKitName = config.get<string>('defaultKit');
+        if (defaultKitName) {
+            const kits = config.get<BuildKit[]>('buildKits') || [];
+            return kits.find(k => k.name === defaultKitName);
+        }
+        return undefined;
     }
 
     getBuildDirForProject(projectFile: string, buildType: string): string {
@@ -362,6 +410,76 @@ export class QtBuildKitManager {
     getCrossCompilePrefix(projectFile: string): string | undefined {
         const kit = this.getActiveKit(projectFile);
         return kit?.crossCompilePrefix;
+    }
+
+    getDeployDirForProject(projectFile: string): string {
+        const kit = this.getActiveKit(projectFile);
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        const workspacePath = workspaceFolder?.uri.fsPath || '';
+        const config = vscode.workspace.getConfiguration('qt');
+        const deployDir = config.get<string>('deployDirectory') || '${workspaceFolder}/deploy';
+
+        if (kit) {
+            return deployDir
+                .replace('${workspaceFolder}', workspacePath)
+                .replace('${kitName}', kit.name.replace(/\s+/g, '_'));
+        }
+        return deployDir.replace('${workspaceFolder}', workspacePath);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Kit Validation
+    // ─────────────────────────────────────────────────────────────
+
+    async validateActiveKit(): Promise<void> {
+        const config = vscode.workspace.getConfiguration('qt');
+        const kits = config.get<BuildKit[]>('buildKits') || [];
+
+        if (kits.length === 0) {
+            void vscode.window.showWarningMessage('No build kits to validate. Run "Detect Build Kits" first.');
+            return;
+        }
+
+        const selected = await vscode.window.showQuickPick(
+            kits.map(k => ({ label: k.name, description: `${k.qtVersion} • ${k.compiler}`, kit: k })),
+            { placeHolder: 'Select kit to validate' }
+        );
+        if (!selected) { return; }
+
+        const issues = this.validateKit(selected.kit);
+        if (issues.length === 0) {
+            void vscode.window.showInformationMessage(`Kit "${selected.kit.name}" is valid ✓`);
+            this.outputChannel.appendLine(`[Build Kits] Validation passed: ${selected.kit.name}`);
+        } else {
+            void vscode.window.showWarningMessage(`Kit "${selected.kit.name}" has ${issues.length} issue(s). See Output → Qt C++ Tools.`);
+            this.outputChannel.appendLine(`[Build Kits] Validation issues for ${selected.kit.name}:`);
+            for (const issue of issues) {
+                this.outputChannel.appendLine(`  ⚠ ${issue}`);
+            }
+        }
+    }
+
+    validateKit(kit: BuildKit): string[] {
+        const issues: string[] = [];
+        if (!fs.existsSync(kit.qtPath)) {
+            issues.push(`Qt path does not exist: ${kit.qtPath}`);
+        }
+        if (!fs.existsSync(kit.qmakePath)) {
+            issues.push(`qmake does not exist: ${kit.qmakePath}`);
+        } else {
+            try {
+                const version = execSync(`"${kit.qmakePath}" -query QT_VERSION`, { encoding: 'utf-8', stdio: 'pipe' }).trim();
+                if (version !== kit.qtVersion) {
+                    issues.push(`Qt version mismatch: kit says ${kit.qtVersion}, qmake reports ${version}`);
+                }
+            } catch {
+                issues.push(`Could not run qmake to verify version`);
+            }
+        }
+        if (kit.cmakeToolchainFile && !fs.existsSync(kit.cmakeToolchainFile)) {
+            issues.push(`Toolchain file does not exist: ${kit.cmakeToolchainFile}`);
+        }
+        return issues;
     }
 
     // ─────────────────────────────────────────────────────────────

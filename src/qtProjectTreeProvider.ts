@@ -82,11 +82,20 @@ export class QtStatusItem extends vscode.TreeItem {
     constructor(
         label: string,
         value: string,
-        icon: string
+        icon: string,
+        commandId?: string,
+        projectFile?: string
     ) {
         super(label, vscode.TreeItemCollapsibleState.None);
         this.description = value;
         this.iconPath = new vscode.ThemeIcon(icon);
+        if (commandId) {
+            this.command = {
+                title: label,
+                command: commandId,
+                arguments: projectFile ? [vscode.Uri.file(projectFile)] : undefined
+            };
+        }
     }
 }
 
@@ -255,7 +264,7 @@ export class QtProjectTreeProvider implements vscode.TreeDataProvider<vscode.Tre
         const lastBuild = this.buildTracker.getLastBuild(projectFile);
         if (lastBuild) {
             items.push(new QtStatusItem('Last Build', this.buildTracker.formatTimeAgo(lastBuild.endTime), 'clock'));
-            items.push(new QtStatusItem('Result', lastBuild.success ? 'Success' : 'Failed', lastBuild.success ? 'check' : 'error'));
+            items.push(new QtStatusItem('Result', lastBuild.success ? 'Success' : 'Failed', lastBuild.success ? 'check' : 'error', 'qt.rebuildProject', projectFile));
             items.push(new QtStatusItem('Task', lastBuild.taskType, 'symbol-method'));
         } else {
             items.push(new QtStatusItem('Last Build', 'Never', 'dash'));

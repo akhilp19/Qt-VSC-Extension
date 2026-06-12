@@ -53,6 +53,7 @@ import { QtIOSDeployment } from './qtIOSDeployment';
 import { QtWebAssembly } from './qtWebAssembly';
 import { QtHealthCheck } from './qtHealthCheck';
 import { QtSettingsMigration } from './qtSettingsMigration';
+import { QtRemoteDeployment } from './qtRemoteDeployment';
 
 let taskProvider: vscode.Disposable | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -302,6 +303,10 @@ export function activate(context: vscode.ExtensionContext): void {
     // Qt WebAssembly
     const qtWasm = new QtWebAssembly(qtConfigManager, qtProjectDetector, outputChannel);
     context.subscriptions.push(qtWasm);
+
+    // Qt Remote Deployment
+    const qtRemote = new QtRemoteDeployment(qtConfigManager, qtProjectDetector, outputChannel);
+    context.subscriptions.push(qtRemote);
     
     context.subscriptions.push(
         vscode.commands.registerCommand('qt.buildAndroidApk', async () => {
@@ -330,6 +335,30 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         vscode.commands.registerCommand('qt.validateAndroidManifest', async () => {
             await qtAndroid.validateManifest();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.buildAndroidApks', async () => {
+            await qtAndroid.buildApksFromAab();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.installAndroidApks', async () => {
+            await qtAndroid.installApks();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.startAndroidLogcat', async () => {
+            await qtAndroid.startLogcat();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.stopAndroidLogcat', async () => {
+            await qtAndroid.stopLogcat();
         })
     );
 
@@ -391,6 +420,30 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         vscode.commands.registerCommand('qt.exportIOSIpa', async () => {
             await qtIOS.exportIOSIpa();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.uploadIOSTestFlight', async () => {
+            await qtIOS.uploadToTestFlight();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.takeSimulatorScreenshot', async () => {
+            await qtIOS.takeSimulatorScreenshot();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.recordSimulatorVideo', async () => {
+            await qtIOS.recordSimulatorVideo();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.stopSimulatorRecording', async () => {
+            await qtIOS.stopSimulatorRecording();
         })
     );
     
@@ -866,6 +919,24 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         vscode.commands.registerCommand('qt.deploy', async () => {
             await qtDeployment.deployApplication();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.deployRemote', async () => {
+            await qtRemote.deployRemotely();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.configureRemoteTarget', async () => {
+            await qtRemote.configureRemoteTarget();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('qt.generateRemoteDebugConfig', async () => {
+            await qtRemote.generateRemoteDebugConfig();
         })
     );
     

@@ -45,3 +45,4 @@ export * from './qtIOSDeployment';
 export * from './qtWebAssembly';
 export * from './qtHealthCheck';
 export * from './qtSettingsMigration';
+export * from './qtRemoteDeployment';

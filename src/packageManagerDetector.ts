@@ -10,7 +10,8 @@ export type PackageManagerSource =
     | 'pacman'
     | 'vcpkg'
     | 'conan'
-    | 'aqtinstall';
+    | 'aqtinstall'
+    | 'yocto';
 
 export interface PackageManagerResult {
     path: string;
@@ -502,6 +503,153 @@ export function detectAqtinstallQt(): PackageManagerResult[] {
 }
 
 // ---------------------------------------------------------------------------
+// Yocto SDK detector (Cross-platform, Linux-focused)
+// ---------------------------------------------------------------------------
+
+export function extractSysrootFromEnvScript(scriptPath: string): string | undefined {
+    try {
+        const content = fs.readFileSync(scriptPath, 'utf-8');
+        const patterns = [
+            /SDKTARGETSYSROOT="([^"]+)"/,
+            /OECORE_TARGET_SYSROOT="([^"]+)"/,
+            /export\s+SDKTARGETSYSROOT=([^\n]+)/,
+            /export\s+OECORE_TARGET_SYSROOT=([^\n]+)/
+        ];
+        for (const pattern of patterns) {
+            const match = content.match(pattern);
+            if (match) {
+                return match[1].trim();
+            }
+        }
+    } catch {
+        // ignore
+    }
+    return undefined;
+}
+
+export function extractCrossPrefixFromEnvScript(scriptPath: string): string | undefined {
+    try {
+        const content = fs.readFileSync(scriptPath, 'utf-8');
+        // Look for OE_CROSS_COMPILE or CROSS_COMPILE definitions
+        const patterns = [
+            /CROSS_COMPILE="([^"]+)"/,
+            /OECORE_CROSS_COMPILE="([^"]+)"/,
+            /export\s+CROSS_COMPILE=([^\n]+)/
+        ];
+        for (const pattern of patterns) {
+            const match = content.match(pattern);
+            if (match) {
+                return match[1].trim();
+            }
+        }
+    } catch {
+        // ignore
+    }
+    return undefined;
+}
+
+export function extractToolchainFileFromEnvScript(sysroot: string): string | undefined {
+    const candidates = [
+        path.join(sysroot, 'usr', 'share', 'cmake', 'OEToolchainConfig.cmake'),
+        path.join(sysroot, 'usr', 'share', 'cmake', 'oetoolchain.cmake'),
+        path.join(sysroot, 'opt', 'cmake-toolchain.cmake')
+    ];
+    for (const candidate of candidates) {
+        if (fs.existsSync(candidate)) {
+            return candidate;
+        }
+    }
+    return undefined;
+}
+
+export function findYoctoEnvScript(sysroot: string): string | undefined {
+    try {
+        let dir = sysroot;
+        for (let i = 0; i < 4; i++) {
+            const entries = fs.readdirSync(dir, { withFileTypes: true });
+            for (const entry of entries) {
+                if (entry.isFile() && entry.name.startsWith('environment-setup-')) {
+                    return path.join(dir, entry.name);
+                }
+            }
+            const parent = path.dirname(dir);
+            if (parent === dir) {
+                break;
+            }
+            dir = parent;
+        }
+    } catch {
+        // ignore
+    }
+    return undefined;
+}
+
+export function detectYoctoSdkQt(): PackageManagerResult[] {
+    const results: PackageManagerResult[] = [];
+
+    const sdkBases = [
+        process.env.OE_SDK_ROOT,
+        process.env.SDKROOT,
+        '/opt/poky',
+        '/opt/yocto',
+        path.join(os.homedir(), 'yocto-sdk')
+    ].filter((p): p is string => !!p);
+
+    for (const sdkBase of sdkBases) {
+        if (!fs.existsSync(sdkBase)) {
+            continue;
+        }
+
+        try {
+            const entries = fs.readdirSync(sdkBase, { withFileTypes: true });
+            for (const entry of entries) {
+                if (!entry.isDirectory()) {
+                    continue;
+                }
+                const machine = entry.name;
+                const envScript = path.join(sdkBase, machine, `environment-setup-${machine}`);
+                if (!fs.existsSync(envScript)) {
+                    continue;
+                }
+
+                const sysroot = extractSysrootFromEnvScript(envScript);
+                if (!sysroot || !fs.existsSync(sysroot)) {
+                    continue;
+                }
+
+                const qmakePath = path.join(sysroot, 'usr', 'bin', 'qmake');
+                if (!fs.existsSync(qmakePath)) {
+                    // Qt may also live under sysroot/usr/bin/qmake-qt5 or similar
+                    const altQmakePaths = [
+                        path.join(sysroot, 'usr', 'bin', 'qmake-qt5'),
+                        path.join(sysroot, 'usr', 'bin', 'qmake-qt6')
+                    ];
+                    let foundAlt = false;
+                    for (const alt of altQmakePaths) {
+                        if (fs.existsSync(alt)) {
+                            foundAlt = true;
+                            break;
+                        }
+                    }
+                    if (!foundAlt) {
+                        continue;
+                    }
+                }
+
+                const result = makeResult(qmakePath, 'yocto');
+                if (result) {
+                    results.push(result);
+                }
+            }
+        } catch {
+            // ignore
+        }
+    }
+
+    return deduplicateResults(results);
+}
+
+// ---------------------------------------------------------------------------
 // Orchestrator: detect from all package managers
 // ---------------------------------------------------------------------------
 
@@ -514,6 +662,7 @@ export function detectAllPackageManagers(): PackageManagerResult[] {
     allResults.push(...detectVcpkgQt());
     allResults.push(...detectConanQt());
     allResults.push(...detectAqtinstallQt());
+    allResults.push(...detectYoctoSdkQt());
 
     return deduplicateResults(allResults);
 }
@@ -529,6 +678,7 @@ export function sourceDisplayName(source: string | undefined): string {
         case 'vcpkg': return 'vcpkg';
         case 'conan': return 'Conan';
         case 'aqtinstall': return 'aqtinstall';
+        case 'yocto': return 'Yocto SDK';
         case 'official': return 'Official';
         default: return 'Unknown';
     }

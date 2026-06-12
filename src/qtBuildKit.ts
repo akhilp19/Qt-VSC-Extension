@@ -3,6 +3,11 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { execSync } from 'child_process';
 import { QtConfigManager, QtInstallation } from './qtConfigManager';
+import {
+    extractCrossPrefixFromEnvScript,
+    extractToolchainFileFromEnvScript,
+    findYoctoEnvScript
+} from './packageManagerDetector';
 
 export interface BuildKit {
     name: string;
@@ -14,6 +19,7 @@ export interface BuildKit {
     envVars?: Record<string, string>;
     cmakeToolchainFile?: string;
     crossCompilePrefix?: string;
+    sysroot?: string;
     additionalQMakeArgs?: string;
     additionalCMakeArgs?: string;
 }
@@ -38,6 +44,9 @@ export class QtBuildKitManager {
         for (const inst of installations) {
             const compiler = this.inferCompiler(inst);
             const kitName = this.generateKitName(inst, compiler);
+            const yoctoInfo = inst.source === 'yocto'
+                ? this.resolveYoctoSdkInfo(inst.qmakePath)
+                : undefined;
             kits.push({
                 name: kitName,
                 qtPath: inst.path,
@@ -45,7 +54,10 @@ export class QtBuildKitManager {
                 qtVersion: inst.version || 'unknown',
                 compiler,
                 buildDirTemplate: '${workspaceFolder}/build-${kitName}-${buildType}',
-                envVars: {},
+                envVars: yoctoInfo?.envVars ?? {},
+                cmakeToolchainFile: yoctoInfo?.toolchainFile,
+                crossCompilePrefix: yoctoInfo?.crossPrefix,
+                sysroot: yoctoInfo?.sysroot,
                 additionalQMakeArgs: '',
                 additionalCMakeArgs: ''
             });
@@ -53,6 +65,31 @@ export class QtBuildKitManager {
 
         this.outputChannel.appendLine(`[Build Kits] Detected ${kits.length} kit(s)`);
         return kits;
+    }
+
+    private resolveYoctoSdkInfo(qmakePath: string): {
+        envVars: Record<string, string>;
+        toolchainFile?: string;
+        crossPrefix?: string;
+        sysroot?: string;
+    } | undefined {
+        // qmake path is expected to be <sysroot>/usr/bin/qmake
+        const sysroot = path.dirname(path.dirname(path.dirname(qmakePath)));
+        if (!fs.existsSync(sysroot)) {
+            return undefined;
+        }
+        const envScript = findYoctoEnvScript(sysroot);
+        const crossPrefix = envScript ? extractCrossPrefixFromEnvScript(envScript) : undefined;
+        const toolchainFile = extractToolchainFileFromEnvScript(sysroot);
+        const envVars: Record<string, string> = {};
+        if (crossPrefix) {
+            envVars.CROSS_COMPILE = crossPrefix;
+        }
+        if (sysroot) {
+            envVars.SDKTARGETSYSROOT = sysroot;
+            envVars.PKG_CONFIG_SYSROOT_DIR = sysroot;
+        }
+        return { envVars, toolchainFile, crossPrefix, sysroot };
     }
 
     async saveDetectedKits(): Promise<void> {
@@ -172,6 +209,15 @@ export class QtBuildKitManager {
         });
         if (newCrossPrefix !== undefined) {
             kit.crossCompilePrefix = newCrossPrefix || undefined;
+        }
+
+        // Edit sysroot
+        const newSysroot = await vscode.window.showInputBox({
+            prompt: 'Sysroot path (leave empty to clear)',
+            value: kit.sysroot || ''
+        });
+        if (newSysroot !== undefined) {
+            kit.sysroot = newSysroot || undefined;
         }
 
         // Edit environment variables
@@ -412,6 +458,11 @@ export class QtBuildKitManager {
         return kit?.crossCompilePrefix;
     }
 
+    getSysroot(projectFile: string): string | undefined {
+        const kit = this.getActiveKit(projectFile);
+        return kit?.sysroot;
+    }
+
     getDeployDirForProject(projectFile: string): string {
         const kit = this.getActiveKit(projectFile);
         const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
@@ -478,6 +529,9 @@ export class QtBuildKitManager {
         }
         if (kit.cmakeToolchainFile && !fs.existsSync(kit.cmakeToolchainFile)) {
             issues.push(`Toolchain file does not exist: ${kit.cmakeToolchainFile}`);
+        }
+        if (kit.sysroot && !fs.existsSync(kit.sysroot)) {
+            issues.push(`Sysroot does not exist: ${kit.sysroot}`);
         }
         return issues;
     }

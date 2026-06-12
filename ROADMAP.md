@@ -765,7 +765,7 @@
 
 ---
 
-## ✅ Version 2.0.0 (Current — Shipped) — Completeness & Polish
+## ✅ Version 2.0.0 (Shipped) — Completeness & Polish
 
 **Theme:** Implement everything that was claimed but missing, fix known limitations, and round out the extension into a truly complete Qt development environment.
 
@@ -812,24 +812,24 @@
 
 ---
 
-## 🚧 Version 2.1.0 — Advanced Mobile & Embedded *(Candidate)*
+## ✅ Version 2.1.0 (Current — Shipped) — Advanced Mobile & Embedded
 
 **Theme:** Deeper mobile integration and embedded cross-compilation workflows.
 
 ### iOS Enhancements
-- [ ] **TestFlight upload** — wrap `xcrun altool` for App Store Connect uploads
-- [ ] **Simulator screenshot/recording** — `xcrun simctl io` integration
+- [x] **TestFlight upload** — wrap `xcrun altool` for App Store Connect uploads
+- [x] **Simulator screenshot/recording** — `xcrun simctl io` integration
 
 ### Android Enhancements
-- [ ] **AAB install & test** — `bundletool` integration for local AAB testing
-- [ ] **Gradle wrapper support** — use project's own Gradle instead of bundled
-- [ ] **Android logcat viewer** — stream `adb logcat` filtered by Qt app PID in output channel
+- [x] **AAB install & test** — `bundletool` integration for local AAB testing
+- [x] **Gradle wrapper support** — use project's own Gradle instead of bundled
+- [x] **Android logcat viewer** — stream `adb logcat` in output channel
 
 ### Cross-Compilation & Embedded
-- [ ] **Sysroot management** — per-kit sysroot path for embedded Linux
-- [ ] **Remote deployment** — SCP/RSYNC built artifacts to target device
-- [ ] **Remote debugging** — GDB server / LLDB remote setup with launch config generation
-- [ ] **Yocto SDK detection** — auto-detect Qt installations inside Yocto SDK sysroots
+- [x] **Sysroot management** — per-kit sysroot path for embedded Linux
+- [x] **Remote deployment** — SCP/RSYNC built artifacts to target device
+- [x] **Remote debugging** — GDB server / LLDB remote setup with launch config generation
+- [x] **Yocto SDK detection** — auto-detect Qt installations inside Yocto SDK sysroots
 
 ---
 
@@ -863,6 +863,6 @@
 2. Open an issue to discuss design if it involves new UI or user-facing behavior.
 3. Submit a PR referencing the roadmap item.
 
-> **Last updated:** June 11, 2026
-> **Current version:** v2.0.0 — Completeness & Polish
+> **Last updated:** June 7, 2026
+> **Current version:** v2.1.0 — Advanced Mobile & Embedded
 > For the latest status, check the [GitHub Issues](https://github.com/akhilp19/Qt-VSC-Extension/issues) page.

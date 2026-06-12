@@ -33,9 +33,12 @@ Access these commands via Command Palette (`Ctrl+Shift+P`):
 - `Qt: Validate Resource File` — Validate `.qrc` files
 - `Qt: Compile Resource File (rcc)` — Run `rcc` manually
 - `Qt: Deploy Application` — Run `windeployqt` / `macdeployqt` / `linuxdeployqt`
-- `Qt: Build Android APK` — Build Android APK via `androiddeployqt`
+- `Qt: Build Android APK` — Build Android APK via `androiddeployqt` (or Gradle wrapper when available)
 - `Qt: Build Android AAB` — Build Android App Bundle
+- `Qt: Build Android APKS from AAB` — Convert AAB to APKS with `bundletool`
+- `Qt: Install Android APKS` — Install APKS on device via `bundletool`
 - `Qt: Validate Android Manifest` — Check `AndroidManifest.xml` for common Qt issues
+- `Qt: Start Android Logcat` / `Qt: Stop Android Logcat` — Stream device logs in output channel
 - Android NDK auto-detection from SDK `ndk/` or `ndk-bundle/` directories
 - `Qt: Configure Android SDK` — Set Android SDK/NDK paths
 - `Qt: Install Android APK` — Install APK to connected device via `adb`
@@ -44,6 +47,9 @@ Access these commands via Command Palette (`Ctrl+Shift+P`):
 - `Qt: Run iOS App on Simulator` — Build, install, and launch on selected simulator
 - `Qt: Archive iOS App` — `xcodebuild archive` for device distribution
 - `Qt: Export iOS IPA` — `xcodebuild -exportArchive` with ExportOptions.plist
+- `Qt: Upload iOS IPA to TestFlight` — Upload exported IPA via `xcrun altool`
+- `Qt: Take iOS Simulator Screenshot` — Capture simulator screen
+- `Qt: Record iOS Simulator Video` / `Qt: Stop Simulator Recording` — Record simulator video
 - `Qt: Build for WebAssembly` — Build Qt app for WASM via Emscripten (with source maps in debug, pthread detection)
 - `Qt: Configure Emscripten SDK` — Set Emscripten path for WASM builds
 - `Qt: Serve WebAssembly Preview` — Start local HTTP server for WASM output
@@ -59,8 +65,10 @@ Access these commands via Command Palette (`Ctrl+Shift+P`):
 - Per-kit build directories with variable substitution
 - Kit-specific deploy directories
 - Cross-compile prefix support per kit
+- Sysroot path support per kit
 - CMake toolchain file injection into build tasks
 - Workspace default kit fallback
+- Yocto SDK auto-detection with sysroot/cross-prefix/toolchain population
 
 **QML Support**
 - `Qt: Format QML File` — Format with `qmlformat`
@@ -140,6 +148,9 @@ Access these commands via Command Palette (`Ctrl+Shift+P`):
 - `Qt: Setup CI/CD Pipeline` — Generate GitHub Actions and GitLab CI templates
 - `Qt: Generate Installer Framework Config` — Create `config.xml` / `package.xml`
 - `Qt: Build Installer` — Run `binarycreator` for `.exe` / `.dmg` / `.run`
+- `Qt: Configure Remote Target` — Set host, user, remote path, deploy mode
+- `Qt: Deploy to Remote Device` — SCP/RSYNC built artifacts to embedded target
+- `Qt: Generate Remote Debug Config` — Create `cppdbg` launch config for GDB/LLDB remote debugging
 
 ### ⚙️ Configuration
 
@@ -359,9 +370,11 @@ See **[ROADMAP.md](ROADMAP.md)** for a detailed, versioned breakdown of complete
 - ✅ **v1.16.0** — QML type inference (`QML_ELEMENT` / `QML_SINGLETON`) & hot reload on save
 - ✅ **v1.17.0 (Shipped)** — QML Language Server (`qmlls`) & Modern CMake Preset Support
 - ✅ **v1.18.0 (Shipped)** — QML Testing (`qmltestrunner`) & Qt Code Quality (clazy, offline docs)
-- ✅ **v1.19.0 (Current)** — Android Deployment & Build Kit Profiles
-- 🚧 **v1.20.0 (Candidate)** — iOS Deployment & Qt for WebAssembly
-- 🔮 **v2.1.0** — LSP & advanced code intelligence (custom LSP server, rename refactoring, cross-reference)
+- ✅ **v1.19.0 (Shipped)** — Android Deployment & Build Kit Profiles
+- ✅ **v1.20.0 (Shipped)** — iOS Deployment & Qt for WebAssembly
+- ✅ **v2.0.0 (Shipped)** — Completeness & Polish
+- ✅ **v2.1.0 (Current)** — Advanced Mobile & Embedded (TestFlight, bundletool, logcat, remote deploy/debug, Yocto, sysroot)
+- 🔮 **v2.2.0** — LSP & advanced code intelligence (custom LSP server, rename refactoring, cross-reference)
 
 ## Contributing
 

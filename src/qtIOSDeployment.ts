@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { spawn, execSync } from 'child_process';
+import { spawn, execSync, ChildProcess } from 'child_process';
 import { QtConfigManager } from './qtConfigManager';
 import { QtProjectDetector } from './qtProjectDetector';
 
@@ -16,6 +16,7 @@ export class QtIOSDeployment {
     private qtConfigManager: QtConfigManager;
     private qtProjectDetector: QtProjectDetector;
     private outputChannel: vscode.OutputChannel;
+    private recordingProcess?: ChildProcess;
 
     constructor(
         qtConfigManager: QtConfigManager,
@@ -28,7 +29,14 @@ export class QtIOSDeployment {
     }
 
     dispose(): void {
-        // No resources to clean up
+        this.stopRecordingProcess();
+    }
+
+    private stopRecordingProcess(): void {
+        if (this.recordingProcess) {
+            this.recordingProcess.kill('SIGTERM');
+            this.recordingProcess = undefined;
+        }
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -423,6 +431,208 @@ export class QtIOSDeployment {
                 child.on('error', (err) => reject(err));
             });
         });
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // iOS TestFlight / App Store Upload
+    // ─────────────────────────────────────────────────────────────
+
+    async uploadToTestFlight(projectFile?: string): Promise<void> {
+        if (!this.checkMacOS()) { return; }
+
+        const xcrun = this.findTool('xcrun');
+        if (!xcrun) {
+            void vscode.window.showErrorMessage('xcrun not found. Install Xcode Command Line Tools.');
+            return;
+        }
+
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        if (!workspaceFolder) {
+            void vscode.window.showErrorMessage('No workspace folder open');
+            return;
+        }
+
+        let targetProject = projectFile || (await this.pickProject(workspaceFolder.uri.fsPath));
+        if (!targetProject) { return; }
+
+        const projectName = path.basename(targetProject, path.extname(targetProject));
+        const exportPath = path.join(workspaceFolder.uri.fsPath, 'build-ios', 'ipa');
+
+        // Find exported IPA
+        let ipaPath: string | undefined;
+        try {
+            const entries = fs.readdirSync(exportPath, { withFileTypes: true });
+            for (const entry of entries) {
+                if (entry.isFile() && entry.name.endsWith('.ipa')) {
+                    ipaPath = path.join(exportPath, entry.name);
+                    break;
+                }
+            }
+        } catch {
+            // ignore
+        }
+        if (!ipaPath) {
+            void vscode.window.showErrorMessage('No exported IPA found. Run "Export iOS IPA" first.');
+            return;
+        }
+
+        const config = vscode.workspace.getConfiguration('qt');
+        let appleId = config.get<string>('iosAppleId') || '';
+        let appPassword = config.get<string>('iosAppSpecificPassword') || '';
+        const apiKeyPath = config.get<string>('iosApiKeyPath') || '';
+        const apiIssuerId = config.get<string>('iosApiIssuerId') || '';
+        const apiKeyId = config.get<string>('iosApiKeyId') || '';
+
+        let useApiKey = apiKeyPath && fs.existsSync(apiKeyPath) && apiIssuerId && apiKeyId;
+
+        if (!useApiKey && !appleId) {
+            appleId = await vscode.window.showInputBox({
+                prompt: 'Apple ID email for App Store Connect',
+                placeHolder: 'name@example.com'
+            }) || '';
+            if (!appleId) { return; }
+            await config.update('iosAppleId', appleId, vscode.ConfigurationTarget.Workspace);
+        }
+
+        if (!useApiKey && !appPassword) {
+            appPassword = await vscode.window.showInputBox({
+                prompt: 'App-specific password for App Store Connect',
+                password: true
+            }) || '';
+            if (!appPassword) { return; }
+            await config.update('iosAppSpecificPassword', appPassword, vscode.ConfigurationTarget.Workspace);
+        }
+
+        let cmd: string;
+        if (useApiKey) {
+            cmd = `"${xcrun}" altool --upload-app -f "${ipaPath}" -t ios --apiKey "${apiKeyId}" --apiIssuer "${apiIssuerId}"`;
+        } else {
+            cmd = `"${xcrun}" altool --upload-app -f "${ipaPath}" -t ios -u "${appleId}" -p "${appPassword}"`;
+        }
+
+        this.outputChannel.appendLine(`[iOS] Uploading ${path.basename(ipaPath)} to TestFlight/App Store...`);
+
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: `Uploading ${path.basename(ipaPath)}...`,
+            cancellable: false
+        }, async () => {
+            return new Promise<void>((resolve, reject) => {
+                const child = spawn(cmd, { shell: true });
+                child.stdout?.on('data', (data: Buffer) => this.outputChannel.append(data.toString('utf-8')));
+                child.stderr?.on('data', (data: Buffer) => this.outputChannel.append(data.toString('utf-8')));
+                child.on('close', (code) => {
+                    if (code === 0) {
+                        void vscode.window.showInformationMessage(`Uploaded ${path.basename(ipaPath!)} to TestFlight/App Store.`);
+                        resolve();
+                    } else {
+                        reject(new Error(`Upload failed (code ${code})`));
+                    }
+                });
+                child.on('error', (err) => reject(err));
+            });
+        });
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // iOS Simulator Media Capture
+    // ─────────────────────────────────────────────────────────────
+
+    async takeSimulatorScreenshot(): Promise<void> {
+        if (!this.checkMacOS()) { return; }
+
+        const xcrun = this.findTool('xcrun');
+        if (!xcrun) {
+            void vscode.window.showErrorMessage('xcrun not found. Install Xcode Command Line Tools.');
+            return;
+        }
+
+        const config = vscode.workspace.getConfiguration('qt');
+        let udid = config.get<string>('iosSelectedSimulator');
+        if (!udid) {
+            await this.selectSimulator();
+            udid = config.get<string>('iosSelectedSimulator');
+            if (!udid) { return; }
+        }
+
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        if (!workspaceFolder) { return; }
+
+        const mediaDirRaw = config.get<string>('iosSimulatorMediaDir') || '${workspaceFolder}/ios-media';
+        const mediaDir = mediaDirRaw.replace('${workspaceFolder}', workspaceFolder.uri.fsPath);
+        if (!fs.existsSync(mediaDir)) {
+            fs.mkdirSync(mediaDir, { recursive: true });
+        }
+
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const screenshotPath = path.join(mediaDir, `simulator-${timestamp}.png`);
+
+        try {
+            execSync(`"${xcrun}" simctl io "${udid}" screenshot "${screenshotPath}"`, {
+                encoding: 'utf-8',
+                stdio: 'pipe'
+            });
+            void vscode.window.showInformationMessage(`Screenshot saved: ${screenshotPath}`, 'Open').then(choice => {
+                if (choice === 'Open') {
+                    void vscode.env.openExternal(vscode.Uri.file(screenshotPath));
+                }
+            });
+            this.outputChannel.appendLine(`[iOS] Screenshot saved: ${screenshotPath}`);
+        } catch (error) {
+            const err = error as { stderr?: string };
+            void vscode.window.showErrorMessage(`Screenshot failed: ${err.stderr || String(error)}`);
+        }
+    }
+
+    async recordSimulatorVideo(): Promise<void> {
+        if (!this.checkMacOS()) { return; }
+
+        const xcrun = this.findTool('xcrun');
+        if (!xcrun) {
+            void vscode.window.showErrorMessage('xcrun not found. Install Xcode Command Line Tools.');
+            return;
+        }
+
+        if (this.recordingProcess) {
+            void vscode.window.showWarningMessage('A simulator recording is already in progress. Stop it first.');
+            return;
+        }
+
+        const config = vscode.workspace.getConfiguration('qt');
+        let udid = config.get<string>('iosSelectedSimulator');
+        if (!udid) {
+            await this.selectSimulator();
+            udid = config.get<string>('iosSelectedSimulator');
+            if (!udid) { return; }
+        }
+
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        if (!workspaceFolder) { return; }
+
+        const mediaDirRaw = config.get<string>('iosSimulatorMediaDir') || '${workspaceFolder}/ios-media';
+        const mediaDir = mediaDirRaw.replace('${workspaceFolder}', workspaceFolder.uri.fsPath);
+        if (!fs.existsSync(mediaDir)) {
+            fs.mkdirSync(mediaDir, { recursive: true });
+        }
+
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const videoPath = path.join(mediaDir, `simulator-${timestamp}.mp4`);
+
+        const cmd = `"${xcrun}" simctl io "${udid}" recordVideo "${videoPath}"`;
+        this.recordingProcess = spawn(cmd, { shell: true });
+
+        this.outputChannel.appendLine(`[iOS] Started simulator recording: ${videoPath}`);
+        void vscode.window.showInformationMessage('Recording iOS simulator video. Use "Stop Simulator Recording" to finish.');
+    }
+
+    async stopSimulatorRecording(): Promise<void> {
+        if (!this.recordingProcess) {
+            void vscode.window.showInformationMessage('No simulator recording is in progress.');
+            return;
+        }
+        this.stopRecordingProcess();
+        void vscode.window.showInformationMessage('Simulator recording stopped.');
+        this.outputChannel.appendLine('[iOS] Stopped simulator recording');
     }
 
     // ─────────────────────────────────────────────────────────────

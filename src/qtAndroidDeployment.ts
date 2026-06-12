@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { spawn, execSync } from 'child_process';
+import { spawn, execSync, ChildProcess } from 'child_process';
 import { QtConfigManager } from './qtConfigManager';
 import { QtProjectDetector } from './qtProjectDetector';
 
@@ -15,6 +15,7 @@ export class QtAndroidDeployment {
     private qtConfigManager: QtConfigManager;
     private qtProjectDetector: QtProjectDetector;
     private outputChannel: vscode.OutputChannel;
+    private logcatProcess?: ChildProcess;
 
     constructor(
         qtConfigManager: QtConfigManager,
@@ -27,7 +28,14 @@ export class QtAndroidDeployment {
     }
 
     dispose(): void {
-        // No resources to clean up
+        this.stopLogcatProcess();
+    }
+
+    private stopLogcatProcess(): void {
+        if (this.logcatProcess) {
+            this.logcatProcess.kill('SIGTERM');
+            this.logcatProcess = undefined;
+        }
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -95,14 +103,6 @@ export class QtAndroidDeployment {
             return;
         }
 
-        const androidDeployQt = await this.findAndroidDeployQt();
-        if (!androidDeployQt) {
-            void vscode.window.showErrorMessage(
-                'androiddeployqt not found. Install Qt for Android (e.g., Qt 6.7.0 Android) and configure Qt path.'
-            );
-            return;
-        }
-
         const sdkPath = this.getAndroidSdkPath();
         if (!sdkPath) {
             const choice = await vscode.window.showWarningMessage(
@@ -132,16 +132,28 @@ export class QtAndroidDeployment {
             projectFile = selected.value;
         }
 
-        // Find built executable / android build
         const buildDir = this.qtConfigManager.getBuildDirectory();
         const projectName = path.basename(projectFile, path.extname(projectFile));
 
-        // For Android, the build produces an android-build directory or APK directly
-        const androidBuildDir = path.join(buildDir, 'android_build');
-        const apkOutputDir = path.join(buildDir, `${projectName}_apk`);
-
         if (!fs.existsSync(buildDir)) {
             void vscode.window.showErrorMessage('Build directory not found. Build the project first.');
+            return;
+        }
+
+        // Prefer Gradle wrapper when available and enabled
+        const config = vscode.workspace.getConfiguration('qt');
+        const preferGradle = config.get<boolean>('androidPreferGradleWrapper') ?? true;
+        const gradlew = preferGradle ? this.findGradleWrapper(buildDir, path.dirname(projectFile)) : undefined;
+        if (gradlew) {
+            await this.runGradleWrapper(gradlew, buildDir, projectName, 'assembleDebug');
+            return;
+        }
+
+        const androidDeployQt = await this.findAndroidDeployQt();
+        if (!androidDeployQt) {
+            void vscode.window.showErrorMessage(
+                'androiddeployqt not found. Install Qt for Android (e.g., Qt 6.7.0 Android) and configure Qt path.'
+            );
             return;
         }
 
@@ -154,8 +166,8 @@ export class QtAndroidDeployment {
             return;
         }
 
-        const config = vscode.workspace.getConfiguration('qt');
         const platform = config.get<string>('androidPlatform') || 'android-34';
+        const apkOutputDir = path.join(buildDir, `${projectName}_apk`);
 
         // Ensure output directory exists
         if (!fs.existsSync(apkOutputDir)) {
@@ -192,12 +204,6 @@ export class QtAndroidDeployment {
     // ─────────────────────────────────────────────────────────────
 
     async buildAab(projectFile?: string): Promise<void> {
-        const androidDeployQt = await this.findAndroidDeployQt();
-        if (!androidDeployQt) {
-            void vscode.window.showErrorMessage('androiddeployqt not found. Ensure Qt for Android is installed.');
-            return;
-        }
-
         const sdkPath = this.getAndroidSdkPath();
         if (!sdkPath) {
             const choice = await vscode.window.showWarningMessage(
@@ -238,10 +244,23 @@ export class QtAndroidDeployment {
 
         const buildDir = this.qtConfigManager.getBuildDirectory();
         const projectName = path.basename(targetProject, path.extname(targetProject));
-        const aabOutputDir = path.join(buildDir, `${projectName}_aab`);
 
         if (!fs.existsSync(buildDir)) {
             void vscode.window.showErrorMessage('Build directory not found. Build the project first.');
+            return;
+        }
+
+        const config = vscode.workspace.getConfiguration('qt');
+        const preferGradle = config.get<boolean>('androidPreferGradleWrapper') ?? true;
+        const gradlew = preferGradle ? this.findGradleWrapper(buildDir, path.dirname(targetProject)) : undefined;
+        if (gradlew) {
+            await this.runGradleWrapper(gradlew, buildDir, projectName, 'bundleDebug');
+            return;
+        }
+
+        const androidDeployQt = await this.findAndroidDeployQt();
+        if (!androidDeployQt) {
+            void vscode.window.showErrorMessage('androiddeployqt not found. Ensure Qt for Android is installed.');
             return;
         }
 
@@ -253,8 +272,8 @@ export class QtAndroidDeployment {
             return;
         }
 
-        const config = vscode.workspace.getConfiguration('qt');
         const platform = config.get<string>('androidPlatform') || 'android-34';
+        const aabOutputDir = path.join(buildDir, `${projectName}_aab`);
 
         if (!fs.existsSync(aabOutputDir)) {
             fs.mkdirSync(aabOutputDir, { recursive: true });
@@ -440,8 +459,335 @@ export class QtAndroidDeployment {
     }
 
     // ─────────────────────────────────────────────────────────────
+    // Bundletool AAB → APKS
+    // ─────────────────────────────────────────────────────────────
+
+    async buildApksFromAab(projectFile?: string): Promise<void> {
+        const bundletool = this.findBundletool();
+        if (!bundletool) {
+            void vscode.window.showErrorMessage('bundletool.jar not found. Configure qt.androidBundletoolPath or place bundletool.jar in ~/bin/.');
+            return;
+        }
+
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        if (!workspaceFolder) {
+            void vscode.window.showErrorMessage('No workspace folder open');
+            return;
+        }
+
+        let targetProject = projectFile;
+        if (!targetProject) {
+            const projects = await this.qtProjectDetector.detectProjects(workspaceFolder.uri.fsPath);
+            if (projects.length === 0) {
+                void vscode.window.showErrorMessage('No Qt project found');
+                return;
+            }
+            if (projects.length === 1) {
+                targetProject = projects[0];
+            } else {
+                const selected = await vscode.window.showQuickPick(
+                    projects.map(p => ({ label: path.basename(p), description: p, value: p })),
+                    { placeHolder: 'Select project to build APKS for' }
+                );
+                if (!selected) { return; }
+                targetProject = selected.value;
+            }
+        }
+
+        const buildDir = this.qtConfigManager.getBuildDirectory();
+        const aabPath = this.findAabFile(buildDir);
+        if (!aabPath) {
+            void vscode.window.showErrorMessage('No AAB found. Build the Android AAB first.');
+            return;
+        }
+
+        const config = vscode.workspace.getConfiguration('qt');
+        const keystorePath = config.get<string>('androidKeystorePath') || this.getDefaultDebugKeystore();
+        const keystorePassword = config.get<string>('androidKeystorePassword') || 'android';
+        const keyAlias = config.get<string>('androidKeyAlias') || 'androiddebugkey';
+
+        const apksPath = aabPath.replace(/\.aab$/i, '.apks');
+
+        let cmd: string;
+        if (keystorePath && fs.existsSync(keystorePath)) {
+            cmd = `java -jar "${bundletool}" build-apks --bundle="${aabPath}" --output="${apksPath}" --ks="${keystorePath}" --ks-pass=pass:${keystorePassword} --ks-key-alias="${keyAlias}"`;
+        } else {
+            cmd = `java -jar "${bundletool}" build-apks --bundle="${aabPath}" --output="${apksPath}"`;
+        }
+
+        this.outputChannel.appendLine(`[Android] Building APKS from ${path.basename(aabPath)}...`);
+
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: `Building APKS for ${path.basename(aabPath)}...`,
+            cancellable: false
+        }, async () => {
+            return new Promise<void>((resolve, reject) => {
+                const child = spawn(cmd, { shell: true });
+                child.stdout?.on('data', (data: Buffer) => this.outputChannel.append(data.toString('utf-8')));
+                child.stderr?.on('data', (data: Buffer) => this.outputChannel.append(data.toString('utf-8')));
+                child.on('close', (code) => {
+                    if (code === 0) {
+                        void vscode.window.showInformationMessage(`APKS built: ${path.basename(apksPath)}`, 'Install APKS').then(choice => {
+                            if (choice === 'Install APKS') {
+                                void this.installApks();
+                            }
+                        });
+                        resolve();
+                    } else {
+                        reject(new Error(`bundletool build-apks failed (code ${code})`));
+                    }
+                });
+                child.on('error', (err) => reject(err));
+            });
+        });
+    }
+
+    async installApks(projectFile?: string): Promise<void> {
+        const bundletool = this.findBundletool();
+        if (!bundletool) {
+            void vscode.window.showErrorMessage('bundletool.jar not found. Configure qt.androidBundletoolPath.');
+            return;
+        }
+
+        const buildDir = this.qtConfigManager.getBuildDirectory();
+        let apksPath: string | undefined;
+        const searchDirs = [buildDir, path.join(buildDir, 'android_build'), path.join(buildDir, 'android-build')];
+        for (const dir of searchDirs) {
+            if (!fs.existsSync(dir)) { continue; }
+            try {
+                const entries = fs.readdirSync(dir, { recursive: true }) as string[];
+                for (const entry of entries) {
+                    if (entry.endsWith('.apks')) {
+                        apksPath = path.join(dir, entry);
+                        break;
+                    }
+                }
+            } catch {
+                // ignore
+            }
+            if (apksPath) { break; }
+        }
+
+        if (!apksPath) {
+            void vscode.window.showErrorMessage('No APKS file found. Build APKS from AAB first.');
+            return;
+        }
+
+        const adbPath = this.findAdb();
+        let deviceArg = '';
+        if (adbPath) {
+            const devices = this.listDevices(adbPath);
+            if (devices.length > 1) {
+                const selected = await vscode.window.showQuickPick(
+                    devices.map(d => ({ label: d.name || d.id, description: d.status, id: d.id })),
+                    { placeHolder: 'Select Android device' }
+                );
+                if (selected) {
+                    deviceArg = ` --device-id=${selected.id}`;
+                }
+            } else if (devices.length === 1) {
+                deviceArg = ` --device-id=${devices[0].id}`;
+            }
+        }
+
+        const cmd = `java -jar "${bundletool}" install-apks --apks="${apksPath}"${deviceArg}`;
+        this.outputChannel.appendLine(`[Android] Installing APKS ${path.basename(apksPath)}...`);
+
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: `Installing APKS on device...`,
+            cancellable: false
+        }, async () => {
+            return new Promise<void>((resolve, reject) => {
+                const child = spawn(cmd, { shell: true });
+                child.stdout?.on('data', (data: Buffer) => this.outputChannel.append(data.toString('utf-8')));
+                child.stderr?.on('data', (data: Buffer) => this.outputChannel.append(data.toString('utf-8')));
+                child.on('close', (code) => {
+                    if (code === 0) {
+                        void vscode.window.showInformationMessage('APKS installed successfully');
+                        resolve();
+                    } else {
+                        reject(new Error(`bundletool install-apks failed (code ${code})`));
+                    }
+                });
+                child.on('error', (err) => reject(err));
+            });
+        });
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Android Logcat
+    // ─────────────────────────────────────────────────────────────
+
+    async startLogcat(): Promise<void> {
+        const adbPath = this.findAdb();
+        if (!adbPath) {
+            void vscode.window.showErrorMessage('adb not found. Configure Android SDK path first.');
+            return;
+        }
+
+        if (this.logcatProcess) {
+            void vscode.window.showWarningMessage('Logcat is already running. Stop it first.');
+            return;
+        }
+
+        const devices = this.listDevices(adbPath);
+        if (devices.length === 0) {
+            void vscode.window.showErrorMessage('No Android devices connected.');
+            return;
+        }
+
+        let deviceId = devices[0].id;
+        if (devices.length > 1) {
+            const selected = await vscode.window.showQuickPick(
+                devices.map(d => ({ label: d.name || d.id, description: d.status, id: d.id })),
+                { placeHolder: 'Select Android device for logcat' }
+            );
+            if (!selected) { return; }
+            deviceId = selected.id;
+        }
+
+        const filter = await vscode.window.showInputBox({
+            prompt: 'Optional logcat filter (tag:priority, e.g., Qt:D)',
+            placeHolder: 'leave empty for all messages'
+        });
+
+        const cmd = filter
+            ? `"${adbPath}" -s ${deviceId} logcat ${filter}`
+            : `"${adbPath}" -s ${deviceId} logcat`;
+
+        this.outputChannel.appendLine(`[Android] Starting logcat for ${deviceId}...`);
+        this.logcatProcess = spawn(cmd, { shell: true });
+        this.logcatProcess.stdout?.on('data', (data: Buffer) => {
+            this.outputChannel.append('[Logcat] ' + data.toString('utf-8'));
+        });
+        this.logcatProcess.stderr?.on('data', (data: Buffer) => {
+            this.outputChannel.append('[Logcat] ' + data.toString('utf-8'));
+        });
+        this.logcatProcess.on('close', (code) => {
+            this.outputChannel.appendLine(`[Android] Logcat exited (code ${code})`);
+            this.logcatProcess = undefined;
+        });
+        this.logcatProcess.on('error', (err) => {
+            void vscode.window.showErrorMessage(`Logcat error: ${err.message}`);
+            this.logcatProcess = undefined;
+        });
+    }
+
+    async stopLogcat(): Promise<void> {
+        if (!this.logcatProcess) {
+            void vscode.window.showInformationMessage('Logcat is not running.');
+            return;
+        }
+        this.stopLogcatProcess();
+        void vscode.window.showInformationMessage('Logcat stopped.');
+    }
+
+    // ─────────────────────────────────────────────────────────────
     // Helpers
     // ─────────────────────────────────────────────────────────────
+
+    private getDefaultDebugKeystore(): string | undefined {
+        const homeDir = process.env.HOME || process.env.USERPROFILE;
+        if (!homeDir) { return undefined; }
+        const keystore = path.join(homeDir, '.android', 'debug.keystore');
+        return fs.existsSync(keystore) ? keystore : undefined;
+    }
+
+    private findBundletool(): string | undefined {
+        const config = vscode.workspace.getConfiguration('qt');
+        const configuredPath = config.get<string>('androidBundletoolPath');
+        if (configuredPath && fs.existsSync(configuredPath)) {
+            return configuredPath;
+        }
+
+        const homeDir = process.env.HOME || process.env.USERPROFILE;
+        const commonPaths = [
+            homeDir ? path.join(homeDir, 'bin', 'bundletool.jar') : '',
+            homeDir ? path.join(homeDir, 'bundletool.jar') : '',
+            path.join(process.cwd(), 'bundletool.jar')
+        ];
+
+        const sdkPath = this.getAndroidSdkPath();
+        if (sdkPath) {
+            const cmdlineTools = path.join(sdkPath, 'cmdline-tools');
+            if (fs.existsSync(cmdlineTools)) {
+                try {
+                    const entries = fs.readdirSync(cmdlineTools, { withFileTypes: true });
+                    for (const entry of entries) {
+                        if (entry.isDirectory()) {
+                            commonPaths.push(path.join(cmdlineTools, entry.name, 'lib', 'bundletool.jar'));
+                        }
+                    }
+                } catch {
+                    // ignore
+                }
+            }
+        }
+
+        for (const p of commonPaths) {
+            if (p && fs.existsSync(p)) { return p; }
+        }
+
+        try {
+            const result = execSync(
+                process.platform === 'win32' ? 'where bundletool' : 'which bundletool',
+                { encoding: 'utf-8', stdio: 'pipe' }
+            ).trim();
+            const first = result.split('\n')[0].trim();
+            if (first && fs.existsSync(first)) { return first; }
+        } catch {
+            // not found
+        }
+
+        return undefined;
+    }
+
+    private findGradleWrapper(buildDir: string, projectDir: string): string | undefined {
+        const isWindows = process.platform === 'win32';
+        const wrapperName = isWindows ? 'gradlew.bat' : 'gradlew';
+        const candidates = [
+            path.join(buildDir, 'android_build', wrapperName),
+            path.join(buildDir, 'android-build', wrapperName),
+            path.join(buildDir, wrapperName),
+            path.join(projectDir, wrapperName)
+        ];
+        for (const candidate of candidates) {
+            if (fs.existsSync(candidate)) {
+                return candidate;
+            }
+        }
+        return undefined;
+    }
+
+    private async runGradleWrapper(gradlew: string, buildDir: string, projectName: string, task: 'assembleDebug' | 'bundleDebug'): Promise<void> {
+        const cwd = path.dirname(gradlew);
+        const isWindows = process.platform === 'win32';
+        const cmd = isWindows ? `"${gradlew}" ${task}` : `"${gradlew}" ${task}`;
+        this.outputChannel.appendLine(`[Android] Running Gradle wrapper: ${cmd}`);
+
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: `Running Gradle ${task}...`,
+            cancellable: false
+        }, async () => {
+            return new Promise<void>((resolve, reject) => {
+                const child = spawn(cmd, { shell: true, cwd });
+                child.stdout?.on('data', (data: Buffer) => this.outputChannel.append(data.toString('utf-8')));
+                child.stderr?.on('data', (data: Buffer) => this.outputChannel.append(data.toString('utf-8')));
+                child.on('close', (code) => {
+                    if (code === 0) {
+                        void vscode.window.showInformationMessage(`Gradle ${task} completed for ${projectName}`);
+                        resolve();
+                    } else {
+                        reject(new Error(`Gradle ${task} failed (code ${code})`));
+                    }
+                });
+                child.on('error', (err) => reject(err));
+            });
+        });
+    }
 
     private async findAndroidDeployQt(): Promise<string | undefined> {
         const qtInstallation = await this.qtConfigManager.getQtInstallation();

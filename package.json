@@ -2,7 +2,7 @@
   "name": "qt-vsc-extension",
   "displayName": "Qt C++ Tools",
   "description": "Build, run and manage Qt C++ projects in VS Code",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "publisher": "akhilp19",
   "author": {
     "name": "Akhil Pawar"
@@ -428,6 +428,61 @@
         "command": "qt.validateBuildKit",
         "title": "Qt: Validate Build Kit",
         "icon": "$(check)"
+      },
+      {
+        "command": "qt.uploadIOSTestFlight",
+        "title": "Qt: Upload iOS IPA to TestFlight",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "qt.takeSimulatorScreenshot",
+        "title": "Qt: Take iOS Simulator Screenshot",
+        "icon": "$(device-camera)"
+      },
+      {
+        "command": "qt.recordSimulatorVideo",
+        "title": "Qt: Record iOS Simulator Video",
+        "icon": "$(record)"
+      },
+      {
+        "command": "qt.stopSimulatorRecording",
+        "title": "Qt: Stop iOS Simulator Recording",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "qt.buildAndroidApks",
+        "title": "Qt: Build Android APKS from AAB",
+        "icon": "$(package)"
+      },
+      {
+        "command": "qt.installAndroidApks",
+        "title": "Qt: Install Android APKS",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "qt.startAndroidLogcat",
+        "title": "Qt: Start Android Logcat",
+        "icon": "$(output)"
+      },
+      {
+        "command": "qt.stopAndroidLogcat",
+        "title": "Qt: Stop Android Logcat",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "qt.deployRemote",
+        "title": "Qt: Deploy to Remote Device",
+        "icon": "$(server-process)"
+      },
+      {
+        "command": "qt.configureRemoteTarget",
+        "title": "Qt: Configure Remote Target",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "qt.generateRemoteDebugConfig",
+        "title": "Qt: Generate Remote Debug Config",
+        "icon": "$(debug)"
       }
     ],
     "taskDefinitions": [
@@ -785,6 +840,90 @@
           "type": "string",
           "default": "",
           "description": "Default build kit name for the workspace. Used when no per-project kit is selected."
+        },
+        "qt.iosAppleId": {
+          "type": "string",
+          "default": "",
+          "description": "Apple ID email for TestFlight / App Store upload via altool."
+        },
+        "qt.iosAppSpecificPassword": {
+          "type": "string",
+          "default": "",
+          "description": "App-specific password for TestFlight / App Store upload."
+        },
+        "qt.iosApiKeyPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to App Store Connect API private key (.p8)."
+        },
+        "qt.iosApiIssuerId": {
+          "type": "string",
+          "default": "",
+          "description": "App Store Connect API issuer ID."
+        },
+        "qt.iosApiKeyId": {
+          "type": "string",
+          "default": "",
+          "description": "App Store Connect API key ID."
+        },
+        "qt.iosSimulatorMediaDir": {
+          "type": "string",
+          "default": "${workspaceFolder}/ios-media",
+          "description": "Directory for iOS simulator screenshots and recordings."
+        },
+        "qt.androidBundletoolPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to bundletool.jar for AAB testing."
+        },
+        "qt.androidKeystorePath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to keystore for signing APKS generated from AAB."
+        },
+        "qt.androidKeystorePassword": {
+          "type": "string",
+          "default": "",
+          "description": "Password for the Android keystore."
+        },
+        "qt.androidKeyAlias": {
+          "type": "string",
+          "default": "",
+          "description": "Key alias for the Android keystore."
+        },
+        "qt.androidPreferGradleWrapper": {
+          "type": "boolean",
+          "default": true,
+          "description": "Use the project's Gradle wrapper (gradlew) for Android builds when available."
+        },
+        "qt.remoteHost": {
+          "type": "string",
+          "default": "",
+          "description": "Remote device hostname or IP for deployment and debugging."
+        },
+        "qt.remoteUser": {
+          "type": "string",
+          "default": "",
+          "description": "Remote user name for deployment and debugging."
+        },
+        "qt.remotePath": {
+          "type": "string",
+          "default": "",
+          "description": "Remote directory to deploy the built application."
+        },
+        "qt.remoteDeployMode": {
+          "type": "string",
+          "enum": [
+            "scp",
+            "rsync"
+          ],
+          "default": "scp",
+          "description": "Remote deployment mode."
+        },
+        "qt.remoteDebugPort": {
+          "type": "number",
+          "default": 2345,
+          "description": "GDB server port for remote debugging."
         }
       }
     },
@@ -1080,6 +1219,50 @@
         },
         {
           "command": "qt.detectBuildKits",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.uploadIOSTestFlight",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.takeSimulatorScreenshot",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.recordSimulatorVideo",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.stopSimulatorRecording",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.buildAndroidApks",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.installAndroidApks",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.startAndroidLogcat",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.stopAndroidLogcat",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.deployRemote",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.configureRemoteTarget",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.generateRemoteDebugConfig",
           "when": "workspaceFolderCount > 0"
         }
       ],

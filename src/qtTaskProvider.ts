@@ -178,6 +178,13 @@ export class QtTaskProvider implements vscode.TaskProvider {
         return undefined;
     }
 
+    private getSysroot(projectFile: string): string | undefined {
+        if (this.qtBuildKitManager) {
+            return this.qtBuildKitManager.getSysroot(projectFile);
+        }
+        return undefined;
+    }
+
     private async createBuildTask(
         projectFile: string,
         projectType: 'qmake' | 'cmake' | 'python' | 'raw',
@@ -208,8 +215,10 @@ export class QtTaskProvider implements vscode.TaskProvider {
             // QMake build: qmake -> make
             const qmakePath = qtInstallation?.qmakePath || 'qmake';
             const crossPrefix = this.getCrossCompilePrefix(projectFile);
+            const sysroot = this.getSysroot(projectFile);
             const crossCompileArg = crossPrefix ? `-device-option CROSS_COMPILE=${crossPrefix}` : '';
-            const additionalArgs = [config.get<string>('additionalQMakeArguments') || '', kitExtraArgs, crossCompileArg].filter(Boolean).join(' ');
+            const sysrootArg = sysroot ? `-sysroot ${quotePath(sysroot)}` : '';
+            const additionalArgs = [config.get<string>('additionalQMakeArguments') || '', kitExtraArgs, crossCompileArg, sysrootArg].filter(Boolean).join(' ');
             const buildTypeArg = buildType === 'release' ? 'CONFIG+=release' : 'CONFIG+=debug';
             const makeArgs = parallelFlag ? `${makeCmd} ${parallelFlag}` : makeCmd;
             
@@ -247,10 +256,12 @@ export class QtTaskProvider implements vscode.TaskProvider {
             const toolchainFile = this.getKitToolchainFile(projectFile);
             const toolchainArg = toolchainFile ? `-DCMAKE_TOOLCHAIN_FILE=${quotePath(toolchainFile)}` : '';
             const crossPrefix = this.getCrossCompilePrefix(projectFile);
+            const sysroot = this.getSysroot(projectFile);
             const crossCompileArg = crossPrefix && !toolchainFile
                 ? `-DCMAKE_C_COMPILER=${quotePath(crossPrefix + 'gcc')} -DCMAKE_CXX_COMPILER=${quotePath(crossPrefix + 'g++')}`
                 : '';
-            const additionalArgs = [config.get<string>('additionalCMakeArguments') || '', kitExtraArgs, toolchainArg, crossCompileArg].filter(Boolean).join(' ');
+            const sysrootArg = sysroot ? `-DCMAKE_SYSROOT=${quotePath(sysroot)}` : '';
+            const additionalArgs = [config.get<string>('additionalCMakeArguments') || '', kitExtraArgs, toolchainArg, crossCompileArg, sysrootArg].filter(Boolean).join(' ');
             const cmakeBuildArgs = parallelFlag ? `--parallel ${jobs}` : '';
             const presetArg = this.qtCMakePresets.getPresetArgs(projectFile);
             
@@ -396,8 +407,10 @@ export class QtTaskProvider implements vscode.TaskProvider {
             // QMake rebuild: clean -> qmake -> make
             const qmakePath = qtInstallation?.qmakePath || 'qmake';
             const crossPrefix = this.getCrossCompilePrefix(projectFile);
+            const sysroot = this.getSysroot(projectFile);
             const crossCompileArg = crossPrefix ? `-device-option CROSS_COMPILE=${crossPrefix}` : '';
-            const additionalArgs = [config.get<string>('additionalQMakeArguments') || '', crossCompileArg].filter(Boolean).join(' ');
+            const sysrootArg = sysroot ? `-sysroot ${quotePath(sysroot)}` : '';
+            const additionalArgs = [config.get<string>('additionalQMakeArguments') || '', crossCompileArg, sysrootArg].filter(Boolean).join(' ');
             const buildTypeArg = buildType === 'release' ? 'CONFIG+=release' : 'CONFIG+=debug';
             const makeArgs = parallelFlag ? `${makeCmd} ${parallelFlag}` : makeCmd;
             const kitEnv = this.getKitEnvVars(projectFile);
@@ -426,10 +439,12 @@ export class QtTaskProvider implements vscode.TaskProvider {
             const toolchainFile = this.getKitToolchainFile(projectFile);
             const toolchainArg = toolchainFile ? `-DCMAKE_TOOLCHAIN_FILE=${quotePath(toolchainFile)}` : '';
             const crossPrefix = this.getCrossCompilePrefix(projectFile);
+            const sysroot = this.getSysroot(projectFile);
             const crossCompileArg = crossPrefix && !toolchainFile
                 ? `-DCMAKE_C_COMPILER=${quotePath(crossPrefix + 'gcc')} -DCMAKE_CXX_COMPILER=${quotePath(crossPrefix + 'g++')}`
                 : '';
-            const additionalArgs = [config.get<string>('additionalCMakeArguments') || '', toolchainArg, crossCompileArg].filter(Boolean).join(' ');
+            const sysrootArg = sysroot ? `-DCMAKE_SYSROOT=${quotePath(sysroot)}` : '';
+            const additionalArgs = [config.get<string>('additionalCMakeArguments') || '', toolchainArg, crossCompileArg, sysrootArg].filter(Boolean).join(' ');
             const cmakeBuildArgs = parallelFlag ? `--parallel ${jobs}` : '';
             const preset = this.qtCMakePresets.getPresetForProject(projectFile);
             const kitEnv = this.getKitEnvVars(projectFile);

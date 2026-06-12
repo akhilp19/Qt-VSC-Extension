@@ -46,3 +46,5 @@ export * from './qtWebAssembly';
 export * from './qtHealthCheck';
 export * from './qtSettingsMigration';
 export * from './qtRemoteDeployment';
+export * from './qtCppLanguageClient';
+export * from './qtCppLanguageServer';

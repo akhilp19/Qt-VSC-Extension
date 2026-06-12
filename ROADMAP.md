@@ -812,7 +812,7 @@
 
 ---
 
-## ✅ Version 2.1.0 (Current — Shipped) — Advanced Mobile & Embedded
+## ✅ Version 2.1.0 (Shipped) — Advanced Mobile & Embedded
 
 **Theme:** Deeper mobile integration and embedded cross-compilation workflows.
 
@@ -833,27 +833,28 @@
 
 ---
 
-## 🚧 Version 2.2.0 — LSP & Deep Code Intelligence *(Candidate)*
+## ✅ Version 2.2.0 (Current — Shipped) — LSP & Deep Code Intelligence
 
-**Theme:** A Qt Language Server Protocol (LSP) client for deep C++ Qt understanding.
+**Theme:** A Qt Language Server Protocol (LSP) server for deep C++ Qt understanding.
 
-### Qt LSP Server
-- [ ] **Custom LSP server for Qt C++**
-  - Parse `moc` output to understand `Q_OBJECT` meta-information
-  - Provide accurate completions for `SIGNAL()` / `SLOT()` macros
-  - Resolve `connect()` overloads with type checking
+### Qt C++ LSP Server
+- [x] **Custom LSP server for Qt C++** (`src/qtCppLanguageServer.ts`)
+  - Parse C++ files for `Q_OBJECT`, signals/slots, `Q_PROPERTY`, `Q_INVOKABLE`, `QML_ELEMENT`
+  - Optional `moc` invocation to validate meta-object information
+  - Accurate completions for `SIGNAL()` / `SLOT()` macros inside `connect()`
+  - Resolve `connect()` calls and suggest matching signals/slots
 
 ### Deep Code Understanding
-- [ ] **Rename refactoring** across signal/slot connections
-  - Rename a signal → update all `connect()` calls and `.qml` bindings
-  - Rename a `Q_PROPERTY` → update QML usages
-- [ ] **Find all signal emitters** — find every `emit mySignal()` call site
-- [ ] **Find all slot connections** — find every `connect(..., SLOT(mySlot()))` call
+- [x] **Rename refactoring** across signal/slot connections
+  - Rename a signal → update declaration, all `connect()` calls, and `emit` call sites
+  - Rename a `Q_PROPERTY` → update declaration
+- [x] **Find all signal emitters** — find every `emit mySignal()` call site
+- [x] **Find all slot connections** — find every `connect(..., SLOT(mySlot()))` call
 
 ### QML-C++ Cross-Reference
-- [ ] **Go to QML usage** from C++ `Q_INVOKABLE` / `Q_PROPERTY`
-- [ ] **Go to C++ definition** from QML `property` or `function` call
-- [ ] **Refactor QML type** — rename C++ `QML_ELEMENT` class and update all `.qml` imports
+- [ ] **Go to QML usage** from C++ `Q_INVOKABLE` / `Q_PROPERTY` (deferred to v2.3.0)
+- [ ] **Go to C++ definition** from QML `property` or `function` call (deferred to v2.3.0)
+- [ ] **Refactor QML type** — rename C++ `QML_ELEMENT` class and update all `.qml` imports (deferred to v2.3.0)
 
 ---
 
@@ -864,5 +865,5 @@
 3. Submit a PR referencing the roadmap item.
 
 > **Last updated:** June 7, 2026
-> **Current version:** v2.1.0 — Advanced Mobile & Embedded
+> **Current version:** v2.2.0 — LSP & Deep Code Intelligence
 > For the latest status, check the [GitHub Issues](https://github.com/akhilp19/Qt-VSC-Extension/issues) page.

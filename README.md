@@ -76,6 +76,7 @@ Access these commands via Command Palette (`Ctrl+Shift+P`):
 - `Qt: Preview QML File` — Launch `qmlscene` with the current file
 - `Qt: Stop QML Preview` — Stop the running QML preview
 - **QML Language Server (`qmlls`)** — Real QML IntelliSense via Qt 6.2+ LSP (completions, diagnostics, hover, rename)
+- **Qt C++ Language Server** — Signal/slot-aware completions, `connect()` resolution, go-to-definition, find references, rename refactoring, and Qt-specific diagnostics
 - **Hot reload** — Auto-restart `qmlscene` on QML file save (`qt.qmlPreviewHotReload`)
 
 **QML-C++ Bridge**
@@ -373,8 +374,8 @@ See **[ROADMAP.md](ROADMAP.md)** for a detailed, versioned breakdown of complete
 - ✅ **v1.19.0 (Shipped)** — Android Deployment & Build Kit Profiles
 - ✅ **v1.20.0 (Shipped)** — iOS Deployment & Qt for WebAssembly
 - ✅ **v2.0.0 (Shipped)** — Completeness & Polish
-- ✅ **v2.1.0 (Current)** — Advanced Mobile & Embedded (TestFlight, bundletool, logcat, remote deploy/debug, Yocto, sysroot)
-- 🔮 **v2.2.0** — LSP & advanced code intelligence (custom LSP server, rename refactoring, cross-reference)
+- ✅ **v2.1.0 (Shipped)** — Advanced Mobile & Embedded (TestFlight, bundletool, logcat, remote deploy/debug, Yocto, sysroot)
+- ✅ **v2.2.0 (Current)** — LSP & Deep Code Intelligence (custom Qt C++ LSP server, signal/slot rename, cross-reference)
 
 ## Contributing
 

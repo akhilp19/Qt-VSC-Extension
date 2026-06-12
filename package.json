@@ -2,7 +2,7 @@
   "name": "qt-vsc-extension",
   "displayName": "Qt C++ Tools",
   "description": "Build, run and manage Qt C++ projects in VS Code",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "publisher": "akhilp19",
   "author": {
     "name": "Akhil Pawar"
@@ -924,6 +924,21 @@
           "type": "number",
           "default": 2345,
           "description": "GDB server port for remote debugging."
+        },
+        "qt.cppLspEnable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the Qt C++ Language Server for signal/slot aware code intelligence."
+        },
+        "qt.cppLspServerPath": {
+          "type": "string",
+          "default": "",
+          "description": "Custom path to the compiled Qt C++ LSP server script (out/qtCppLanguageServer.js). Leave empty for auto-detection."
+        },
+        "qt.cppLspDiagnosticsEnable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Qt-specific diagnostics from the Qt C++ Language Server (missing Q_OBJECT, old-style connect, etc.)."
         }
       }
     },
@@ -1434,6 +1449,8 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
-    "vscode-languageclient": "^9.0.1"
+    "vscode-languageclient": "^9.0.1",
+    "vscode-languageserver": "^10.0.0",
+    "vscode-languageserver-textdocument": "^1.0.12"
   }
 }

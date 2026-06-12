@@ -54,6 +54,7 @@ import { QtWebAssembly } from './qtWebAssembly';
 import { QtHealthCheck } from './qtHealthCheck';
 import { QtSettingsMigration } from './qtSettingsMigration';
 import { QtRemoteDeployment } from './qtRemoteDeployment';
+import { QtCppLanguageClient } from './qtCppLanguageClient';
 
 let taskProvider: vscode.Disposable | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -307,6 +308,19 @@ export function activate(context: vscode.ExtensionContext): void {
     // Qt Remote Deployment
     const qtRemote = new QtRemoteDeployment(qtConfigManager, qtProjectDetector, outputChannel);
     context.subscriptions.push(qtRemote);
+
+    // Qt C++ Language Server
+    const qtCppLanguageClient = new QtCppLanguageClient(qtConfigManager, outputChannel);
+    context.subscriptions.push(qtCppLanguageClient);
+
+    setTimeout(async () => {
+        const qtInstallation = await qtConfigManager.getQtInstallation();
+        const includePaths: string[] = [];
+        if (qtInstallation) {
+            includePaths.push(path.join(qtInstallation.path, 'include'));
+        }
+        await qtCppLanguageClient.start(includePaths);
+    }, 6000);
     
     context.subscriptions.push(
         vscode.commands.registerCommand('qt.buildAndroidApk', async () => {

@@ -765,48 +765,49 @@
 
 ---
 
-## 🚧 Version 2.0.0 — Completeness & Polish *(Next)*
+## ✅ Version 2.0.0 (Current — Shipped) — Completeness & Polish
 
 **Theme:** Implement everything that was claimed but missing, fix known limitations, and round out the extension into a truly complete Qt development environment.
 
 ### Code Intelligence (v0.4.0 gaps)
-- [ ] **Context-aware Qt completions** — infer enclosing C++ class and suggest only that class's methods/signals/slots
+- [x] **Context-aware Qt completions** — infer enclosing C++ class and suggest base-class methods/signals/slots
 - [ ] **MOC-aware IntelliSense v2** — resolve `Q_PROPERTY` types for property-specific completions (e.g., `QString` properties offer string methods)
 
 ### Sidebar & Import (v0.5.0 gaps)
-- [ ] **One-click rebuild from status indicator** — add `command` to `QtStatusGroupItem` tree nodes
-- [ ] **Qt Creator `.pro.user` run config import** — complete `runConfiguration` parsing (executable, workingDirectory, arguments)
+- [x] **One-click rebuild from status indicator** — add `command` to `QtStatusGroupItem` tree nodes
+- [x] **Qt Creator `.pro.user` run config import** — complete `runConfiguration` parsing (executable, workingDirectory, arguments)
 
 ### Build Features (v0.6.0 gaps)
-- [ ] **Unnecessary rebuild detection** — compare source timestamps vs object file timestamps; warn when `make` would rebuild unchanged files
-- [ ] **Proactive ccache suggestion** — after a slow build, suggest enabling ccache if not already configured
+- [x] **Unnecessary rebuild detection** — compare source timestamps vs object file timestamps; warn when `make` would rebuild unchanged files
+- [x] **Proactive ccache suggestion** — after a slow build, suggest enabling ccache if not already configured
 
 ### QML-C++ Bridge (v1.3.0 limitation)
-- [ ] **`QML_ATTACHED` support** — detect `QML_ATTACHED` macros, index attached properties, offer completions for `Type.attachedProperty` patterns
+- [x] **`QML_ATTACHED` support** — detect `QML_ATTACHED` macros, index attached properties, offer completions for `Type.attachedProperty` patterns
 
 ### Build Analytics (v1.14.0 gaps)
-- [ ] **Build time regression alerts** — compare current build time to trailing average; show warning if > 1.5x
+- [x] **Build time regression alerts** — compare current build time to trailing average; show warning if > 1.5x
 - [ ] **Per-file compilation time breakdown** — parse build output to attribute time to individual `.cpp` files; show slowest files in analytics tree
 
 ### Code Quality (v1.18.0 gaps)
-- [ ] **clazy auto-fix quick actions** — `CodeActionProvider` that offers "Modernize connect()", "Add missing tr()", etc. with one-click apply
-- [ ] **`.clang-tidy` / `_clang-tidy` config detection** — read project-level config and pass `--config-file=` to clazy invocation
+- [x] **clazy auto-fix quick actions** — `CodeActionProvider` that offers "Modernize connect()", "Add missing tr()", etc. with one-click apply
+- [x] **`.clang-tidy` / `_clang-tidy` config detection** — read project-level config and pass `--config-file=` to clazy invocation
 
 ### Mobile & Deployment (v1.19.0–1.20.0 gaps)
-- [ ] **Android NDK auto-detection** — detect NDK from `ndk-bundle` inside SDK, `ANDROID_NDK_HOME`, or common paths
-- [ ] **iOS device deployment** — provisioning profile detection, code signing, `xcodebuild archive`, export IPA
-- [ ] **WebAssembly source maps** — configure `-g` and serve `.wasm.map` files from preview server
-- [ ] **WebAssembly threading** — detect pthread-enabled Qt WASM and configure `-sUSE_PTHREADS`
+- [x] **Android NDK auto-detection** — detect NDK from `ndk-bundle` inside SDK, `ANDROID_NDK_HOME`, or common paths
+- [x] **iOS device deployment** — `xcodebuild archive` + `xcodebuild -exportArchive` for IPA export
+- [ ] **iOS provisioning profile & signing** — detect profiles, select signing identity (deferred to v2.1.0)
+- [x] **WebAssembly source maps** — configure `-g` and serve `.wasm.map` files from preview server
+- [x] **WebAssembly threading** — detect pthread-enabled Qt WASM and configure `-sUSE_PTHREADS`
 
 ### Build Kits (v1.20.0 gaps)
-- [ ] **Kit validation** — `Qt: Validate Build Kit` command checks Qt path, compiler, toolchain file all exist and are compatible
-- [ ] **Default kit per workspace** — "Set as default for this workspace" option in kit selector
-- [ ] **Kit-specific deploy directories** — extend `${kitName}` variable substitution to `qt.deployDirectory`
-- [ ] **Kit env var editor UI** — interactive key/value editor instead of raw JSON
+- [x] **Kit validation** — `Qt: Validate Build Kit` command checks Qt path, compiler, toolchain file all exist and are compatible
+- [x] **Default kit per workspace** — "Set as default for this workspace" option in kit selector
+- [x] **Kit-specific deploy directories** — extend `${kitName}` variable substitution to `qt.deployDirectory`
+- [x] **Kit env var editor UI** — interactive key/value editor instead of raw JSON
 
 ### General Polish
-- [ ] **Extension health check** — `Qt: Run Health Check` command validates Qt, compiler, debugger, and kit configs; produces a diagnostic report
-- [ ] **Settings migration** — auto-migrate old setting names/structures on extension update
+- [x] **Extension health check** — `Qt: Run Health Check` command validates Qt, compiler, debugger, and kit configs; produces a diagnostic report
+- [x] **Settings migration** — auto-migrate old setting names/structures on extension update
 - [ ] **Telemetry opt-in** — anonymous usage metrics (command invocations, build times) to guide future development
 
 ---
@@ -863,5 +864,5 @@
 3. Submit a PR referencing the roadmap item.
 
 > **Last updated:** June 11, 2026
-> **Current version:** v1.20.0 — iOS, WebAssembly & Build Kit Tools
+> **Current version:** v2.0.0 — Completeness & Polish
 > For the latest status, check the [GitHub Issues](https://github.com/akhilp19/Qt-VSC-Extension/issues) page.

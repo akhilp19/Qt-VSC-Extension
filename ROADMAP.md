@@ -839,17 +839,30 @@
 
 ### Qt C++ LSP Server
 - [x] **Custom LSP server for Qt C++** (`src/qtCppLanguageServer.ts`)
-  - Parse C++ files for `Q_OBJECT`, signals/slots, `Q_PROPERTY`, `Q_INVOKABLE`, `QML_ELEMENT`
-  - Optional `moc` invocation to validate meta-object information
-  - Accurate completions for `SIGNAL()` / `SLOT()` macros inside `connect()`
-  - Resolve `connect()` calls and suggest matching signals/slots
+  - Built on `vscode-languageserver`, runs as a stdio child process
+  - VS Code client wrapper: `src/qtCppLanguageClient.ts`
+  - Parse C++ files for `Q_OBJECT`, `signals:`/`slots:`, `Q_SIGNALS`/`Q_SLOTS`, `Q_PROPERTY`, `Q_INVOKABLE`, `QML_ELEMENT`, `QML_NAMED_ELEMENT`, `QML_SINGLETON`
+  - Optional `moc` invocation to validate meta-object information and detect missing `Q_OBJECT`
+  - Advertised LSP capabilities: completion, hover, definition, references, rename, code actions, diagnostics
 
-### Deep Code Understanding
+### Code Intelligence Features
+- [x] **Signal/slot completions** inside `connect()` calls
+  - Suggest `SIGNAL(...)`, `SLOT(...)`, lambda, `this`, and known signals of the inferred sender
+  - Suggest signals/slots/properties after `->` or `.` on a Qt object
+- [x] **Go to definition** on `SIGNAL()` / `SLOT()` macros → jump to the real signal/slot declaration
+- [x] **Hover** on signals/slots/properties → signature, class, and kind
+- [x] **Find all references** across `connect()` calls and `emit` sites
 - [x] **Rename refactoring** across signal/slot connections
   - Rename a signal → update declaration, all `connect()` calls, and `emit` call sites
   - Rename a `Q_PROPERTY` → update declaration
 - [x] **Find all signal emitters** — find every `emit mySignal()` call site
 - [x] **Find all slot connections** — find every `connect(..., SLOT(mySlot()))` call
+
+### Diagnostics & Quick Fixes
+- [x] **Missing `Q_OBJECT` diagnostic** for classes with signals/slots
+- [x] **Old-style `connect()` diagnostic** for `SIGNAL()`/`SLOT()` macros (informational)
+- [x] **Quick fixes**: add `Q_OBJECT`, modernize `connect()` to function pointers
+- [x] **Settings**: `qt.cppLspEnable`, `qt.cppLspServerPath`, `qt.cppLspDiagnosticsEnable`
 
 ### QML-C++ Cross-Reference
 - [ ] **Go to QML usage** from C++ `Q_INVOKABLE` / `Q_PROPERTY` (deferred to v2.3.0)

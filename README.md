@@ -76,8 +76,17 @@ Access these commands via Command Palette (`Ctrl+Shift+P`):
 - `Qt: Preview QML File` — Launch `qmlscene` with the current file
 - `Qt: Stop QML Preview` — Stop the running QML preview
 - **QML Language Server (`qmlls`)** — Real QML IntelliSense via Qt 6.2+ LSP (completions, diagnostics, hover, rename)
-- **Qt C++ Language Server** — Signal/slot-aware completions, `connect()` resolution, go-to-definition, find references, rename refactoring, and Qt-specific diagnostics
 - **Hot reload** — Auto-restart `qmlscene` on QML file save (`qt.qmlPreviewHotReload`)
+
+**Qt C++ Language Server**
+- Signal/slot-aware completions inside `connect()` calls
+- `SIGNAL()` / `SLOT()` macro go-to-definition
+- Find all references across `connect()` calls and `emit` sites
+- Rename refactoring for signals, slots, and `Q_PROPERTY`
+- Diagnostics: missing `Q_OBJECT`, old-style `connect()` usage
+- Quick fixes: add `Q_OBJECT`, modernize `connect()` to function pointers
+- Auto-starts a stdio LSP server (`out/qtCppLanguageServer.js`) for C++ files
+- Settings: `qt.cppLspEnable`, `qt.cppLspServerPath`, `qt.cppLspDiagnosticsEnable`
 
 **QML-C++ Bridge**
 - `Qt: Rebuild QML-C++ Index` — Rebuild cross-language index

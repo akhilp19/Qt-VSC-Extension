@@ -771,7 +771,7 @@
 
 ### Code Intelligence (v0.4.0 gaps)
 - [x] **Context-aware Qt completions** — infer enclosing C++ class and suggest base-class methods/signals/slots
-- [ ] **MOC-aware IntelliSense v2** — resolve `Q_PROPERTY` types for property-specific completions (e.g., `QString` properties offer string methods)
+- [x] **MOC-aware IntelliSense v2** — resolve `Q_PROPERTY` types for property-specific completions (e.g., `QString` properties offer string methods) (shipped in v2.7.0)
 
 ### Sidebar & Import (v0.5.0 gaps)
 - [x] **One-click rebuild from status indicator** — add `command` to `QtStatusGroupItem` tree nodes
@@ -940,7 +940,7 @@
 
 ---
 
-## ✅ Version 2.6.0 (Current — Shipped) — Per-File Compilation Time Breakdown
+## ✅ Version 2.6.0 (Shipped) — Per-File Compilation Time Breakdown
 
 **Theme:** Attribute build time to individual `.cpp` files and surface the slowest files in the Build Analytics tree.
 
@@ -976,6 +976,48 @@
 
 ---
 
+## ✅ Version 2.7.0 (Current — Shipped) — MOC-aware IntelliSense v2
+
+**Theme:** Resolve `Q_PROPERTY` types so property member access offers type-specific completions.
+
+### LSP Server Enhancements
+- [x] **`src/qtCppLanguageServer.ts`** extended to:
+  - Parse and store the C++ type of each `Q_PROPERTY` declaration
+  - Detect `obj->property.` and `obj.property.` access patterns
+  - Resolve variable declared types (`ClassName *obj`, `auto obj = new ClassName`, `qobject_cast`, `this`)
+  - Return completions from the property type's method catalog
+- [x] **`src/qtCppLanguageClient.ts`** passes `qt.mocIntelliSenseV2Enabled` to the LSP server via initialization options
+
+### Qt API Data Expansion
+- [x] **`src/qtApiData.ts`** enriched with property-heavy Qt types:
+  - `QByteArray`, `QUrl`, `QDateTime`, `QVariant`, `QStringList`
+  - `QList`, `QVector`, `QMap`
+  - `QColor`, `QSize`, `QPoint`, `QRect`
+
+### Setting
+- [x] **`qt.mocIntelliSenseV2Enabled`** — toggle MOC-aware IntelliSense v2 (default `true`)
+
+### Example
+```cpp
+class MyClass : public QObject {
+    Q_OBJECT
+    Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
+};
+
+MyClass *obj = new MyClass();
+obj->name. // suggests QString methods: append, split, toInt, etc.
+```
+
+### Files Changed
+- `src/qtCppLanguageServer.ts` — property-type parsing, variable resolution, property-access completions
+- `src/qtCppLanguageClient.ts` — pass setting to LSP server
+- `src/qtApiData.ts` — expand type/method catalog
+- `package.json` — version bump to `2.7.0`, add `qt.mocIntelliSenseV2Enabled`
+- `README.md` — document MOC-aware IntelliSense v2
+- `ROADMAP.md` — mark item shipped and add v2.7.0 section
+
+---
+
 ## How to Contribute
 
 1. Pick an open item from the upcoming version.
@@ -983,5 +1025,5 @@
 3. Submit a PR referencing the roadmap item.
 
 > **Last updated:** June 07, 2026
-> **Current version:** v2.6.0 — Per-File Compilation Time Breakdown
+> **Current version:** v2.7.0 — MOC-aware IntelliSense v2
 > For the latest status, check the [GitHub Issues](https://github.com/akhilp19/Qt-VSC-Extension/issues) page.

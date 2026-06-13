@@ -308,6 +308,181 @@ export const QT_CLASSES: QtClass[] = [
             { name: 'timeout', signature: 'timeout()', description: 'Emitted when timer times out.', isSignal: true },
             { name: 'singleShot', signature: 'singleShot(msec, receiver, member)', description: 'Static single-shot timer.', isStatic: true }
         ]
+    },
+    {
+        name: 'QByteArray',
+        description: 'Array of bytes.',
+        header: 'QByteArray',
+        docUrl: 'https://doc.qt.io/qt-6/qbytearray.html',
+        methods: [
+            { name: 'append', signature: 'append(const QByteArray &ba)', description: 'Appends bytes.' },
+            { name: 'prepend', signature: 'prepend(const QByteArray &ba)', description: 'Prepends bytes.' },
+            { name: 'toHex', signature: 'toHex()', description: 'Returns hex-encoded byte array.' },
+            { name: 'toBase64', signature: 'toBase64()', description: 'Returns base64-encoded byte array.' },
+            { name: 'fromRawData', signature: 'fromRawData(const char *data, int size)', description: 'Constructs without copying.', isStatic: true },
+            { name: 'isEmpty', signature: 'isEmpty()', description: 'Returns true if empty.' },
+            { name: 'size', signature: 'size()', description: 'Returns number of bytes.' },
+            { name: 'toStdString', signature: 'toStdString()', description: 'Returns std::string copy.' },
+            { name: 'fromStdString', signature: 'fromStdString(const std::string &str)', description: 'Constructs from std::string.', isStatic: true }
+        ]
+    },
+    {
+        name: 'QUrl',
+        description: 'Convenient interface for working with URLs.',
+        header: 'QUrl',
+        docUrl: 'https://doc.qt.io/qt-6/qurl.html',
+        methods: [
+            { name: 'toString', signature: 'toString(QUrl::FormattingOptions options = {})', description: 'Returns URL as string.' },
+            { name: 'toLocalFile', signature: 'toLocalFile()', description: 'Returns local file path.' },
+            { name: 'fromLocalFile', signature: 'fromLocalFile(const QString &localFile)', description: 'Constructs URL from local file.', isStatic: true },
+            { name: 'isValid', signature: 'isValid()', description: 'Returns true if URL is valid.' },
+            { name: 'scheme', signature: 'scheme()', description: 'Returns URL scheme.' },
+            { name: 'setScheme', signature: 'setScheme(const QString &scheme)', description: 'Sets URL scheme.' },
+            { name: 'host', signature: 'host()', description: 'Returns host.' },
+            { name: 'path', signature: 'path()', description: 'Returns path.' }
+        ]
+    },
+    {
+        name: 'QDateTime',
+        description: 'Date and time combined.',
+        header: 'QDateTime',
+        docUrl: 'https://doc.qt.io/qt-6/qdatetime.html',
+        methods: [
+            { name: 'toString', signature: 'toString(const QString &format)', description: 'Returns formatted string.' },
+            { name: 'toSecsSinceEpoch', signature: 'toSecsSinceEpoch()', description: 'Returns seconds since epoch.' },
+            { name: 'fromSecsSinceEpoch', signature: 'fromSecsSinceEpoch(qint64 secs)', description: 'Constructs from seconds since epoch.', isStatic: true },
+            { name: 'currentDateTime', signature: 'currentDateTime()', description: 'Returns current date/time.', isStatic: true },
+            { name: 'date', signature: 'date()', description: 'Returns date part.' },
+            { name: 'time', signature: 'time()', description: 'Returns time part.' },
+            { name: 'isValid', signature: 'isValid()', description: 'Returns true if valid.' }
+        ]
+    },
+    {
+        name: 'QVariant',
+        description: 'Acts like a union for most common Qt data types.',
+        header: 'QVariant',
+        docUrl: 'https://doc.qt.io/qt-6/qvariant.html',
+        methods: [
+            { name: 'toString', signature: 'toString()', description: 'Returns string representation.' },
+            { name: 'toInt', signature: 'toInt(bool *ok = nullptr)', description: 'Returns int value.' },
+            { name: 'toBool', signature: 'toBool()', description: 'Returns bool value.' },
+            { name: 'toDouble', signature: 'toDouble(bool *ok = nullptr)', description: 'Returns double value.' },
+            { name: 'isValid', signature: 'isValid()', description: 'Returns true if variant contains a value.' },
+            { name: 'typeName', signature: 'typeName()', description: 'Returns type name.' },
+            { name: 'canConvert', signature: 'canConvert(int targetTypeId)', description: 'Returns true if conversion possible.' }
+        ]
+    },
+    {
+        name: 'QStringList',
+        description: 'List of strings.',
+        header: 'QStringList',
+        inherits: 'QList<QString>',
+        docUrl: 'https://doc.qt.io/qt-6/qstringlist.html',
+        methods: [
+            { name: 'join', signature: 'join(const QString &separator)', description: 'Joins strings with separator.' },
+            { name: 'filter', signature: 'filter(const QString &str)', description: 'Returns matching strings.' },
+            { name: 'replaceInStrings', signature: 'replaceInStrings(const QString &before, const QString &after)', description: 'Replaces in all strings.' },
+            { name: 'sort', signature: 'sort()', description: 'Sorts the list.' }
+        ]
+    },
+    {
+        name: 'QList',
+        description: 'Generic list template.',
+        header: 'QList',
+        docUrl: 'https://doc.qt.io/qt-6/qlist.html',
+        methods: [
+            { name: 'append', signature: 'append(const T &value)', description: 'Appends value.' },
+            { name: 'prepend', signature: 'prepend(const T &value)', description: 'Prepends value.' },
+            { name: 'isEmpty', signature: 'isEmpty()', description: 'Returns true if empty.' },
+            { name: 'size', signature: 'size()', description: 'Returns element count.' },
+            { name: 'at', signature: 'at(int i)', description: 'Returns element at index.' },
+            { name: 'first', signature: 'first()', description: 'Returns first element.' },
+            { name: 'last', signature: 'last()', description: 'Returns last element.' },
+            { name: 'clear', signature: 'clear()', description: 'Removes all elements.' },
+            { name: 'contains', signature: 'contains(const T &value)', description: 'Returns true if contains value.' }
+        ]
+    },
+    {
+        name: 'QVector',
+        description: 'Dynamic array template.',
+        header: 'QVector',
+        docUrl: 'https://doc.qt.io/qt-6/qvector.html',
+        methods: [
+            { name: 'append', signature: 'append(const T &value)', description: 'Appends value.' },
+            { name: 'isEmpty', signature: 'isEmpty()', description: 'Returns true if empty.' },
+            { name: 'size', signature: 'size()', description: 'Returns element count.' },
+            { name: 'at', signature: 'at(int i)', description: 'Returns element at index.' },
+            { name: 'first', signature: 'first()', description: 'Returns first element.' },
+            { name: 'last', signature: 'last()', description: 'Returns last element.' }
+        ]
+    },
+    {
+        name: 'QMap',
+        description: 'Sorted associative array template.',
+        header: 'QMap',
+        docUrl: 'https://doc.qt.io/qt-6/qmap.html',
+        methods: [
+            { name: 'insert', signature: 'insert(const Key &key, const T &value)', description: 'Inserts key-value pair.' },
+            { name: 'value', signature: 'value(const Key &key)', description: 'Returns value for key.' },
+            { name: 'contains', signature: 'contains(const Key &key)', description: 'Returns true if key exists.' },
+            { name: 'keys', signature: 'keys()', description: 'Returns all keys.' },
+            { name: 'isEmpty', signature: 'isEmpty()', description: 'Returns true if empty.' },
+            { name: 'size', signature: 'size()', description: 'Returns element count.' }
+        ]
+    },
+    {
+        name: 'QColor',
+        description: 'Color based on RGB, HSV or CMYK values.',
+        header: 'QColor',
+        docUrl: 'https://doc.qt.io/qt-6/qcolor.html',
+        methods: [
+            { name: 'name', signature: 'name()', description: 'Returns hex color name.' },
+            { name: 'setNamedColor', signature: 'setNamedColor(const QString &name)', description: 'Sets from named color.' },
+            { name: 'red', signature: 'red()', description: 'Returns red component.' },
+            { name: 'green', signature: 'green()', description: 'Returns green component.' },
+            { name: 'blue', signature: 'blue()', description: 'Returns blue component.' },
+            { name: 'alpha', signature: 'alpha()', description: 'Returns alpha component.' },
+            { name: 'isValid', signature: 'isValid()', description: 'Returns true if valid.' }
+        ]
+    },
+    {
+        name: 'QSize',
+        description: '2D size using integers.',
+        header: 'QSize',
+        docUrl: 'https://doc.qt.io/qt-6/qsize.html',
+        methods: [
+            { name: 'width', signature: 'width()', description: 'Returns width.' },
+            { name: 'height', signature: 'height()', description: 'Returns height.' },
+            { name: 'isEmpty', signature: 'isEmpty()', description: 'Returns true if empty.' },
+            { name: 'setWidth', signature: 'setWidth(int w)', description: 'Sets width.' },
+            { name: 'setHeight', signature: 'setHeight(int h)', description: 'Sets height.' }
+        ]
+    },
+    {
+        name: 'QPoint',
+        description: 'Point in a 2D coordinate system using integers.',
+        header: 'QPoint',
+        docUrl: 'https://doc.qt.io/qt-6/qpoint.html',
+        methods: [
+            { name: 'x', signature: 'x()', description: 'Returns x coordinate.' },
+            { name: 'y', signature: 'y()', description: 'Returns y coordinate.' },
+            { name: 'setX', signature: 'setX(int x)', description: 'Sets x coordinate.' },
+            { name: 'setY', signature: 'setY(int y)', description: 'Sets y coordinate.' }
+        ]
+    },
+    {
+        name: 'QRect',
+        description: 'Rectangle in a 2D coordinate system using integers.',
+        header: 'QRect',
+        docUrl: 'https://doc.qt.io/qt-6/qrect.html',
+        methods: [
+            { name: 'x', signature: 'x()', description: 'Returns left coordinate.' },
+            { name: 'y', signature: 'y()', description: 'Returns top coordinate.' },
+            { name: 'width', signature: 'width()', description: 'Returns width.' },
+            { name: 'height', signature: 'height()', description: 'Returns height.' },
+            { name: 'isEmpty', signature: 'isEmpty()', description: 'Returns true if empty.' },
+            { name: 'contains', signature: 'contains(const QPoint &point)', description: 'Returns true if contains point.' }
+        ]
     }
 ];
 

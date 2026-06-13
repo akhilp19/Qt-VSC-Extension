@@ -80,6 +80,7 @@ Access these commands via Command Palette (`Ctrl+Shift+P`):
 
 **Qt C++ Language Server**
 - Signal/slot-aware completions inside `connect()` calls
+- **MOC-aware IntelliSense v2** — after a `Q_PROPERTY` access such as `myObject->myProperty.`, get type-specific completions (e.g., `QString` methods for a `QString` property)
 - `SIGNAL()` / `SLOT()` macro go-to-definition
 - Find all references across `connect()` calls and `emit` sites
 - Rename refactoring for signals, slots, and `Q_PROPERTY`

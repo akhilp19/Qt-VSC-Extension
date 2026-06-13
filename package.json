@@ -2,7 +2,7 @@
   "name": "qt-vsc-extension",
   "displayName": "Qt C++ Tools",
   "description": "Build, run and manage Qt C++ projects in VS Code",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "publisher": "akhilp19",
   "author": {
     "name": "Akhil Pawar"
@@ -965,6 +965,11 @@
           "type": "boolean",
           "default": true,
           "description": "Collect and display per-file compilation timing from Qt build output."
+        },
+        "qt.mocIntelliSenseV2Enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable MOC-aware IntelliSense v2: type-specific completions on Q_PROPERTY member access via the Qt C++ Language Server."
         }
       }
     },

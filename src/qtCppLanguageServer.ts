@@ -33,6 +33,7 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import * as path from 'path';
 import * as fs from 'fs';
 import { execSync } from 'child_process';
+import { findQtClass, searchQtMethods, QtMethod } from './qtApiData';
 
 // ─────────────────────────────────────────────────────────────
 // Index data structures
@@ -48,6 +49,7 @@ interface QtSymbol {
     className: string;
     signature?: string;
     qmlTypeName?: string;
+    propertyType?: string;
     docs?: string;
 }
 
@@ -99,6 +101,7 @@ const workspaceIndexes = new Map<string, DocumentIndex>();
 let workspaceFolders: string[] = [];
 let qtIncludePath: string | undefined;
 let diagnosticsEnabled = true;
+let mocIntelliSenseV2Enabled = true;
 
 // ─────────────────────────────────────────────────────────────
 // Initialize
@@ -109,6 +112,7 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
     const initOptions = params.initializationOptions as Record<string, unknown> | undefined;
     qtIncludePath = typeof initOptions?.qtIncludePath === 'string' ? initOptions.qtIncludePath : undefined;
     diagnosticsEnabled = initOptions?.diagnosticsEnabled !== false;
+    mocIntelliSenseV2Enabled = initOptions?.mocIntelliSenseV2Enabled !== false;
 
     return {
         capabilities: {
@@ -190,6 +194,15 @@ function stripComments(code: string): string {
     return code
         .replace(/\/\*[\s\S]*?\*\//g, ' ')
         .replace(/\/\/.*$/gm, '');
+}
+
+function normalizePropertyType(type: string): string {
+    return type
+        .replace(/\s+/g, '')
+        .replace(/(?:const|volatile|mutable|static|constexpr)\b/g, '')
+        .replace(/[*&]+$/, '')
+        .replace(/<.*>/, '')
+        .trim();
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -296,13 +309,15 @@ function indexDocument(uri: string, text: string): DocumentIndex {
             const tokens = propMatch[1].trim().split(/\s+/);
             if (tokens.length >= 2) {
                 const propName = tokens[1];
+                const propType = normalizePropertyType(tokens[0]);
                 addSymbol(index, currentClass, {
                     uri,
                     range: rangeFromMatch(code, propMatch, 1),
                     name: propName,
                     kind: 'property',
                     className: currentClass.name,
-                    signature: propMatch[1].trim()
+                    signature: propMatch[1].trim(),
+                    propertyType: propType
                 });
             }
         }
@@ -482,6 +497,75 @@ function resolveClassOfVariable(text: string, line: number, variable: string): s
     return undefined;
 }
 
+function resolveVariableDeclarationType(text: string, line: number, variable: string): string | undefined {
+    const lines = text.split('\n');
+
+    // Explicit declarations: ClassName *varName, ClassName& varName, ClassName varName(...), etc.
+    const explicitRegex = new RegExp(`\\b([A-Za-z_][A-Za-z0-9_:]*)\\s*[*&]?\\s+\\b${variable}\\b(?:\\s*[=;:(]|\\s*\\{)`);
+
+    // auto varName = new ClassName(...)
+    const autoNewRegex = new RegExp(`\\bauto\\s*[*&]?\\s*\\b${variable}\\s*[=:]\\s*new\\s+([A-Za-z_][A-Za-z0-9_:]*)\\s*[(<]`);
+
+    // auto varName = qobject_cast<ClassName *>(...)
+    const autoCastRegex = new RegExp(`\\bauto\\s*[*&]?\\s*\\b${variable}\\s*[=:]\\s*qobject_cast<\\s*([A-Za-z_][A-Za-z0-9_:]*)\\s*[*&]?\\s*>`);
+
+    // ClassName *varName = qobject_cast<ClassName *>(...)
+    const explicitCastRegex = new RegExp(`\\b([A-Za-z_][A-Za-z0-9_:]*)\\s*[*&]\\s*\\b${variable}\\s*[=:]\\s*qobject_cast<`);
+
+    for (let i = line; i >= 0; i--) {
+        const lineText = lines[i] || '';
+
+        const autoNewMatch = lineText.match(autoNewRegex);
+        if (autoNewMatch) { return autoNewMatch[1]; }
+
+        const autoCastMatch = lineText.match(autoCastRegex);
+        if (autoCastMatch) { return autoCastMatch[1]; }
+
+        const explicitCastMatch = lineText.match(explicitCastRegex);
+        if (explicitCastMatch) { return explicitCastMatch[1]; }
+
+        const explicitMatch = lineText.match(explicitRegex);
+        if (explicitMatch) { return explicitMatch[1]; }
+
+        // Stop scanning at a top-level closing brace to avoid unrelated scopes.
+        if (/^\s*\}\s*$/.test(lineText)) {
+            return undefined;
+        }
+    }
+    return undefined;
+}
+
+function getEnclosingClassAtLine(text: string, line: number): string | undefined {
+    const lines = text.split('\n');
+    let braceDepth = 0;
+    for (let i = line; i >= 0; i--) {
+        const lineText = lines[i] || '';
+        for (const ch of lineText) {
+            if (ch === '}') { braceDepth++; }
+            else if (ch === '{') { braceDepth--; }
+        }
+        if (braceDepth < 0) {
+            const classMatch = lineText.match(/class\s+(?:Q_\w+\s+)?(\w+)(?:\s*:\s*(.+?))?\s*(?:\{|\{|$)/);
+            if (classMatch) { return classMatch[1]; }
+        }
+    }
+    return undefined;
+}
+
+function getPropertyTypeCompletions(typeName: string, prefix: string): CompletionItem[] {
+    const cls = findQtClass(typeName);
+    if (!cls) { return []; }
+
+    const methods = prefix ? searchQtMethods(typeName, prefix) : cls.methods;
+    return methods.map((m: QtMethod) => ({
+        label: m.name,
+        kind: m.isSignal ? CompletionItemKind.Event : m.isSlot ? CompletionItemKind.Method : CompletionItemKind.Method,
+        detail: `${cls.name}::${m.signature}`,
+        documentation: m.description,
+        insertText: m.name
+    }));
+}
+
 function isInsideConnect(text: string, line: number, character: number): boolean {
     const lineText = text.split('\n')[line] || '';
     const before = lineText.substring(0, character);
@@ -610,12 +694,41 @@ connection.onCompletion((params: TextDocumentPositionParams): CompletionItem[] =
         return items;
     }
 
+    // Property member access: obj->property. or obj.property.
+    if (mocIntelliSenseV2Enabled) {
+        const propAccessMatch = before.match(/(\b\w+)\s*(?:->|\.)\s*(\w+)\s*(?:->|\.)\s*(\w*)$/);
+        if (propAccessMatch) {
+            const varName = propAccessMatch[1];
+            const propName = propAccessMatch[2];
+            const prefix = propAccessMatch[3] || '';
+
+            let className = resolveVariableDeclarationType(text, line, varName)
+                || resolveClassOfVariable(text, line, varName)
+                || (varName === 'this' ? getEnclosingClassAtLine(text, line) : undefined)
+                || varName;
+
+            const cls = findClass(className);
+            if (cls) {
+                const propSym = cls.symbols.get(propName);
+                if (propSym && propSym.kind === 'property' && propSym.propertyType) {
+                    const typeCompletions = getPropertyTypeCompletions(propSym.propertyType, prefix);
+                    if (typeCompletions.length > 0) {
+                        return typeCompletions;
+                    }
+                }
+            }
+        }
+    }
+
     // Member access -> or .
     const memberMatch = before.match(/(\b\w+)\s*(?:->|\.)\s*(\w*)$/);
     if (memberMatch) {
         const varName = memberMatch[1];
         const prefix = memberMatch[2] || '';
-        const className = resolveClassOfVariable(text, line, varName) || varName;
+        const className = resolveVariableDeclarationType(text, line, varName)
+            || resolveClassOfVariable(text, line, varName)
+            || (varName === 'this' ? getEnclosingClassAtLine(text, line) : undefined)
+            || varName;
         const cls = findClass(className);
         if (cls) {
             for (const sym of cls.symbols.values()) {

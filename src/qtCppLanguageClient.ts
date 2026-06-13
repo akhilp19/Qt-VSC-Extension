@@ -64,7 +64,8 @@ export class QtCppLanguageClient {
             initializationOptions: {
                 qtIncludePath: qtInclude,
                 diagnosticsEnabled: config.get<boolean>('cppLspDiagnosticsEnable') ?? true,
-                includePaths: allIncludes
+                includePaths: allIncludes,
+                mocIntelliSenseV2Enabled: config.get<boolean>('mocIntelliSenseV2Enabled') ?? true
             }
         };
 

@@ -865,9 +865,20 @@
 - [x] **Settings**: `qt.cppLspEnable`, `qt.cppLspServerPath`, `qt.cppLspDiagnosticsEnable`
 
 ### QML-C++ Cross-Reference
-- [ ] **Go to QML usage** from C++ `Q_INVOKABLE` / `Q_PROPERTY` (deferred to v2.3.0)
-- [ ] **Go to C++ definition** from QML `property` or `function` call (deferred to v2.3.0)
-- [ ] **Refactor QML type** — rename C++ `QML_ELEMENT` class and update all `.qml` imports (deferred to v2.3.0)
+- [ ] **Go to QML usage** from C++ `Q_INVOKABLE` / `Q_PROPERTY` (deferred to v2.4.0)
+- [ ] **Go to C++ definition** from QML `property` or `function` call (deferred to v2.4.0)
+- [ ] **Refactor QML type** — rename C++ `QML_ELEMENT` class and update all `.qml` imports (deferred to v2.4.0)
+
+---
+
+## ✅ Version 2.3.0 (Current — Shipped) — Extension Icon & Branding
+
+**Theme:** Add a marketplace icon to the extension.
+
+- [x] **Extension icon** — `images/qt_tools_logo.png`
+  - Copied from provided square logo asset
+  - Referenced in `package.json` via `"icon": "images/qt_tools_logo.png"`
+  - Included in the published VSIX package
 
 ---
 
@@ -877,6 +888,6 @@
 2. Open an issue to discuss design if it involves new UI or user-facing behavior.
 3. Submit a PR referencing the roadmap item.
 
-> **Last updated:** June 7, 2026
-> **Current version:** v2.2.0 — LSP & Deep Code Intelligence
+> **Last updated:** June 13, 2026
+> **Current version:** v2.3.0 — Extension Icon & Branding
 > For the latest status, check the [GitHub Issues](https://github.com/akhilp19/Qt-VSC-Extension/issues) page.

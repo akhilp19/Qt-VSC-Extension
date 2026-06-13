@@ -384,7 +384,8 @@ See **[ROADMAP.md](ROADMAP.md)** for a detailed, versioned breakdown of complete
 - ✅ **v1.20.0 (Shipped)** — iOS Deployment & Qt for WebAssembly
 - ✅ **v2.0.0 (Shipped)** — Completeness & Polish
 - ✅ **v2.1.0 (Shipped)** — Advanced Mobile & Embedded (TestFlight, bundletool, logcat, remote deploy/debug, Yocto, sysroot)
-- ✅ **v2.2.0 (Current)** — LSP & Deep Code Intelligence (custom Qt C++ LSP server, signal/slot rename, cross-reference)
+- ✅ **v2.2.0 (Shipped)** — LSP & Deep Code Intelligence (custom Qt C++ LSP server, signal/slot rename, cross-reference)
+- ✅ **v2.3.0 (Current)** — Extension icon and branding
 
 ## Contributing
 

@@ -90,8 +90,10 @@ Access these commands via Command Palette (`Ctrl+Shift+P`):
 
 **QML-C++ Bridge**
 - `Qt: Rebuild QML-C++ Index` — Rebuild cross-language index
-- **Go to Definition** (`F12`) from QML property/method to C++ declaration
-- **Find References** (`Shift+F12`) from C++ `Q_INVOKABLE` / `Q_PROPERTY` to QML usages
+- **Go to C++ Definition** (`F12`) from QML property bindings and method calls jumps to the C++ `Q_PROPERTY` / `Q_INVOKABLE` declaration, including inherited properties
+- **Find QML Usages from C++** (`Shift+F12`) on `Q_INVOKABLE` / `Q_PROPERTY` finds usages scoped to the correct QML type
+- **Rename QML-Registered C++ Class** (`F2`) on a `QML_ELEMENT` class updates all `.qml` instantiations
+- **Inheritance-aware navigation** — resolves symbols across the QML type inheritance chain
 - **QML_ATTACHED support** — Attached property completions and hover
 - **QML Type Inference** — Resolve custom QML types defined in C++ via `QML_ELEMENT` / `QML_SINGLETON`
 - **QML Module Support** — Parse `qmldir` files, navigate to imported QML types, auto-configure `QML_IMPORT_PATH`

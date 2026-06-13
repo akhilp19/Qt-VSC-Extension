@@ -25,7 +25,7 @@ import { QtCodeActionProvider } from './qtCodeActionProvider';
 import { sourceDisplayName } from './packageManagerDetector';
 import { QmlSupport } from './qmlSupport';
 import { QmlCppBridgeIndexer } from './qmlCppBridge';
-import { QmlDefinitionProvider, QmlCompletionProvider as QmlBridgeCompletionProvider, CppReferenceProvider, QmlTypeHoverProvider } from './qmlCppBridgeProviders';
+import { QmlDefinitionProvider, QmlCompletionProvider as QmlBridgeCompletionProvider, CppReferenceProvider, QmlTypeHoverProvider, QmlTypeRenameProvider } from './qmlCppBridgeProviders';
 import { QtDebuggerIntegration } from './qtDebugger';
 import { QtTestFramework } from './qtTestFramework';
 import { QtTranslationProvider } from './qtTranslation';
@@ -583,6 +583,7 @@ export function activate(context: vscode.ExtensionContext): void {
     const qmlBridgeCompProvider = new QmlBridgeCompletionProvider(qmlCppBridge, outputChannel);
     const cppRefProvider = new CppReferenceProvider(qmlCppBridge, outputChannel);
     const qmlTypeHoverProvider = new QmlTypeHoverProvider(qmlCppBridge, outputChannel);
+    const qmlTypeRenameProvider = new QmlTypeRenameProvider(qmlCppBridge, outputChannel);
     
     context.subscriptions.push(
         vscode.languages.registerDefinitionProvider(
@@ -610,6 +611,13 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.languages.registerHoverProvider(
             { scheme: 'file', pattern: '**/*.qml' },
             qmlTypeHoverProvider
+        )
+    );
+
+    context.subscriptions.push(
+        vscode.languages.registerRenameProvider(
+            { scheme: 'file', pattern: '**/*.{cpp,h,hpp}' },
+            qmlTypeRenameProvider
         )
     );
     

@@ -44,14 +44,17 @@ export class QmlDefinitionProvider implements vscode.DefinitionProvider {
             return undefined;
         }
 
-        // Look up the symbol
-        const symbol = this.bridge.findSymbol(qmlTypeName, word);
-        if (symbol) {
-            this.outputChannel.appendLine(`[QML-C++ Bridge] Definition: ${word} in ${qmlTypeName} → ${symbol.filePath}:${symbol.line + 1}`);
-            return new vscode.Location(
-                vscode.Uri.file(symbol.filePath),
-                new vscode.Position(symbol.line, symbol.character)
-            );
+        // Walk the QML type inheritance chain to find the symbol
+        const chain = this.bridge.getQmlTypeChain(qmlTypeName);
+        for (const typeName of chain) {
+            const symbol = this.bridge.findSymbol(typeName, word);
+            if (symbol) {
+                this.outputChannel.appendLine(`[QML-C++ Bridge] Definition: ${word} in ${typeName} → ${symbol.filePath}:${symbol.line + 1}`);
+                return new vscode.Location(
+                    vscode.Uri.file(symbol.filePath),
+                    new vscode.Position(symbol.line, symbol.character)
+                );
+            }
         }
 
         // Fallback: check qmldir-registered QML types
@@ -98,6 +101,17 @@ export class QmlDefinitionProvider implements vscode.DefinitionProvider {
      * Determine the QML type context for a symbol at the given position.
      */
     private determineContextType(document: vscode.TextDocument, position: vscode.Position, lineText: string, word: string): string | undefined {
+        // Check if this is an attached property pattern: TypeName.property
+        const attachedPattern = new RegExp(`([A-Z][A-Za-z0-9_]*)\\.${word}\\b`);
+        const attachedMatch = lineText.match(attachedPattern);
+        if (attachedMatch) {
+            const prefixType = attachedMatch[1];
+            const typeInfo = this.bridge.findQmlType(prefixType);
+            if (typeInfo?.attachedType) {
+                return typeInfo.attachedType;
+            }
+        }
+
         // Check if this is an id.property or id.method() pattern
         const idPattern = new RegExp(`(\\w+)\\.${word}\\b`);
         const idMatch = lineText.match(idPattern);
@@ -107,11 +121,22 @@ export class QmlDefinitionProvider implements vscode.DefinitionProvider {
             if (resolvedType) {
                 return resolvedType;
             }
+            // Fallback to id declarations in the same file
+            const localType = this.resolveIdTypeInDocument(document, id);
+            if (localType) {
+                return localType;
+            }
         }
 
         // Check if this is a property binding inside the root type
         // Walk up to find the enclosing QML type
         return this.findEnclosingQmlType(document, position);
+    }
+
+    private resolveIdTypeInDocument(document: vscode.TextDocument, id: string): string | undefined {
+        const declarations = this.bridge.getIdDeclarations(document.uri.fsPath);
+        const match = declarations.find(d => d.id === id);
+        return match?.qmlType;
     }
 
     /**
@@ -387,7 +412,7 @@ export class QmlTypeHoverProvider implements vscode.HoverProvider {
 
 /**
  * Provides "Find All References" from C++ Q_INVOKABLE/Q_PROPERTY declarations to QML usages.
- * Experimental — matches by symbol name only.
+ * Now type-scoped: only returns usages that belong to the QML type exposed by the enclosing C++ class.
  */
 export class CppReferenceProvider implements vscode.ReferenceProvider {
     private bridge: QmlCppBridgeIndexer;
@@ -420,17 +445,47 @@ export class CppReferenceProvider implements vscode.ReferenceProvider {
             return undefined;
         }
 
-        const usages = this.bridge.findQmlUsages(word);
-        if (usages.length === 0) {
-            return [];
-        }
+        const qmlTypeName = this.resolveQmlTypeName(document, position);
+        const usages = qmlTypeName
+            ? this.bridge.findQmlUsagesForType(word, qmlTypeName)
+            : this.bridge.findQmlUsages(word);
 
-        this.outputChannel.appendLine(`[QML-C++ Bridge] References for ${word}: ${usages.length} QML usage(s)`);
-
-        return usages.map(u => new vscode.Location(
+        const locations = usages.map(u => new vscode.Location(
             vscode.Uri.file(u.filePath),
             new vscode.Position(u.line, u.character)
         ));
+
+        if (context.includeDeclaration && qmlTypeName) {
+            const symbol = this.bridge.findSymbol(qmlTypeName, word);
+            if (symbol) {
+                locations.push(new vscode.Location(
+                    vscode.Uri.file(symbol.filePath),
+                    new vscode.Position(symbol.line, symbol.character)
+                ));
+            }
+        }
+
+        this.outputChannel.appendLine(`[QML-C++ Bridge] References for ${word} (${qmlTypeName ?? 'unscoped'}): ${locations.length} location(s)`);
+
+        return locations;
+    }
+
+    /**
+     * Resolve the QML type name exposed by the C++ class surrounding the cursor.
+     */
+    private resolveQmlTypeName(document: vscode.TextDocument, position: vscode.Position): string | undefined {
+        const lines = document.getText().split('\n');
+        for (let i = position.line; i >= 0 && i >= position.line - 100; i--) {
+            const classMatch = lines[i].match(/class\s+(\w+)\s*:/);
+            if (classMatch) {
+                const cppClassName = classMatch[1];
+                const type = this.bridge.findQmlTypeByCppClass(cppClassName);
+                if (type) {
+                    return type.qmlTypeName;
+                }
+            }
+        }
+        return undefined;
     }
 
     /**
@@ -443,5 +498,95 @@ export class CppReferenceProvider implements vscode.ReferenceProvider {
             }
         }
         return false;
+    }
+}
+
+/**
+ * Provides rename refactoring for C++ QML_ELEMENT classes and their QML usages.
+ *
+ * Limitations:
+ * - Only supports QML_ELEMENT classes where the QML type name equals the C++ class name.
+ * - Does not support QML_NAMED_ELEMENT types.
+ * - Does not update qmldir module declarations.
+ * - Other C++ references to the class are left to the C++ language server.
+ */
+export class QmlTypeRenameProvider implements vscode.RenameProvider {
+    private bridge: QmlCppBridgeIndexer;
+    private outputChannel: vscode.OutputChannel;
+
+    constructor(bridge: QmlCppBridgeIndexer, outputChannel: vscode.OutputChannel) {
+        this.bridge = bridge;
+        this.outputChannel = outputChannel;
+    }
+
+    prepareRename(
+        document: vscode.TextDocument,
+        position: vscode.Position,
+        token: vscode.CancellationToken
+    ): vscode.ProviderResult<vscode.Range> {
+        const wordRange = document.getWordRangeAtPosition(position, /[a-zA-Z_][a-zA-Z0-9_]*/);
+        if (!wordRange) {
+            return undefined;
+        }
+
+        const word = document.getText(wordRange);
+        const type = this.resolveQmlType(document, position, word);
+        if (!type) {
+            return undefined;
+        }
+
+        return wordRange;
+    }
+
+    provideRenameEdits(
+        document: vscode.TextDocument,
+        position: vscode.Position,
+        newName: string,
+        token: vscode.CancellationToken
+    ): vscode.ProviderResult<vscode.WorkspaceEdit> {
+        const wordRange = document.getWordRangeAtPosition(position, /[a-zA-Z_][a-zA-Z0-9_]*/);
+        if (!wordRange) {
+            return undefined;
+        }
+
+        const oldName = document.getText(wordRange);
+        const type = this.resolveQmlType(document, position, oldName);
+        if (!type) {
+            return undefined;
+        }
+
+        const edit = new vscode.WorkspaceEdit();
+
+        // Rename the C++ class token at the cursor
+        edit.replace(document.uri, wordRange, newName);
+
+        // Rename all recorded QML type usages
+        const usages = this.bridge.findQmlTypeUsages(oldName);
+        for (const usage of usages) {
+            const uri = vscode.Uri.file(usage.filePath);
+            const range = new vscode.Range(
+                new vscode.Position(usage.line, usage.character),
+                new vscode.Position(usage.line, usage.character + oldName.length)
+            );
+            edit.replace(uri, range, newName);
+        }
+
+        this.outputChannel.appendLine(`[QML-C++ Bridge] Rename ${oldName} → ${newName} across ${usages.length} QML usage(s)`);
+        return edit;
+    }
+
+    private resolveQmlType(document: vscode.TextDocument, position: vscode.Position, word: string): QmlTypeInfo | undefined {
+        const lines = document.getText().split('\n');
+        for (let i = position.line; i >= 0 && i >= position.line - 100; i--) {
+            const classMatch = lines[i].match(/class\s+(\w+)\s*:/);
+            if (classMatch && classMatch[1] === word) {
+                const cppClassName = classMatch[1];
+                const type = this.bridge.findQmlTypeByCppClass(cppClassName);
+                if (type && type.qmlTypeName === type.cppClassName) {
+                    return type;
+                }
+            }
+        }
+        return undefined;
     }
 }

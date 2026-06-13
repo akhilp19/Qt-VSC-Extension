@@ -865,13 +865,13 @@
 - [x] **Settings**: `qt.cppLspEnable`, `qt.cppLspServerPath`, `qt.cppLspDiagnosticsEnable`
 
 ### QML-C++ Cross-Reference
-- [ ] **Go to QML usage** from C++ `Q_INVOKABLE` / `Q_PROPERTY` (deferred to v2.4.0)
-- [ ] **Go to C++ definition** from QML `property` or `function` call (deferred to v2.4.0)
-- [ ] **Refactor QML type** — rename C++ `QML_ELEMENT` class and update all `.qml` imports (deferred to v2.4.0)
+- [x] **Go to QML usage** from C++ `Q_INVOKABLE` / `Q_PROPERTY` (shipped in v2.4.0)
+- [x] **Go to C++ definition** from QML `property` or `function` call (shipped in v2.4.0)
+- [x] **Refactor QML type** — rename C++ `QML_ELEMENT` class and update all `.qml` imports (shipped in v2.4.0)
 
 ---
 
-## ✅ Version 2.3.0 (Current — Shipped) — Extension Icon & Branding
+## ✅ Version 2.3.0 (Shipped) — Extension Icon & Branding
 
 **Theme:** Add a marketplace icon to the extension.
 
@@ -882,12 +882,38 @@
 
 ---
 
+## ✅ Version 2.4.0 (Current — Shipped) — QML-C++ Cross-Reference
+
+**Theme:** Close the QML-C++ cross-reference gaps deferred from v2.2.0.
+
+### Type-Scoped References
+- [x] **Type-usage index** — record every `.qml` type instantiation for rename and reference operations
+- [x] **Scoped Find References** — `Shift+F12` on C++ `Q_INVOKABLE` / `Q_PROPERTY` returns only usages of the owning QML type
+- [x] **Honor `includeDeclaration`** — optionally include the C++ declaration location in reference results
+
+### Better QML → C++ Navigation
+- [x] **Inheritance-aware Go to Definition** — resolves properties and methods across the QML type inheritance chain
+- [x] **Attached property support** — `F12` on `AttachedType.property` jumps to the attached type's declaration
+- [x] **Local id fallback** — resolves `id:` declarations in the same file even when not yet indexed globally
+
+### Rename QML Type
+- [x] **Rename `QML_ELEMENT` class** — `F2` on a C++ `QML_ELEMENT` class renames the class and all `.qml` instantiations
+  - Limitations: only when the QML type name equals the C++ class name; does not update `QML_NAMED_ELEMENT` or `qmldir` entries
+
+### Files Changed
+- `src/qmlCppBridge.ts` — type-usage index, base-class tracking, `getQmlTypeChain()`, scoped usage lookup
+- `src/qmlCppBridgeProviders.ts` — improved `QmlDefinitionProvider`, scoped `CppReferenceProvider`, new `QmlTypeRenameProvider`
+- `src/extension.ts` — register rename provider
+- `package.json` — version bump to `2.4.0`
+
+---
+
 ## How to Contribute
 
 1. Pick an open item from the upcoming version.
 2. Open an issue to discuss design if it involves new UI or user-facing behavior.
 3. Submit a PR referencing the roadmap item.
 
-> **Last updated:** June 13, 2026
-> **Current version:** v2.3.0 — Extension Icon & Branding
+> **Last updated:** June 07, 2026
+> **Current version:** v2.4.0 — QML-C++ Cross-Reference
 > For the latest status, check the [GitHub Issues](https://github.com/akhilp19/Qt-VSC-Extension/issues) page.

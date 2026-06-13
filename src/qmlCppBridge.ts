@@ -24,6 +24,7 @@ export interface QmlTypeInfo {
     character: number;
     qmlTypeName: string;
     cppClassName: string;
+    baseClassName?: string;
     isSingleton: boolean;
     isAttached: boolean;
     attachedType?: string;
@@ -53,6 +54,13 @@ export interface QmlDirEntry {
     moduleUri?: string;
 }
 
+export interface QmlTypeUsage {
+    filePath: string;
+    line: number;
+    character: number;
+    typeName: string;
+}
+
 /**
  * Indexes C++ headers for QML-relevant declarations (Q_PROPERTY, Q_INVOKABLE, QML_ELEMENT)
  * and QML files for property/method usages to enable cross-language navigation.
@@ -65,6 +73,12 @@ export class QmlCppBridgeIndexer {
 
     // Map: QML type name → C++ QML type declaration info
     private qmlTypeIndex = new Map<string, QmlTypeInfo>();
+
+    // Map: C++ class name → QML type name (for base-class resolution)
+    private cppClassToQmlTypeName = new Map<string, string>();
+
+    // Map: QML type name → list of QML type instantiation usages
+    private typeUsageIndex = new Map<string, QmlTypeUsage[]>();
 
     // Map: QML file path → list of id declarations in that file
     private idIndex = new Map<string, IdDeclaration[]>();
@@ -103,6 +117,8 @@ export class QmlCppBridgeIndexer {
         // Clear existing index
         this.symbolIndex.clear();
         this.qmlTypeIndex.clear();
+        this.cppClassToQmlTypeName.clear();
+        this.typeUsageIndex.clear();
         this.qmldirIndex.clear();
         this.qmlModulePaths.clear();
         this.idIndex.clear();
@@ -151,9 +167,63 @@ export class QmlCppBridgeIndexer {
         if (this.debounceTimer) {
             clearTimeout(this.debounceTimer);
         }
+        this.symbolIndex.clear();
+        this.qmlTypeIndex.clear();
+        this.cppClassToQmlTypeName.clear();
+        this.typeUsageIndex.clear();
+        this.qmldirIndex.clear();
+        this.qmlModulePaths.clear();
+        this.idIndex.clear();
+        this.usageIndex.clear();
+        this.idToTypeMap.clear();
         this.debounceTimer = setTimeout(() => {
             void this.indexWorkspace();
         }, 2000);
+    }
+
+    /**
+     * Find QML type usages (type instantiations) by QML type name.
+     */
+    findQmlTypeUsages(typeName: string): QmlTypeUsage[] {
+        return this.typeUsageIndex.get(typeName) || [];
+    }
+
+    /**
+     * Find QML usages of a symbol scoped to a specific QML type context.
+     */
+    findQmlUsagesForType(symbolName: string, qmlTypeName: string): QmlUsage[] {
+        const all = this.usageIndex.get(symbolName) || [];
+        return all.filter(u => u.contextType === qmlTypeName);
+    }
+
+    /**
+     * Get the inheritance chain for a registered QML type (most-derived first).
+     */
+    getQmlTypeChain(qmlTypeName: string): string[] {
+        const chain: string[] = [];
+        const visited = new Set<string>();
+        let currentName: string | undefined = qmlTypeName;
+
+        while (currentName) {
+            if (visited.has(currentName)) { break; }
+            visited.add(currentName);
+            chain.push(currentName);
+
+            const current = this.qmlTypeIndex.get(currentName);
+            if (!current?.baseClassName) { break; }
+            currentName = this.cppClassToQmlTypeName.get(current.baseClassName);
+        }
+
+        return chain;
+    }
+
+    /**
+     * Find a QML type registered from a given C++ class name.
+     */
+    findQmlTypeByCppClass(cppClassName: string): QmlTypeInfo | undefined {
+        const qmlTypeName = this.cppClassToQmlTypeName.get(cppClassName);
+        if (!qmlTypeName) { return undefined; }
+        return this.qmlTypeIndex.get(qmlTypeName);
     }
 
     /**
@@ -279,6 +349,7 @@ export class QmlCppBridgeIndexer {
             let inClass = false;
             let braceDepth = 0;
             let currentClassName = '';
+            let currentBaseClassName = '';
             let currentQmlTypeName = '';
             let hasQObject = false;
             let classStartLine = -1;
@@ -293,6 +364,7 @@ export class QmlCppBridgeIndexer {
                     inClass = true;
                     braceDepth = 0;
                     currentClassName = classMatch[1];
+                    currentBaseClassName = classMatch[2].trim().replace(/\s*<[^>]*>/, '');
                     currentQmlTypeName = currentClassName;
                     hasQObject = false;
                     classStartLine = i;
@@ -387,14 +459,17 @@ export class QmlCppBridgeIndexer {
                             character: lines[classStartLine].indexOf('class'),
                             qmlTypeName: currentQmlTypeName,
                             cppClassName: currentClassName,
+                            baseClassName: currentBaseClassName,
                             isSingleton,
                             isAttached: !!attachedMatch,
                             attachedType: attachedMatch ? attachedMatch[1] : undefined,
                             hasQObject
                         });
+                        this.cppClassToQmlTypeName.set(currentClassName, currentQmlTypeName);
                     }
                     inClass = false;
                     currentClassName = '';
+                    currentBaseClassName = '';
                     currentQmlTypeName = '';
                     hasQObject = false;
                 }
@@ -438,6 +513,13 @@ export class QmlCppBridgeIndexer {
                     }
                     typeStack.push(typeName);
                     currentType = typeName;
+
+                    const char = line.indexOf(typeName);
+                    if (char >= 0) {
+                        const existing = this.typeUsageIndex.get(typeName) || [];
+                        existing.push({ filePath, line: i, character: char, typeName });
+                        this.typeUsageIndex.set(typeName, existing);
+                    }
                 }
 
                 braceDepth += openBraces - closeBraces;

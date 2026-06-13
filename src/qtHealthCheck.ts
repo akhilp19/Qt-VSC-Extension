@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { execSync } from 'child_process';
 import { QtConfigManager } from './qtConfigManager';
+import { listSigningIdentities, listProvisioningProfiles } from './qtIOSSigning';
 
 interface HealthCheckResult {
     name: string;
@@ -89,6 +90,22 @@ export class QtHealthCheck {
                 results.push({ name: 'iOS Tools', status: 'pass', message: 'xcodebuild available' });
             } catch {
                 results.push({ name: 'iOS Tools', status: 'warn', message: 'xcodebuild not found' });
+            }
+
+            const iosConfig = vscode.workspace.getConfiguration('qt');
+            const buildForDevice = iosConfig.get<boolean>('iosBuildForDevice') || false;
+            if (buildForDevice) {
+                const identitySetting = iosConfig.get<string>('iosSigningIdentity') || '';
+                const profileSetting = iosConfig.get<string>('iosProvisioningProfile') || '';
+                const identities = listSigningIdentities();
+                const profiles = listProvisioningProfiles();
+                const identityValid = identitySetting && identities.some(i => i.name === identitySetting);
+                const profileValid = profileSetting && profiles.some(p => p.uuid === profileSetting);
+                if (identityValid && profileValid) {
+                    results.push({ name: 'iOS Signing', status: 'pass', message: `Identity and provisioning profile configured` });
+                } else {
+                    results.push({ name: 'iOS Signing', status: 'warn', message: 'Device builds require a valid signing identity and provisioning profile. Run the selection commands.' });
+                }
             }
         }
 

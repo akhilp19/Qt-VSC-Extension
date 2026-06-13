@@ -2,7 +2,7 @@
   "name": "qt-vsc-extension",
   "displayName": "Qt C++ Tools",
   "description": "Build, run and manage Qt C++ projects in VS Code",
-  "version": "2.7.0",
+  "version": "2.8.0",
   "publisher": "akhilp19",
   "author": {
     "name": "Akhil Pawar"
@@ -384,6 +384,16 @@
         "command": "qt.selectIOSSimulator",
         "title": "Qt: Select iOS Simulator",
         "icon": "$(list-selection)"
+      },
+      {
+        "command": "qt.selectIOSSigningIdentity",
+        "title": "Qt: Select iOS Signing Identity",
+        "icon": "$(key)"
+      },
+      {
+        "command": "qt.selectIOSProvisioningProfile",
+        "title": "Qt: Select iOS Provisioning Profile",
+        "icon": "$(file-badge)"
       },
       {
         "command": "qt.runIOSOnSimulator",
@@ -831,6 +841,27 @@
           "type": "boolean",
           "default": false,
           "description": "Build iOS app for physical device instead of simulator."
+        },
+        "qt.iosSigningIdentity": {
+          "type": "string",
+          "default": "",
+          "description": "Selected iOS code-signing identity name (e.g. 'iPhone Developer: Name (TEAMID)')."
+        },
+        "qt.iosProvisioningProfile": {
+          "type": "string",
+          "default": "",
+          "description": "UUID of the selected iOS provisioning profile."
+        },
+        "qt.iosTeamId": {
+          "type": "string",
+          "default": "",
+          "description": "Apple Team ID used for iOS signing and export."
+        },
+        "qt.iosExportMethod": {
+          "type": "string",
+          "enum": ["development", "app-store", "ad-hoc", "enterprise"],
+          "default": "development",
+          "description": "iOS IPA export method."
         },
         "qt.emscriptenPath": {
           "type": "string",

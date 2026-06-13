@@ -795,7 +795,7 @@
 ### Mobile & Deployment (v1.19.0–1.20.0 gaps)
 - [x] **Android NDK auto-detection** — detect NDK from `ndk-bundle` inside SDK, `ANDROID_NDK_HOME`, or common paths
 - [x] **iOS device deployment** — `xcodebuild archive` + `xcodebuild -exportArchive` for IPA export
-- [ ] **iOS provisioning profile & signing** — detect profiles, select signing identity (deferred to v2.1.0)
+- [x] **iOS provisioning profile & signing** — detect profiles, select signing identity (shipped in v2.8.0)
 - [x] **WebAssembly source maps** — configure `-g` and serve `.wasm.map` files from preview server
 - [x] **WebAssembly threading** — detect pthread-enabled Qt WASM and configure `-sUSE_PTHREADS`
 
@@ -976,7 +976,7 @@
 
 ---
 
-## ✅ Version 2.7.0 (Current — Shipped) — MOC-aware IntelliSense v2
+## ✅ Version 2.7.0 (Shipped) — MOC-aware IntelliSense v2
 
 **Theme:** Resolve `Q_PROPERTY` types so property member access offers type-specific completions.
 
@@ -1018,6 +1018,41 @@ obj->name. // suggests QString methods: append, split, toInt, etc.
 
 ---
 
+## ✅ Version 2.8.0 (Current — Shipped) — iOS Provisioning Profile & Signing
+
+**Theme:** Make iOS device builds, archives, and IPA exports signing-aware without leaving VS Code.
+
+### Signing Identity Selection
+- [x] **`Qt: Select iOS Signing Identity`** (`qt.selectIOSSigningIdentity`) — list valid code-signing identities via `security find-identity -v -p codesigning`
+- [x] **Auto-extract Team ID** from the identity string and persist it in `qt.iosTeamId`
+- [x] **Persist selected identity** in `qt.iosSigningIdentity`
+
+### Provisioning Profile Selection
+- [x] **`Qt: Select iOS Provisioning Profile`** (`qt.selectIOSProvisioningProfile`) — scan `~/Library/MobileDevice/Provisioning Profiles/*.mobileprovision`
+- [x] **Decode profiles** with `security cms -D -i <profile> | plutil -p -` to read UUID, name, team ID, application identifier, and expiration date
+- [x] **Filter expired profiles** from the selector
+- [x] **Persist selected profile UUID** in `qt.iosProvisioningProfile`
+
+### Build & Export Integration
+- [x] **Device builds** append `CODE_SIGN_IDENTITY`, `PROVISIONING_PROFILE_SPECIFIER`, and `DEVELOPMENT_TEAM` to `xcodebuild` invocations
+- [x] **Archive** passes the same signing arguments to `xcodebuild archive`
+- [x] **Export** generates a signing-aware `ExportOptions.plist` with `method`, `teamID`, `provisioningProfiles`, and `signingCertificate`
+- [x] **Export method** configurable via `qt.iosExportMethod` (`development`, `app-store`, `ad-hoc`, `enterprise`)
+
+### Health Check
+- [x] **iOS Signing check** warns when `qt.iosBuildForDevice` is enabled but no valid signing identity or provisioning profile is configured
+
+### Files Changed
+- `src/qtIOSSigning.ts` — new signing/profile discovery and selection module
+- `src/qtIOSDeployment.ts` — pass signing args to `xcodebuild build`, `archive`, and `-exportArchive`
+- `src/qtHealthCheck.ts` — validate iOS signing configuration
+- `src/extension.ts` — register new selection commands
+- `package.json` — version bump to `2.8.0`, new commands and settings
+- `README.md` — document iOS signing commands and settings
+- `ROADMAP.md` — mark item shipped and add v2.8.0 section
+
+---
+
 ## How to Contribute
 
 1. Pick an open item from the upcoming version.
@@ -1025,5 +1060,5 @@ obj->name. // suggests QString methods: append, split, toInt, etc.
 3. Submit a PR referencing the roadmap item.
 
 > **Last updated:** June 07, 2026
-> **Current version:** v2.7.0 — MOC-aware IntelliSense v2
+> **Current version:** v2.8.0 — iOS Provisioning Profile & Signing
 > For the latest status, check the [GitHub Issues](https://github.com/akhilp19/Qt-VSC-Extension/issues) page.

@@ -50,6 +50,7 @@ import { QtDocViewer } from './qtDocViewer';
 import { QtAndroidDeployment } from './qtAndroidDeployment';
 import { QtBuildKitManager } from './qtBuildKit';
 import { QtIOSDeployment } from './qtIOSDeployment';
+import { selectSigningIdentity, selectProvisioningProfile } from './qtIOSSigning';
 import { QtWebAssembly } from './qtWebAssembly';
 import { QtHealthCheck } from './qtHealthCheck';
 import { QtSettingsMigration } from './qtSettingsMigration';
@@ -411,6 +412,18 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         registerQtCommand('qt.selectIOSSimulator', async () => {
             await qtIOS.selectSimulator();
+        })
+    );
+
+    context.subscriptions.push(
+        registerQtCommand('qt.selectIOSSigningIdentity', async () => {
+            await selectSigningIdentity();
+        })
+    );
+
+    context.subscriptions.push(
+        registerQtCommand('qt.selectIOSProvisioningProfile', async () => {
+            await selectProvisioningProfile();
         })
     );
 

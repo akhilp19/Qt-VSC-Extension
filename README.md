@@ -44,9 +44,11 @@ Access these commands via Command Palette (`Ctrl+Shift+P`):
 - `Qt: Install Android APK` — Install APK to connected device via `adb`
 - `Qt: Build iOS App` — Build iOS app for simulator or device (macOS only)
 - `Qt: Select iOS Simulator` — Pick iPhone/iPad simulator from `xcrun simctl`
+- `Qt: Select iOS Signing Identity` — Pick a code-signing identity from the keychain
+- `Qt: Select iOS Provisioning Profile` — Pick a provisioning profile installed on your Mac
 - `Qt: Run iOS App on Simulator` — Build, install, and launch on selected simulator
-- `Qt: Archive iOS App` — `xcodebuild archive` for device distribution
-- `Qt: Export iOS IPA` — `xcodebuild -exportArchive` with ExportOptions.plist
+- `Qt: Archive iOS App` — `xcodebuild archive` for device distribution with signing
+- `Qt: Export iOS IPA` — `xcodebuild -exportArchive` with signing-aware ExportOptions.plist
 - `Qt: Upload iOS IPA to TestFlight` — Upload exported IPA via `xcrun altool`
 - `Qt: Take iOS Simulator Screenshot` — Capture simulator screen
 - `Qt: Record iOS Simulator Video` / `Qt: Stop Simulator Recording` — Record simulator video
@@ -192,7 +194,12 @@ Configure the extension via VS Code settings (`File > Preferences > Settings` or
   "qt.autoUic": false,                            // Auto-run uic on .ui save
   "qt.autoRcc": false,                            // Auto-run rcc on .qrc save
   "qt.testAutoDiscover": true,                    // Auto-discover Qt Test classes
-  "qt.debuggerType": "auto"                       // auto, cppvsdbg, gdb, lldb
+  "qt.debuggerType": "auto",                      // auto, cppvsdbg, gdb, lldb
+  "qt.iosBuildForDevice": false,                  // Build iOS for physical device
+  "qt.iosSigningIdentity": "",                    // iPhone Developer/Distribution identity
+  "qt.iosProvisioningProfile": "",                // Provisioning profile UUID
+  "qt.iosTeamId": "",                             // Apple Team ID
+  "qt.iosExportMethod": "development"             // development, app-store, ad-hoc, enterprise
 }
 ```
 

@@ -13,6 +13,26 @@ export interface PersistedBuildRecord {
     success: boolean;
 }
 
+export interface PerFileCompileRecord {
+    filePath: string;
+    durationMs: number;
+}
+
+export interface PerFileTimingRecord {
+    projectFile: string;
+    buildStartTime: number;
+    filePath: string;
+    durationMs: number;
+}
+
+export interface FileTimingAggregate {
+    filePath: string;
+    totalDurationMs: number;
+    averageDurationMs: number;
+    occurrenceCount: number;
+    lastDurationMs: number;
+}
+
 export interface ProjectAnalytics {
     projectFile: string;
     projectName: string;
@@ -33,15 +53,19 @@ export interface CcacheInfo {
 }
 
 const HISTORY_FILE = '.vscode/qt-build-history.json';
+const TIMING_FILE = '.vscode/qt-per-file-timing.json';
 const MAX_RECORDS = 500;
+const MAX_TIMING_RECORDS = 5000;
 
 export class QtBuildAnalytics {
     private outputChannel: vscode.OutputChannel;
     private records: PersistedBuildRecord[] = [];
+    private perFileRecords: PerFileTimingRecord[] = [];
 
     constructor(outputChannel: vscode.OutputChannel) {
         this.outputChannel = outputChannel;
         this.loadHistory();
+        this.loadPerFileTiming();
     }
 
     // ========================================================================
@@ -88,6 +112,8 @@ export class QtBuildAnalytics {
         this.records.push(record);
         this.saveHistory();
         this.outputChannel.appendLine(`[BuildAnalytics] Recorded ${record.taskType} for ${path.basename(record.projectFile)} (${record.durationMs}ms)`);
+
+        // Proactive ccache suggestion after slow builds
 
         // Proactive ccache suggestion after slow builds
         if (record.taskType === 'build' || record.taskType === 'rebuild') {
@@ -146,6 +172,85 @@ export class QtBuildAnalytics {
 
     getAllProjects(): string[] {
         return Array.from(new Set(this.records.map(r => r.projectFile)));
+    }
+
+    // ========================================================================
+    // Per-file timing
+    // ========================================================================
+
+    addPerFileTiming(projectFile: string, buildStartTime: number, records: PerFileCompileRecord[]): void {
+        for (const r of records) {
+            this.perFileRecords.push({
+                projectFile,
+                buildStartTime,
+                filePath: r.filePath,
+                durationMs: r.durationMs
+            });
+        }
+        this.savePerFileTiming();
+        this.outputChannel.appendLine(`[BuildAnalytics] Stored ${records.length} per-file timing record(s) for ${path.basename(projectFile)}`);
+    }
+
+    getPerFileTiming(projectFile: string): FileTimingAggregate[] {
+        const map = new Map<string, FileTimingAggregate>();
+        for (const r of this.perFileRecords) {
+            if (r.projectFile !== projectFile) { continue; }
+            const existing = map.get(r.filePath);
+            if (existing) {
+                existing.totalDurationMs += r.durationMs;
+                existing.occurrenceCount += 1;
+                existing.lastDurationMs = r.durationMs;
+            } else {
+                map.set(r.filePath, {
+                    filePath: r.filePath,
+                    totalDurationMs: r.durationMs,
+                    averageDurationMs: r.durationMs,
+                    occurrenceCount: 1,
+                    lastDurationMs: r.durationMs
+                });
+            }
+        }
+
+        for (const agg of map.values()) {
+            agg.averageDurationMs = Math.round(agg.totalDurationMs / agg.occurrenceCount);
+        }
+
+        return Array.from(map.values()).sort((a, b) => b.averageDurationMs - a.averageDurationMs);
+    }
+
+    private getTimingHistoryPath(): string | undefined {
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        if (!workspaceFolder) { return undefined; }
+        return path.join(workspaceFolder.uri.fsPath, TIMING_FILE);
+    }
+
+    private loadPerFileTiming(): void {
+        const historyPath = this.getTimingHistoryPath();
+        if (!historyPath || !fs.existsSync(historyPath)) {
+            return;
+        }
+        try {
+            const content = fs.readFileSync(historyPath, 'utf-8');
+            this.perFileRecords = JSON.parse(content) as PerFileTimingRecord[];
+            this.outputChannel.appendLine(`[BuildAnalytics] Loaded ${this.perFileRecords.length} per-file timing records`);
+        } catch {
+            this.perFileRecords = [];
+        }
+    }
+
+    private savePerFileTiming(): void {
+        const historyPath = this.getTimingHistoryPath();
+        if (!historyPath) { return; }
+        try {
+            const dir = path.dirname(historyPath);
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, { recursive: true });
+            }
+            const toSave = this.perFileRecords.slice(-MAX_TIMING_RECORDS);
+            fs.writeFileSync(historyPath, JSON.stringify(toSave, null, 2), 'utf-8');
+        } catch (error) {
+            this.outputChannel.appendLine(`[BuildAnalytics] Failed to save per-file timing: ${error}`);
+        }
     }
 
     // ========================================================================

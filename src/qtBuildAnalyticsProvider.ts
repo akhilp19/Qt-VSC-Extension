@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { QtBuildAnalytics, PersistedBuildRecord, ProjectAnalytics } from './qtBuildAnalytics';
+import { QtBuildAnalytics, PersistedBuildRecord, ProjectAnalytics, FileTimingAggregate } from './qtBuildAnalytics';
 import { QtBuildTracker } from './qtBuildTracker';
 
 type AnalyticsNode =
@@ -8,6 +8,8 @@ type AnalyticsNode =
     | { type: 'project'; projectFile: string; analytics: ProjectAnalytics }
     | { type: 'stat'; label: string; value: string; icon: string }
     | { type: 'build'; record: PersistedBuildRecord }
+    | { type: 'timingGroup'; projectFile: string }
+    | { type: 'timing'; file: FileTimingAggregate }
     | { type: 'ccache'; info: { label: string; value: string; icon: string }[] }
     | { type: 'empty'; message: string };
 
@@ -85,6 +87,33 @@ export class QtBuildAnalyticsProvider implements vscode.TreeDataProvider<Analyti
                 return item;
             }
 
+            case 'timingGroup': {
+                const item = new vscode.TreeItem('Slowest Files', vscode.TreeItemCollapsibleState.Collapsed);
+                item.iconPath = new vscode.ThemeIcon('flame');
+                return item;
+            }
+
+            case 'timing': {
+                const f = element.file;
+                const item = new vscode.TreeItem(path.basename(f.filePath));
+                item.description = `${QtBuildAnalytics.formatDuration(f.averageDurationMs)} avg / ${QtBuildAnalytics.formatDuration(f.totalDurationMs)} total (${f.occurrenceCount}x)`;
+                item.iconPath = new vscode.ThemeIcon('file-code');
+                item.collapsibleState = vscode.TreeItemCollapsibleState.None;
+                item.tooltip = [
+                    f.filePath,
+                    `Average: ${QtBuildAnalytics.formatDuration(f.averageDurationMs)}`,
+                    `Total: ${QtBuildAnalytics.formatDuration(f.totalDurationMs)}`,
+                    `Last: ${QtBuildAnalytics.formatDuration(f.lastDurationMs)}`,
+                    `Builds: ${f.occurrenceCount}`
+                ].join('\n');
+                item.command = {
+                    command: 'vscode.open',
+                    title: 'Open File',
+                    arguments: [vscode.Uri.file(f.filePath)]
+                };
+                return item;
+            }
+
             case 'ccache': {
                 const item = new vscode.TreeItem('Compiler Cache', vscode.TreeItemCollapsibleState.Expanded);
                 item.iconPath = new vscode.ThemeIcon('database');
@@ -159,7 +188,18 @@ export class QtBuildAnalyticsProvider implements vscode.TreeDataProvider<Analyti
                     nodes.push(...recent.map(r => ({ type: 'build' as const, record: r })));
                 }
 
+                // Per-file timing
+                const timing = this.buildAnalytics.getPerFileTiming(element.projectFile);
+                if (timing.length > 0) {
+                    nodes.push({ type: 'timingGroup' as const, projectFile: element.projectFile });
+                }
+
                 return nodes;
+            }
+
+            case 'timingGroup': {
+                const timing = this.buildAnalytics.getPerFileTiming(element.projectFile);
+                return timing.slice(0, 10).map(f => ({ type: 'timing' as const, file: f }));
             }
 
             case 'ccache': {

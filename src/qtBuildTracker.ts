@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { QtBuildAnalytics, PersistedBuildRecord } from './qtBuildAnalytics';
 import { QtTelemetry } from './qtTelemetry';
+import { parseBuildLog } from './qtBuildTimingParser';
 
 export interface BuildRecord {
     projectFile: string;
@@ -83,6 +84,20 @@ export class QtBuildTracker {
                         record.endTime - record.startTime,
                         record.success ?? false
                     );
+                }
+
+                // Per-file compilation timing
+                const config = vscode.workspace.getConfiguration('qt');
+                if (config.get<boolean>('perFileTimingEnabled') !== false) {
+                    const buildDir = task.definition.buildDir as string | undefined;
+                    const logPath = buildDir ? `${buildDir}/.qt-build-output.log` : undefined;
+                    if (buildDir && logPath && this.buildAnalytics) {
+                        const perFileRecords = parseBuildLog(logPath, buildDir);
+                        if (perFileRecords.length > 0) {
+                            this.buildAnalytics.addPerFileTiming(projectFile, record.startTime, perFileRecords);
+                            this.outputChannel.appendLine(`[BuildTracker] Parsed per-file timing for ${projectFile}: ${perFileRecords.length} file(s)`);
+                        }
+                    }
                 }
 
                 this._onDidUpdate.fire();

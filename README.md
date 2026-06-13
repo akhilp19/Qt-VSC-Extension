@@ -133,6 +133,7 @@ Access these commands via Command Palette (`Ctrl+Shift+P`):
 - `Qt: Show Build Analytics` — Sidebar with build history, durations, success rates
 - **Build regression alerts** — Warning icon when last build is > 1.5x average duration
 - **Proactive ccache suggestion** — Auto-suggests enabling ccache after slow builds
+- **Per-file compilation timing** — See the slowest `.cpp` files in the Build Analytics view (powered by captured build output; most accurate with CMake+Ninja)
 - `Qt: Configure ccache/sccache` — Auto-detect and configure compiler cache
 - `Qt: Show ccache Stats` — View cache hit/miss statistics
 - `Qt: Detect Slow Compilation Targets` — Identify slowest `.cpp` files by complexity

@@ -2,7 +2,7 @@
   "name": "qt-vsc-extension",
   "displayName": "Qt C++ Tools",
   "description": "Build, run and manage Qt C++ projects in VS Code",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "publisher": "akhilp19",
   "author": {
     "name": "Akhil Pawar"
@@ -960,6 +960,11 @@
           "type": "string",
           "default": "",
           "description": "Optional HTTPS endpoint to flush anonymous telemetry events. Leave empty to keep events local only."
+        },
+        "qt.perFileTimingEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Collect and display per-file compilation timing from Qt build output."
         }
       }
     },

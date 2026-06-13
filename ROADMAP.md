@@ -786,7 +786,7 @@
 
 ### Build Analytics (v1.14.0 gaps)
 - [x] **Build time regression alerts** — compare current build time to trailing average; show warning if > 1.5x
-- [ ] **Per-file compilation time breakdown** — parse build output to attribute time to individual `.cpp` files; show slowest files in analytics tree
+- [x] **Per-file compilation time breakdown** — parse build output to attribute time to individual `.cpp` files; show slowest files in analytics tree (shipped in v2.6.0)
 
 ### Code Quality (v1.18.0 gaps)
 - [x] **clazy auto-fix quick actions** — `CodeActionProvider` that offers "Modernize connect()", "Add missing tr()", etc. with one-click apply
@@ -908,7 +908,7 @@
 
 ---
 
-## ✅ Version 2.5.0 (Current — Shipped) — Telemetry Opt-In
+## ✅ Version 2.5.0 (Shipped) — Telemetry Opt-In
 
 **Theme:** Collect anonymous, opt-in usage metrics to guide future development while respecting user privacy.
 
@@ -940,6 +940,42 @@
 
 ---
 
+## ✅ Version 2.6.0 (Current — Shipped) — Per-File Compilation Time Breakdown
+
+**Theme:** Attribute build time to individual `.cpp` files and surface the slowest files in the Build Analytics tree.
+
+### Output-Capture Build Terminal
+- [x] **`src/qtBuildTerminal.ts`** — `QtBuildPseudoterminal` runs Qt build/rebuild tasks, streams output to the user terminal, and writes a structured log
+- [x] **Custom task execution** — `QtTaskProvider` uses `vscode.CustomExecution` for build/rebuild tasks so output can be captured without losing terminal visibility
+- [x] **Verbose output enabled** — `V=1` added to QMake make invocations and `VERBOSE=1` injected into CMake build environments
+
+### Timing Extraction
+- [x] **`src/qtBuildTimingParser.ts`** — parser with two strategies:
+  - **Ninja log** (accurate): parse `<buildDir>/.ninja_log` for CMake+Ninja builds
+  - **Structured log heuristic** (approximate): measure time between compile-start lines in captured verbose output for other generators
+- [x] **`QtBuildTracker`** invokes the parser after each build/rebuild and passes results to analytics
+
+### Storage & UI
+- [x] **`QtBuildAnalytics`** persists per-file timing in `.vscode/qt-per-file-timing.json` and computes per-file aggregates
+- [x] **`QtBuildAnalyticsProvider`** renders a **Slowest Files** tree node per project, listing the top 10 files by average duration with clickable file links
+
+### Setting
+- [x] **`qt.perFileTimingEnabled`** — toggle per-file timing collection (default `true`)
+
+### Files Changed
+- `src/qtBuildTerminal.ts` — new pseudoterminal for build/rebuild tasks
+- `src/qtBuildTimingParser.ts` — ninja-log and structured-log parsers
+- `src/qtTaskProvider.ts` — switch build/rebuild tasks to `CustomExecution`, add `V=1`/`VERBOSE=1`
+- `src/qtBuildTracker.ts` — call parser after builds
+- `src/qtBuildAnalytics.ts` — store and aggregate per-file timing
+- `src/qtBuildAnalyticsProvider.ts` — render Slowest Files node
+- `src/index.ts` — export new modules
+- `package.json` — version bump to `2.6.0`, add `qt.perFileTimingEnabled`
+- `README.md` — document per-file timing
+- `ROADMAP.md` — mark item shipped and add v2.6.0 section
+
+---
+
 ## How to Contribute
 
 1. Pick an open item from the upcoming version.
@@ -947,5 +983,5 @@
 3. Submit a PR referencing the roadmap item.
 
 > **Last updated:** June 07, 2026
-> **Current version:** v2.5.0 — Telemetry Opt-In
+> **Current version:** v2.6.0 — Per-File Compilation Time Breakdown
 > For the latest status, check the [GitHub Issues](https://github.com/akhilp19/Qt-VSC-Extension/issues) page.

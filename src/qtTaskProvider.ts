@@ -5,6 +5,7 @@ import { QtConfigManager } from './qtConfigManager';
 import { QtProjectDetector } from './qtProjectDetector';
 import { QtCMakePresets } from './qtCMakePresets';
 import { QtBuildKitManager } from './qtBuildKit';
+import { QtBuildPseudoterminal } from './qtBuildTerminal';
 import {
     isWindows,
     mkdirCmd,
@@ -207,7 +208,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
         const useCcache = config.get<boolean>('useCcache') ?? false;
         const ccachePath = config.get<string>('ccachePath') || 'ccache';
         
-        let execution: vscode.ShellExecution;
+        let execution: vscode.ShellExecution | vscode.CustomExecution;
         
         const kitExtraArgs = this.getKitExtraArgs(projectFile, projectType);
 
@@ -220,7 +221,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
             const sysrootArg = sysroot ? `-sysroot ${quotePath(sysroot)}` : '';
             const additionalArgs = [config.get<string>('additionalQMakeArguments') || '', kitExtraArgs, crossCompileArg, sysrootArg].filter(Boolean).join(' ');
             const buildTypeArg = buildType === 'release' ? 'CONFIG+=release' : 'CONFIG+=debug';
-            const makeArgs = parallelFlag ? `${makeCmd} ${parallelFlag}` : makeCmd;
+            const makeArgs = parallelFlag ? `${makeCmd} ${parallelFlag} V=1` : `${makeCmd} V=1`;
             
             const commands: string[] = [];
             if (preBuildCommand) {
@@ -247,9 +248,10 @@ export class QtTaskProvider implements vscode.TaskProvider {
                 commands.push(postBuildCommand);
             }
             
-            execution = new vscode.ShellExecution(joinCmds(...commands), {
-                cwd: workspaceFolder.uri.fsPath,
-                env: kitEnv
+            const logPath = path.join(buildDir, '.qt-build-output.log');
+            const buildCommand = joinCmds(...commands);
+            execution = new vscode.CustomExecution(async () => {
+                return new QtBuildPseudoterminal(buildCommand, workspaceFolder.uri.fsPath, kitEnv, logPath, this.outputChannel);
             });
         } else {
             // CMake build
@@ -264,6 +266,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
             const additionalArgs = [config.get<string>('additionalCMakeArguments') || '', kitExtraArgs, toolchainArg, crossCompileArg, sysrootArg].filter(Boolean).join(' ');
             const cmakeBuildArgs = parallelFlag ? `--parallel ${jobs}` : '';
             const presetArg = this.qtCMakePresets.getPresetArgs(projectFile);
+            const verboseEnv = { ...kitEnv, VERBOSE: '1' };
             
             const commands: string[] = [];
             if (preBuildCommand) {
@@ -298,9 +301,10 @@ export class QtTaskProvider implements vscode.TaskProvider {
                 commands.push(postBuildCommand);
             }
             
-            execution = new vscode.ShellExecution(joinCmds(...commands), {
-                cwd: workspaceFolder.uri.fsPath,
-                env: kitEnv
+            const logPath = path.join(buildDir, '.qt-build-output.log');
+            const buildCommand = joinCmds(...commands);
+            execution = new vscode.CustomExecution(async () => {
+                return new QtBuildPseudoterminal(buildCommand, workspaceFolder.uri.fsPath, verboseEnv, logPath, this.outputChannel);
             });
         }
         
@@ -308,7 +312,8 @@ export class QtTaskProvider implements vscode.TaskProvider {
             {
                 type: 'qt',
                 task: 'build',
-                file: projectFile
+                file: projectFile,
+                buildDir: buildDir
             },
             workspaceFolder,
             `Build ${projectName}`,
@@ -340,7 +345,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
         const makeCmd = this.qtConfigManager.getMakeCommand();
         const projectName = path.basename(projectFile, path.extname(projectFile));
         
-        let execution: vscode.ShellExecution;
+        let execution: vscode.ShellExecution | vscode.CustomExecution;
         
         if (projectType === 'qmake') {
             // QMake clean
@@ -401,7 +406,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
         const preBuildCommand = config.get<string>('preBuildCommand') || '';
         const postBuildCommand = config.get<string>('postBuildCommand') || '';
         
-        let execution: vscode.ShellExecution;
+        let execution: vscode.ShellExecution | vscode.CustomExecution;
         
         if (projectType === 'qmake') {
             // QMake rebuild: clean -> qmake -> make
@@ -412,7 +417,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
             const sysrootArg = sysroot ? `-sysroot ${quotePath(sysroot)}` : '';
             const additionalArgs = [config.get<string>('additionalQMakeArguments') || '', crossCompileArg, sysrootArg].filter(Boolean).join(' ');
             const buildTypeArg = buildType === 'release' ? 'CONFIG+=release' : 'CONFIG+=debug';
-            const makeArgs = parallelFlag ? `${makeCmd} ${parallelFlag}` : makeCmd;
+            const makeArgs = parallelFlag ? `${makeCmd} ${parallelFlag} V=1` : `${makeCmd} V=1`;
             const kitEnv = this.getKitEnvVars(projectFile);
             
             const commands: string[] = [];
@@ -430,9 +435,10 @@ export class QtTaskProvider implements vscode.TaskProvider {
                 commands.push(postBuildCommand);
             }
             
-            execution = new vscode.ShellExecution(joinCmds(...commands), {
-                cwd: workspaceFolder.uri.fsPath,
-                env: kitEnv
+            const logPath = path.join(buildDir, '.qt-build-output.log');
+            const buildCommand = joinCmds(...commands);
+            execution = new vscode.CustomExecution(async () => {
+                return new QtBuildPseudoterminal(buildCommand, workspaceFolder.uri.fsPath, kitEnv, logPath, this.outputChannel);
             });
         } else {
             // CMake rebuild
@@ -448,6 +454,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
             const cmakeBuildArgs = parallelFlag ? `--parallel ${jobs}` : '';
             const preset = this.qtCMakePresets.getPresetForProject(projectFile);
             const kitEnv = this.getKitEnvVars(projectFile);
+            const verboseEnv = { ...kitEnv, VERBOSE: '1' };
             
             const commands: string[] = [];
             if (preBuildCommand) {
@@ -470,9 +477,10 @@ export class QtTaskProvider implements vscode.TaskProvider {
                 commands.push(postBuildCommand);
             }
             
-            execution = new vscode.ShellExecution(joinCmds(...commands), {
-                cwd: workspaceFolder.uri.fsPath,
-                env: kitEnv
+            const logPath = path.join(buildDir, '.qt-build-output.log');
+            const buildCommand = joinCmds(...commands);
+            execution = new vscode.CustomExecution(async () => {
+                return new QtBuildPseudoterminal(buildCommand, workspaceFolder.uri.fsPath, verboseEnv, logPath, this.outputChannel);
             });
         }
         
@@ -480,7 +488,8 @@ export class QtTaskProvider implements vscode.TaskProvider {
             {
                 type: 'qt',
                 task: 'rebuild',
-                file: projectFile
+                file: projectFile,
+                buildDir: buildDir
             },
             workspaceFolder,
             `Rebuild ${projectName}`,
@@ -517,7 +526,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
         // Try to find the executable
         const exePath = await this.qtProjectDetector.findExecutable(projectFile, buildDir);
         
-        let execution: vscode.ShellExecution;
+        let execution: vscode.ShellExecution | vscode.CustomExecution;
         
         if (projectType === 'python') {
             // Python project: run with python interpreter

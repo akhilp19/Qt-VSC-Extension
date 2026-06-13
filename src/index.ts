@@ -49,3 +49,5 @@ export * from './qtRemoteDeployment';
 export * from './qtCppLanguageClient';
 export * from './qtCppLanguageServer';
 export * from './qtTelemetry';
+export * from './qtBuildTerminal';
+export * from './qtBuildTimingParser';

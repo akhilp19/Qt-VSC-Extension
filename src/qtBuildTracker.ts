@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { QtBuildAnalytics, PersistedBuildRecord } from './qtBuildAnalytics';
+import { QtTelemetry } from './qtTelemetry';
 
 export interface BuildRecord {
     projectFile: string;
@@ -13,13 +14,15 @@ export class QtBuildTracker {
     private outputChannel: vscode.OutputChannel;
     private records: BuildRecord[] = [];
     private buildAnalytics?: QtBuildAnalytics;
+    private telemetry?: QtTelemetry;
     private activeBuilds = new Map<string, BuildRecord>();
     private _onDidUpdate = new vscode.EventEmitter<void>();
     readonly onDidUpdate = this._onDidUpdate.event;
 
-    constructor(outputChannel: vscode.OutputChannel, buildAnalytics?: QtBuildAnalytics) {
+    constructor(outputChannel: vscode.OutputChannel, buildAnalytics?: QtBuildAnalytics, telemetry?: QtTelemetry) {
         this.outputChannel = outputChannel;
         this.buildAnalytics = buildAnalytics;
+        this.telemetry = telemetry;
         this.setupTaskListeners();
     }
 
@@ -71,6 +74,15 @@ export class QtBuildTracker {
                         success: record.success
                     };
                     this.buildAnalytics.addRecord(persisted);
+                }
+
+                // Telemetry
+                if (this.telemetry && record.endTime && record.startTime) {
+                    this.telemetry.trackBuild(
+                        record.taskType,
+                        record.endTime - record.startTime,
+                        record.success ?? false
+                    );
                 }
 
                 this._onDidUpdate.fire();

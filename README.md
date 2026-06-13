@@ -194,6 +194,15 @@ Configure the extension via VS Code settings (`File > Preferences > Settings` or
 }
 ```
 
+### 📊 Telemetry
+
+Qt C++ Tools includes an **opt-in, disabled-by-default** telemetry feature to help guide future development.
+
+- **No PII is collected.** Events include only anonymous metadata such as command IDs, build durations/outcomes, feature-flag snapshots, activation counts, platform, extension version, and timestamp.
+- **You control it.** Use `Qt: Configure Telemetry` to enable or disable telemetry at any time, or set `qt.telemetryEnabled` in settings.
+- **Local by default.** Events are stored locally in the extension's global storage. Use `Qt: Export Telemetry Data` to inspect the queued events.
+- **Optional remote flush.** If you configure `qt.telemetryEndpoint`, enabled events are flushed periodically to that HTTPS endpoint.
+
 ## Requirements
 
 ### Software Requirements

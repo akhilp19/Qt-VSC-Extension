@@ -808,7 +808,7 @@
 ### General Polish
 - [x] **Extension health check** — `Qt: Run Health Check` command validates Qt, compiler, debugger, and kit configs; produces a diagnostic report
 - [x] **Settings migration** — auto-migrate old setting names/structures on extension update
-- [ ] **Telemetry opt-in** — anonymous usage metrics (command invocations, build times) to guide future development
+- [x] **Telemetry opt-in** — anonymous usage metrics (command invocations, build times) to guide future development (shipped in v2.5.0)
 
 ---
 
@@ -882,7 +882,7 @@
 
 ---
 
-## ✅ Version 2.4.0 (Current — Shipped) — QML-C++ Cross-Reference
+## ✅ Version 2.4.0 (Shipped) — QML-C++ Cross-Reference
 
 **Theme:** Close the QML-C++ cross-reference gaps deferred from v2.2.0.
 
@@ -908,6 +908,38 @@
 
 ---
 
+## ✅ Version 2.5.0 (Current — Shipped) — Telemetry Opt-In
+
+**Theme:** Collect anonymous, opt-in usage metrics to guide future development while respecting user privacy.
+
+### Telemetry Service
+- [x] **`src/qtTelemetry.ts`** — `QtTelemetry` service: event collection, local persistence, export, and optional remote flush
+- [x] **Opt-in by default** — `qt.telemetryEnabled` is `false`; nothing is recorded until the user enables it
+- [x] **One-time prompt** — activation asks once per extension version whether to enable telemetry (Enable / Disable / Later)
+- [x] **No PII** — collects only event type, command/task type, platform, extension version, timestamps, durations, and feature-flag snapshots
+- [x] **Local storage** — events queued in `qt-telemetry.json` under the extension's global storage, capped at 1,000 events
+- [x] **Optional endpoint flush** — if `qt.telemetryEndpoint` is set, queued events are POSTed periodically or when threshold reached
+
+### Hook Points
+- [x] **Command telemetry** — global `vscode.commands.onDidExecuteCommand` listener records all `qt.*` command invocations
+- [x] **Build telemetry** — `QtBuildTracker` emits build duration/success events after each Qt task
+- [x] **Activation telemetry** — records extension activation and a snapshot of key feature settings
+
+### Commands
+- [x] **`Qt: Configure Telemetry`** (`qt.configureTelemetry`) — opens the `qt.telemetryEnabled` setting
+- [x] **`Qt: Export Telemetry Data`** (`qt.exportTelemetry`) — saves the queued event queue as JSON
+
+### Files Changed
+- `src/qtTelemetry.ts` — new telemetry service
+- `src/extension.ts` — instantiate telemetry, register commands, wire command listener, show opt-in prompt, feature snapshot
+- `src/qtBuildTracker.ts` — emit build events
+- `src/index.ts` — export telemetry module
+- `package.json` — version bump to `2.5.0`, new settings and commands
+- `README.md` — telemetry documentation
+- `ROADMAP.md` — mark telemetry shipped and add v2.5.0 section
+
+---
+
 ## How to Contribute
 
 1. Pick an open item from the upcoming version.
@@ -915,5 +947,5 @@
 3. Submit a PR referencing the roadmap item.
 
 > **Last updated:** June 07, 2026
-> **Current version:** v2.4.0 — QML-C++ Cross-Reference
+> **Current version:** v2.5.0 — Telemetry Opt-In
 > For the latest status, check the [GitHub Issues](https://github.com/akhilp19/Qt-VSC-Extension/issues) page.

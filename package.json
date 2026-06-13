@@ -2,7 +2,7 @@
   "name": "qt-vsc-extension",
   "displayName": "Qt C++ Tools",
   "description": "Build, run and manage Qt C++ projects in VS Code",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "publisher": "akhilp19",
   "author": {
     "name": "Akhil Pawar"
@@ -279,6 +279,16 @@
         "command": "qt.showCcacheStats",
         "title": "Qt: Show ccache Stats",
         "icon": "$(output)"
+      },
+      {
+        "command": "qt.configureTelemetry",
+        "title": "Qt: Configure Telemetry",
+        "icon": "$(radio-tower)"
+      },
+      {
+        "command": "qt.exportTelemetry",
+        "title": "Qt: Export Telemetry Data",
+        "icon": "$(export)"
       },
       {
         "command": "qt.launchQmlProfiler",
@@ -940,6 +950,16 @@
           "type": "boolean",
           "default": true,
           "description": "Enable Qt-specific diagnostics from the Qt C++ Language Server (missing Q_OBJECT, old-style connect, etc.)."
+        },
+        "qt.telemetryEnabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Opt in to send anonymous usage and error telemetry to help improve Qt C++ Tools."
+        },
+        "qt.telemetryEndpoint": {
+          "type": "string",
+          "default": "",
+          "description": "Optional HTTPS endpoint to flush anonymous telemetry events. Leave empty to keep events local only."
         }
       }
     },
@@ -1175,6 +1195,14 @@
         },
         {
           "command": "qt.showCcacheStats",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.configureTelemetry",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "qt.exportTelemetry",
           "when": "workspaceFolderCount > 0"
         },
         {

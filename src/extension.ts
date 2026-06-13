@@ -55,6 +55,7 @@ import { QtHealthCheck } from './qtHealthCheck';
 import { QtSettingsMigration } from './qtSettingsMigration';
 import { QtRemoteDeployment } from './qtRemoteDeployment';
 import { QtCppLanguageClient } from './qtCppLanguageClient';
+import { QtTelemetry } from './qtTelemetry';
 
 let taskProvider: vscode.Disposable | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -73,6 +74,18 @@ export function activate(context: vscode.ExtensionContext): void {
     // Create output channel
     outputChannel = vscode.window.createOutputChannel('Qt C++ Tools');
     context.subscriptions.push(outputChannel);
+
+    // Initialize telemetry (opt-in, disabled by default)
+    const telemetry = new QtTelemetry(context, outputChannel);
+    context.subscriptions.push(telemetry);
+    
+    // Helper to register Qt commands and record telemetry
+    function registerQtCommand(command: string, callback: (...args: any[]) => any): vscode.Disposable {
+        return vscode.commands.registerCommand(command, async (...args) => {
+            telemetry.trackCommand(command);
+            return await callback(...args);
+        });
+    }
     
     // Initialize managers
     qtConfigManager = new QtConfigManager(outputChannel);
@@ -80,7 +93,7 @@ export function activate(context: vscode.ExtensionContext): void {
     
     // Create build analytics and tracker
     const buildAnalytics = new QtBuildAnalytics(outputChannel);
-    const buildTracker = new QtBuildTracker(outputChannel, buildAnalytics);
+    const buildTracker = new QtBuildTracker(outputChannel, buildAnalytics, telemetry);
     context.subscriptions.push(buildTracker);
     
     // Create tree provider
@@ -186,20 +199,32 @@ export function activate(context: vscode.ExtensionContext): void {
     
     // Register commands
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.showBuildAnalytics', async () => {
+        registerQtCommand('qt.showBuildAnalytics', async () => {
             await vscode.commands.executeCommand('qt-build-analytics.focus');
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.configureCcache', async () => {
+        registerQtCommand('qt.configureCcache', async () => {
             await buildAnalytics.configureCcache();
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.showCcacheStats', async () => {
+        registerQtCommand('qt.showCcacheStats', async () => {
             await buildAnalytics.showCcacheStats();
+        })
+    );
+
+    context.subscriptions.push(
+        registerQtCommand('qt.configureTelemetry', async () => {
+            await telemetry.configureTelemetry();
+        })
+    );
+
+    context.subscriptions.push(
+        registerQtCommand('qt.exportTelemetry', async (uri?: vscode.Uri) => {
+            await telemetry.exportTelemetry(uri);
         })
     );
     
@@ -207,32 +232,32 @@ export function activate(context: vscode.ExtensionContext): void {
     const qtProfiling = new QtProfiling(qtConfigManager, qtProjectDetector, outputChannel);
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.launchQmlProfiler', async () => {
+        registerQtCommand('qt.launchQmlProfiler', async () => {
             await qtProfiling.launchQmlProfiler();
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.launchCpuProfiler', async () => {
+        registerQtCommand('qt.launchCpuProfiler', async () => {
             await qtProfiling.launchCpuProfiler();
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.launchMemoryProfiler', async () => {
+        registerQtCommand('qt.launchMemoryProfiler', async () => {
             await qtProfiling.launchMemoryProfiler();
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.detectSlowTargets', async () => {
+        registerQtCommand('qt.detectSlowTargets', async () => {
             await qtProfiling.detectSlowTargets();
         })
     );
     
     // CMake Preset commands
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.selectCMakePreset', async (uri?: vscode.Uri) => {
+        registerQtCommand('qt.selectCMakePreset', async (uri?: vscode.Uri) => {
             const projectFile = uri?.fsPath;
             if (!projectFile) {
                 void vscode.window.showErrorMessage('No CMake project selected');
@@ -243,7 +268,7 @@ export function activate(context: vscode.ExtensionContext): void {
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.clearCMakePreset', async (uri?: vscode.Uri) => {
+        registerQtCommand('qt.clearCMakePreset', async (uri?: vscode.Uri) => {
             const projectFile = uri?.fsPath;
             if (!projectFile) {
                 void vscode.window.showErrorMessage('No CMake project selected');
@@ -267,13 +292,13 @@ export function activate(context: vscode.ExtensionContext): void {
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.runClazy', async () => {
+        registerQtCommand('qt.runClazy', async () => {
             await qtClazy.runOnWorkspace();
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.runClazyOnFile', async (uri?: vscode.Uri) => {
+        registerQtCommand('qt.runClazyOnFile', async (uri?: vscode.Uri) => {
             const filePath = uri?.fsPath || vscode.window.activeTextEditor?.document.uri.fsPath;
             if (!filePath) {
                 void vscode.window.showErrorMessage('No C++ file selected');
@@ -288,7 +313,7 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(qtDocViewer);
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.openQtDocumentation', async () => {
+        registerQtCommand('qt.openQtDocumentation', async () => {
             await qtDocViewer.openDocViewer();
         })
     );
@@ -323,93 +348,93 @@ export function activate(context: vscode.ExtensionContext): void {
     }, 6000);
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.buildAndroidApk', async () => {
+        registerQtCommand('qt.buildAndroidApk', async () => {
             await qtAndroid.buildApk();
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.configureAndroidSdk', async () => {
+        registerQtCommand('qt.configureAndroidSdk', async () => {
             await qtAndroid.configureAndroidSdk();
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.installAndroidApk', async () => {
+        registerQtCommand('qt.installAndroidApk', async () => {
             await qtAndroid.installApk();
         })
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.buildAndroidAab', async () => {
+        registerQtCommand('qt.buildAndroidAab', async () => {
             await qtAndroid.buildAab();
         })
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.validateAndroidManifest', async () => {
+        registerQtCommand('qt.validateAndroidManifest', async () => {
             await qtAndroid.validateManifest();
         })
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.buildAndroidApks', async () => {
+        registerQtCommand('qt.buildAndroidApks', async () => {
             await qtAndroid.buildApksFromAab();
         })
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.installAndroidApks', async () => {
+        registerQtCommand('qt.installAndroidApks', async () => {
             await qtAndroid.installApks();
         })
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.startAndroidLogcat', async () => {
+        registerQtCommand('qt.startAndroidLogcat', async () => {
             await qtAndroid.startLogcat();
         })
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.stopAndroidLogcat', async () => {
+        registerQtCommand('qt.stopAndroidLogcat', async () => {
             await qtAndroid.stopLogcat();
         })
     );
 
     // iOS commands
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.buildIOSApp', async () => {
+        registerQtCommand('qt.buildIOSApp', async () => {
             await qtIOS.buildIOSApp();
         })
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.selectIOSSimulator', async () => {
+        registerQtCommand('qt.selectIOSSimulator', async () => {
             await qtIOS.selectSimulator();
         })
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.runIOSOnSimulator', async () => {
+        registerQtCommand('qt.runIOSOnSimulator', async () => {
             await qtIOS.runOnSimulator();
         })
     );
 
     // WebAssembly commands
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.buildWebAssembly', async () => {
+        registerQtCommand('qt.buildWebAssembly', async () => {
             await qtWasm.buildWebAssembly();
         })
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.configureEmscripten', async () => {
+        registerQtCommand('qt.configureEmscripten', async () => {
             await qtWasm.configureEmscripten();
         })
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.serveWebAssembly', async () => {
+        registerQtCommand('qt.serveWebAssembly', async () => {
             await qtWasm.serveWebAssembly();
         })
     );
@@ -419,130 +444,130 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(qtHealthCheck);
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.runHealthCheck', async () => {
+        registerQtCommand('qt.runHealthCheck', async () => {
             await qtHealthCheck.run();
         })
     );
 
     // iOS Archive & Export
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.archiveIOSApp', async () => {
+        registerQtCommand('qt.archiveIOSApp', async () => {
             await qtIOS.archiveIOSApp();
         })
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.exportIOSIpa', async () => {
+        registerQtCommand('qt.exportIOSIpa', async () => {
             await qtIOS.exportIOSIpa();
         })
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.uploadIOSTestFlight', async () => {
+        registerQtCommand('qt.uploadIOSTestFlight', async () => {
             await qtIOS.uploadToTestFlight();
         })
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.takeSimulatorScreenshot', async () => {
+        registerQtCommand('qt.takeSimulatorScreenshot', async () => {
             await qtIOS.takeSimulatorScreenshot();
         })
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.recordSimulatorVideo', async () => {
+        registerQtCommand('qt.recordSimulatorVideo', async () => {
             await qtIOS.recordSimulatorVideo();
         })
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.stopSimulatorRecording', async () => {
+        registerQtCommand('qt.stopSimulatorRecording', async () => {
             await qtIOS.stopSimulatorRecording();
         })
     );
     
     // Build Kit commands
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.selectBuildKit', async (uri?: vscode.Uri) => {
+        registerQtCommand('qt.selectBuildKit', async (uri?: vscode.Uri) => {
             await qtBuildKitManager.selectKit(uri?.fsPath);
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.configureBuildKit', async () => {
+        registerQtCommand('qt.configureBuildKit', async () => {
             await qtBuildKitManager.configureKit();
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.detectBuildKits', async () => {
+        registerQtCommand('qt.detectBuildKits', async () => {
             await qtBuildKitManager.saveDetectedKits();
         })
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.configureKitToolchain', async () => {
+        registerQtCommand('qt.configureKitToolchain', async () => {
             await qtBuildKitManager.configureKitToolchain();
         })
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.exportBuildKits', async () => {
+        registerQtCommand('qt.exportBuildKits', async () => {
             await qtBuildKitManager.exportKits();
         })
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.importBuildKits', async () => {
+        registerQtCommand('qt.importBuildKits', async () => {
             await qtBuildKitManager.importKits();
         })
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.validateBuildKit', async () => {
+        registerQtCommand('qt.validateBuildKit', async () => {
             await qtBuildKitManager.validateActiveKit();
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.buildProject', async (uri?: vscode.Uri) => {
+        registerQtCommand('qt.buildProject', async (uri?: vscode.Uri) => {
             await executeQtTask('build', uri?.fsPath);
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.quickBuild', async (uri?: vscode.Uri) => {
+        registerQtCommand('qt.quickBuild', async (uri?: vscode.Uri) => {
             await executeQtTask('build', uri?.fsPath, true);
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.installQt', async () => {
+        registerQtCommand('qt.installQt', async () => {
             await showInstallQtInstructions();
         })
     );
     
     // QML commands
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.formatQml', async () => {
+        registerQtCommand('qt.formatQml', async () => {
             await qmlSupport.formatQml();
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.lintQml', async () => {
+        registerQtCommand('qt.lintQml', async () => {
             await qmlSupport.lintQml();
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.previewQml', async () => {
+        registerQtCommand('qt.previewQml', async () => {
             await qmlSupport.previewQml();
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.stopQmlPreview', async () => {
+        registerQtCommand('qt.stopQmlPreview', async () => {
             qmlSupport.stopPreview();
             void vscode.window.showInformationMessage('QML preview stopped');
         })
@@ -633,7 +658,7 @@ export function activate(context: vscode.ExtensionContext): void {
     
     // Manual rebuild command
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.rebuildQmlCppIndex', async () => {
+        registerQtCommand('qt.rebuildQmlCppIndex', async () => {
             void vscode.window.showInformationMessage('Rebuilding QML-C++ index...');
             await qmlCppBridge.indexWorkspace();
             void vscode.window.showInformationMessage('QML-C++ index rebuilt');
@@ -644,19 +669,19 @@ export function activate(context: vscode.ExtensionContext): void {
     const qtDebugger = new QtDebuggerIntegration(qtConfigManager, qtProjectDetector, outputChannel);
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.generateLaunchJson', async (uri?: vscode.Uri) => {
+        registerQtCommand('qt.generateLaunchJson', async (uri?: vscode.Uri) => {
             await qtDebugger.generateLaunchConfig(uri?.fsPath);
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.setupPrettyPrinters', async () => {
+        registerQtCommand('qt.setupPrettyPrinters', async () => {
             await qtDebugger.setupPrettyPrinters();
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.addSignalSlotBreakpoint', async () => {
+        registerQtCommand('qt.addSignalSlotBreakpoint', async () => {
             await qtDebugger.addSignalSlotBreakpoint();
         })
     );
@@ -702,25 +727,25 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(analyticsTree);
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.lupdate', async () => {
+        registerQtCommand('qt.lupdate', async () => {
             await translationProvider.runLupdate();
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.lrelease', async () => {
+        registerQtCommand('qt.lrelease', async () => {
             await translationProvider.runLrelease();
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.openInLinguist', async (uri?: vscode.Uri) => {
+        registerQtCommand('qt.openInLinguist', async (uri?: vscode.Uri) => {
             await translationProvider.openInLinguist(uri?.fsPath);
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.refreshTranslations', async () => {
+        registerQtCommand('qt.refreshTranslations', async () => {
             translationProvider.refresh();
         })
     );
@@ -738,19 +763,19 @@ export function activate(context: vscode.ExtensionContext): void {
     const qtPythonSupport = new QtPythonSupport(outputChannel);
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.compileUiToPython', async (uri?: vscode.Uri) => {
+        registerQtCommand('qt.compileUiToPython', async (uri?: vscode.Uri) => {
             await qtPythonSupport.compileUiToPython(uri?.fsPath);
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.compileRccToPython', async (uri?: vscode.Uri) => {
+        registerQtCommand('qt.compileRccToPython', async (uri?: vscode.Uri) => {
             await qtPythonSupport.compileRccToPython(uri?.fsPath);
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.openPythonDesigner', async () => {
+        registerQtCommand('qt.openPythonDesigner', async () => {
             await qtPythonSupport.openDesignerForPython();
         })
     );
@@ -760,19 +785,19 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(qtCodeGenerator);
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.generateMoc', async (uri?: vscode.Uri) => {
+        registerQtCommand('qt.generateMoc', async (uri?: vscode.Uri) => {
             await qtCodeGenerator.runMoc(uri?.fsPath);
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.generateUic', async (uri?: vscode.Uri) => {
+        registerQtCommand('qt.generateUic', async (uri?: vscode.Uri) => {
             await qtCodeGenerator.runUic(uri?.fsPath);
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.generateRcc', async (uri?: vscode.Uri) => {
+        registerQtCommand('qt.generateRcc', async (uri?: vscode.Uri) => {
             await qtCodeGenerator.runRcc(uri?.fsPath);
         })
     );
@@ -782,13 +807,13 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(qtNav);
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.goToGeneratedCode', async (uri?: vscode.Uri) => {
+        registerQtCommand('qt.goToGeneratedCode', async (uri?: vscode.Uri) => {
             await qtNav.goToGeneratedCode(uri?.fsPath);
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.peekGeneratedCode', async (uri?: vscode.Uri) => {
+        registerQtCommand('qt.peekGeneratedCode', async (uri?: vscode.Uri) => {
             await qtNav.peekGeneratedCode(uri?.fsPath);
         })
     );
@@ -804,7 +829,7 @@ export function activate(context: vscode.ExtensionContext): void {
     const qtPch = new QtPchSupport(outputChannel);
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.generatePch', async () => {
+        registerQtCommand('qt.generatePch', async () => {
             await qtPch.generatePch();
         })
     );
@@ -813,7 +838,7 @@ export function activate(context: vscode.ExtensionContext): void {
     const qtCustomBuild = new QtCustomBuildSystem(outputChannel);
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.generateCustomMakefile', async (uri?: vscode.Uri) => {
+        registerQtCommand('qt.generateCustomMakefile', async (uri?: vscode.Uri) => {
             await qtCustomBuild.generateMakefile(uri?.fsPath);
         })
     );
@@ -822,7 +847,7 @@ export function activate(context: vscode.ExtensionContext): void {
     const qtPchIntegration = new QtPchBuildIntegration(outputChannel);
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.integratePch', async () => {
+        registerQtCommand('qt.integratePch', async () => {
             await qtPchIntegration.integratePch();
         })
     );
@@ -831,7 +856,7 @@ export function activate(context: vscode.ExtensionContext): void {
     const qtBuildScriptInjector = new QtBuildScriptInjector(outputChannel);
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.injectBuildScripts', async (uri?: vscode.Uri) => {
+        registerQtCommand('qt.injectBuildScripts', async (uri?: vscode.Uri) => {
             await qtBuildScriptInjector.injectBuildScripts(uri?.fsPath);
         })
     );
@@ -840,7 +865,7 @@ export function activate(context: vscode.ExtensionContext): void {
     const qtPchCompilerConfig = new QtPchCompilerConfig(outputChannel);
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.configurePchCompiler', async () => {
+        registerQtCommand('qt.configurePchCompiler', async () => {
             await qtPchCompilerConfig.configurePchCompiler();
         })
     );
@@ -849,7 +874,7 @@ export function activate(context: vscode.ExtensionContext): void {
     const qtCiCd = new QtCiCdIntegration(outputChannel);
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.setupCiCd', async () => {
+        registerQtCommand('qt.setupCiCd', async () => {
             await qtCiCd.setupCiCd();
         })
     );
@@ -858,120 +883,120 @@ export function activate(context: vscode.ExtensionContext): void {
     const qtInstaller = new QtInstallerFramework(outputChannel);
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.generateInstallerConfig', async () => {
+        registerQtCommand('qt.generateInstallerConfig', async () => {
             await qtInstaller.generateInstallerConfig();
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.buildInstaller', async () => {
+        registerQtCommand('qt.buildInstaller', async () => {
             await qtInstaller.buildInstaller();
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.cleanProject', async (uri?: vscode.Uri) => {
+        registerQtCommand('qt.cleanProject', async (uri?: vscode.Uri) => {
             await executeQtTask('clean', uri?.fsPath);
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.rebuildProject', async (uri?: vscode.Uri) => {
+        registerQtCommand('qt.rebuildProject', async (uri?: vscode.Uri) => {
             await executeQtTask('rebuild', uri?.fsPath);
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.runProject', async (uri?: vscode.Uri) => {
+        registerQtCommand('qt.runProject', async (uri?: vscode.Uri) => {
             await executeQtTask('run', uri?.fsPath);
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.configureQt', async () => {
+        registerQtCommand('qt.configureQt', async () => {
             await configureQtPath();
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.selectQtVersion', async () => {
+        registerQtCommand('qt.selectQtVersion', async () => {
             await selectQtVersion();
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.createQMakeProject', async () => {
+        registerQtCommand('qt.createQMakeProject', async () => {
             await createQMakeProject();
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.createCMakeProject', async () => {
+        registerQtCommand('qt.createCMakeProject', async () => {
             await createCMakeProject();
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.refreshProjects', async () => {
+        registerQtCommand('qt.refreshProjects', async () => {
             await treeProvider.refresh();
         })
     );
     
     // Qt Designer commands
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.openInDesigner', async (uri?: vscode.Uri) => {
+        registerQtCommand('qt.openInDesigner', async (uri?: vscode.Uri) => {
             await qtDesigner.openInDesigner(uri?.fsPath);
         })
     );
     
     // QRC commands
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.validateQrc', async (uri?: vscode.Uri) => {
+        registerQtCommand('qt.validateQrc', async (uri?: vscode.Uri) => {
             await qrcSupport.validateQrc(uri?.fsPath);
         })
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.runRcc', async (uri?: vscode.Uri) => {
+        registerQtCommand('qt.runRcc', async (uri?: vscode.Uri) => {
             await qrcSupport.runRcc(uri?.fsPath);
         })
     );
     
     // Deployment commands
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.deploy', async () => {
+        registerQtCommand('qt.deploy', async () => {
             await qtDeployment.deployApplication();
         })
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.deployRemote', async () => {
+        registerQtCommand('qt.deployRemote', async () => {
             await qtRemote.deployRemotely();
         })
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.configureRemoteTarget', async () => {
+        registerQtCommand('qt.configureRemoteTarget', async () => {
             await qtRemote.configureRemoteTarget();
         })
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.generateRemoteDebugConfig', async () => {
+        registerQtCommand('qt.generateRemoteDebugConfig', async () => {
             await qtRemote.generateRemoteDebugConfig();
         })
     );
     
     // IntelliSense commands
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.configureIntelliSense', async () => {
+        registerQtCommand('qt.configureIntelliSense', async () => {
             await intelliSenseHelper.configureIntelliSense();
         })
     );
     
     // Build configuration selector
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.selectBuildConfig', async (projectFile?: string) => {
+        registerQtCommand('qt.selectBuildConfig', async (projectFile?: string) => {
             await selectBuildConfig(projectFile);
         })
     );
@@ -979,7 +1004,7 @@ export function activate(context: vscode.ExtensionContext): void {
     // Qt Creator import
     const qtCreatorImporter = new QtCreatorImporter(outputChannel);
     context.subscriptions.push(
-        vscode.commands.registerCommand('qt.importQtCreator', async () => {
+        registerQtCommand('qt.importQtCreator', async () => {
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
             if (!workspaceFolder) {
                 void vscode.window.showErrorMessage('No workspace folder open');
@@ -1005,6 +1030,21 @@ export function activate(context: vscode.ExtensionContext): void {
     
     // Auto-detect Qt on activation
     void qtConfigManager.detectQtInstallation();
+
+    // Telemetry activation event and opt-in prompt
+    telemetry.trackActivation();
+    void telemetry.showOptInPrompt();
+
+    // Snapshot a few feature flags for telemetry after activation settles
+    setTimeout(() => {
+        const config = vscode.workspace.getConfiguration('qt');
+        telemetry.trackFeature('cppLspEnable', config.get<boolean>('cppLspEnable') ?? false);
+        telemetry.trackFeature('qmlCppBridgeEnabled', config.get<boolean>('qmlCppBridgeEnabled') ?? false);
+        telemetry.trackFeature('useCcache', config.get<boolean>('useCcache') ?? false);
+        telemetry.trackFeature('clazyEnable', config.get<boolean>('clazyEnable') ?? false);
+        telemetry.trackFeature('testAutoDiscover', config.get<boolean>('testAutoDiscover') ?? false);
+    }, 5000);
+
     
     outputChannel.appendLine('Qt C++ Tools extension initialized successfully');
 }

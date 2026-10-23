@@ -13,36 +13,43 @@ export interface QtProject {
 
 export class QtProjectDetector {
     private outputChannel: vscode.OutputChannel;
-    private fileWatcher?: vscode.FileSystemWatcher;
-    
+    private fileWatchers: vscode.FileSystemWatcher[] = [];
+
     constructor(outputChannel: vscode.OutputChannel) {
         this.outputChannel = outputChannel;
         this.setupFileWatcher();
     }
-    
+
     /**
-     * Set up file watcher for project files
+     * Set up file watchers for project files (.pro and CMakeLists.txt).
+     * Uses separate watchers because VS Code's glob doesn't support mixed
+     * brace expansions like `{pro,txt}` reliably and it would match all .txt files.
      */
     private setupFileWatcher(): void {
-        // Watch for .pro and CMakeLists.txt files
-        this.fileWatcher = vscode.workspace.createFileSystemWatcher(
-            '**/*.{pro,txt}',
-            false, // ignoreCreateEvents
-            false, // ignoreChangeEvents
-            false  // ignoreDeleteEvents
-        );
-        
-        this.fileWatcher.onDidCreate(() => {
-            this.outputChannel.appendLine('Qt project file created, refreshing tasks...');
-        });
-        
-        this.fileWatcher.onDidChange(() => {
-            this.outputChannel.appendLine('Qt project file changed, refreshing tasks...');
-        });
-        
-        this.fileWatcher.onDidDelete(() => {
-            this.outputChannel.appendLine('Qt project file deleted, refreshing tasks...');
-        });
+        const patterns = ['**/*.pro', '**/CMakeLists.txt'];
+
+        for (const pattern of patterns) {
+            const watcher = vscode.workspace.createFileSystemWatcher(
+                pattern,
+                false, // ignoreCreateEvents
+                false, // ignoreChangeEvents
+                false  // ignoreDeleteEvents
+            );
+
+            watcher.onDidCreate(() => {
+                this.outputChannel.appendLine('Qt project file created, refreshing tasks...');
+            });
+
+            watcher.onDidChange(() => {
+                this.outputChannel.appendLine('Qt project file changed, refreshing tasks...');
+            });
+
+            watcher.onDidDelete(() => {
+                this.outputChannel.appendLine('Qt project file deleted, refreshing tasks...');
+            });
+
+            this.fileWatchers.push(watcher);
+        }
     }
     
     /**
@@ -315,8 +322,9 @@ export class QtProjectDetector {
      * Dispose resources
      */
     dispose(): void {
-        if (this.fileWatcher) {
-            this.fileWatcher.dispose();
+        for (const watcher of this.fileWatchers) {
+            watcher.dispose();
         }
+        this.fileWatchers = [];
     }
 }

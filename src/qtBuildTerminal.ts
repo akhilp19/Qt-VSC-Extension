@@ -4,6 +4,8 @@ import * as fs from 'fs';
 import { spawn, ChildProcess } from 'child_process';
 import { isWindows } from './platformUtils';
 
+export const buildExitCodes = new Map<string, number>();
+
 export interface BuildTimingResult {
     success: boolean;
     logPath: string;
@@ -31,7 +33,8 @@ export class QtBuildPseudoterminal implements vscode.Pseudoterminal {
         private cwd: string,
         private env: NodeJS.ProcessEnv,
         private logPath: string,
-        private outputChannel: vscode.OutputChannel
+        private outputChannel: vscode.OutputChannel,
+        private buildId?: string
     ) {}
 
     open(_initialDimensions: vscode.TerminalDimensions | undefined): void {
@@ -65,20 +68,40 @@ export class QtBuildPseudoterminal implements vscode.Pseudoterminal {
             this.emitData(data.toString());
         });
 
-        this.child.on('error', (error) => {
-            this.emitData(`\r\nProcess error: ${error.message}\r\n`);
-            this.closeEmitter.fire(1);
+        this.logStream?.on('error', error => {
+            this.outputChannel.appendLine(`[BuildTerminal] Log error: ${error.message}`);
+            this.logStream = undefined;
         });
 
-        this.child.on('exit', (code, signal) => {
-            this.flushBuffer();
+        this.child.on('error', (error) => {
+            this.emitData(`\r\nProcess error: ${error.message}\r\n`);
             this.logStream?.end();
+            this.finish(1);
+        });
+
+        this.child.on('close', (code, signal) => {
+            this.flushBuffer();
             this.outputChannel.appendLine(`[BuildTerminal] Exited with code ${code ?? signal}`);
-            this.closeEmitter.fire(code ?? 0);
+            // Analytics reads the log on task completion, so finish after writes flush.
+            if (this.logStream) {
+                this.logStream.end(() => this.finish(code ?? 1));
+            } else {
+                this.finish(code ?? 1);
+            }
         });
     }
 
+    private finished = false;
+
+    private finish(code: number): void {
+        if (this.finished) { return; }
+        this.finished = true;
+        if (this.buildId) { buildExitCodes.set(this.buildId, code); }
+        this.closeEmitter.fire(code);
+    }
+
     close(): void {
+        if (!this.finished) { this.finish(1); }
         if (this.child && !this.child.killed) {
             this.child.kill('SIGTERM');
         }
@@ -94,6 +117,7 @@ export class QtBuildPseudoterminal implements vscode.Pseudoterminal {
     }
 
     private emitData(chunk: string): void {
+        if (this.finished) { return; }
         this.writeEmitter.fire(chunk);
         this.buffer += chunk;
         // Normalize line endings and flush complete lines to the structured log.

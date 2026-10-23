@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { execSync, spawn } from 'child_process';
+import { execFileSync, spawn } from 'child_process';
 import { isWindows, exe } from './platformUtils';
 
 export type PythonQtBinding = 'PySide6' | 'PyQt6' | 'PySide2' | 'PyQt5' | 'unknown';
@@ -96,7 +96,7 @@ export class QtPythonSupport {
 
         try {
             this.outputChannel.appendLine(`Compiling UI: ${toolPath} ${targetPath} -o ${outputPath}`);
-            execSync(`"${toolPath}" "${targetPath}" -o "${outputPath}"`, { encoding: 'utf-8' });
+            execFileSync(toolPath, [targetPath, '-o', outputPath], { encoding: 'utf-8' });
 
             void vscode.window.showInformationMessage(
                 `Compiled to ${path.basename(outputPath)}`,
@@ -140,7 +140,7 @@ export class QtPythonSupport {
 
         try {
             this.outputChannel.appendLine(`Compiling RCC: ${toolPath} ${targetPath} -o ${outputPath}`);
-            execSync(`"${toolPath}" "${targetPath}" -o "${outputPath}"`, { encoding: 'utf-8' });
+            execFileSync(toolPath, [targetPath, '-o', outputPath], { encoding: 'utf-8' });
 
             void vscode.window.showInformationMessage(
                 `Compiled to ${path.basename(outputPath)}`,
@@ -295,10 +295,11 @@ export class QtPythonSupport {
             // ignore
         }
 
-        // 2. Try python -m to find the module's script directory
+        // 2. Try python -c to find the module's script directory
         try {
             const pythonCmd = isWindows() ? 'python' : 'python3';
-            const scriptPath = execSync(`${pythonCmd} -c "import sys, os; print(os.path.join(sys.prefix, 'Scripts' if os.name == 'nt' else 'bin'))"`, {
+            const script = 'import sys, os; print(os.path.join(sys.prefix, "Scripts" if os.name == "nt" else "bin"))';
+            const scriptPath = execFileSync(pythonCmd, ['-c', script], {
                 encoding: 'utf-8',
                 stdio: ['pipe', 'pipe', 'pipe']
             }).trim();
@@ -312,8 +313,8 @@ export class QtPythonSupport {
 
         // 3. Try which/where
         try {
-            const lookupCmd = isWindows() ? `where ${toolName}` : `which ${toolName}`;
-            const result = execSync(lookupCmd, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+            const lookupProgram = isWindows() ? 'where' : 'which';
+            const result = execFileSync(lookupProgram, [toolName], { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
             const firstLine = result.split('\n')[0].trim();
             if (firstLine && fs.existsSync(firstLine)) {
                 return firstLine;

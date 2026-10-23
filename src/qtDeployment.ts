@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import { spawn } from 'child_process';
 import { QtConfigManager } from './qtConfigManager';
 import { QtProjectDetector } from './qtProjectDetector';
-import { isWindows, isMacOS, exe, deployToolName, quotePath } from './platformUtils';
+import { isWindows, isMacOS, exe, deployToolName } from './platformUtils';
 
 export class QtDeployment {
     private qtConfigManager: QtConfigManager;
@@ -88,22 +88,22 @@ export class QtDeployment {
         const additionalArgs = config.get<string>('additionalWinDeployQtArguments') || '';
         const deployTool = deployToolName();
         let args: string[] = [];
-        
+
         if (isMacOS()) {
             // macdeployqt: deploy app bundle
-            args = [quotePath(exePath)];
+            args = [exePath];
         } else if (isWindows()) {
-            args = [quotePath(exePath), '--dir', quotePath(deployDir)];
+            args = [exePath, '--dir', deployDir];
         } else {
             // linuxdeployqt: deploy to AppDir or target
-            args = [quotePath(exePath), '-appimage'];
+            args = [exePath, '-appimage'];
         }
-        
+
         if (additionalArgs) {
-            args.push(additionalArgs);
+            args.push(...additionalArgs.split(/\s+/).filter(Boolean));
         }
-        
-        const command = `${quotePath(deployToolPath)} ${args.join(' ')}`;
+
+        const command = `${deployToolPath} ${args.join(' ')}`;
 
         this.outputChannel.appendLine(`Deploying application...`);
         this.outputChannel.appendLine(`  Executable: ${exePath}`);
@@ -118,24 +118,17 @@ export class QtDeployment {
 
         await vscode.window.withProgress(progressOptions, async () => {
             return new Promise<void>((resolve, reject) => {
-                const child = spawn(command, {
-                    shell: true,
+                const child = spawn(deployToolPath, args, {
+                    shell: false,
                     cwd: workspaceFolderPath
                 });
 
-                let stdout = '';
-                let stderr = '';
-
                 child.stdout?.on('data', (data) => {
-                    const text = data.toString();
-                    stdout += text;
-                    this.outputChannel.append(text);
+                    this.outputChannel.append(data.toString());
                 });
 
                 child.stderr?.on('data', (data) => {
-                    const text = data.toString();
-                    stderr += text;
-                    this.outputChannel.append(text);
+                    this.outputChannel.append(data.toString());
                 });
 
                 child.on('close', (code) => {
@@ -185,9 +178,9 @@ export class QtDeployment {
 
         // Fallback: search PATH
         try {
-            const { execSync } = await import('child_process');
-            const lookupCmd = process.platform === 'win32' ? `where ${toolName}` : `which ${toolName}`;
-            const result = execSync(lookupCmd, { encoding: 'utf-8' }).trim().split('\n')[0];
+            const { execFileSync } = await import('child_process');
+            const lookupProgram = process.platform === 'win32' ? 'where' : 'which';
+            const result = execFileSync(lookupProgram, [toolName], { encoding: 'utf-8' }).trim().split('\n')[0];
             if (result && fs.existsSync(result)) {
                 return result;
             }

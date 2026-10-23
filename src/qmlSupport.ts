@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { execSync, spawn } from 'child_process';
+import { execFileSync, spawn } from 'child_process';
 import { QtConfigManager } from './qtConfigManager';
 import { exe, isWindows } from './platformUtils';
 
@@ -42,8 +42,8 @@ export class QmlSupport {
 
         // 2. Look in PATH
         try {
-            const lookupCmd = isWindows() ? `where ${toolName}` : `which ${toolName}`;
-            const result = execSync(lookupCmd, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+            const lookupProgram = isWindows() ? 'where' : 'which';
+            const result = execFileSync(lookupProgram, [toolName], { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
             const firstLine = result.split('\n')[0].trim();
             if (firstLine && fs.existsSync(firstLine)) {
                 return firstLine;
@@ -76,7 +76,7 @@ export class QmlSupport {
 
         try {
             this.outputChannel.appendLine(`Formatting QML: ${targetPath}`);
-            execSync(`"${qmlformatPath}" -i "${targetPath}"`, { encoding: 'utf-8' });
+            execFileSync(qmlformatPath, ['-i', targetPath], { encoding: 'utf-8' });
             this.outputChannel.appendLine('QML formatting complete');
 
             // Reload the document if it's open
@@ -116,7 +116,7 @@ export class QmlSupport {
 
         try {
             this.outputChannel.appendLine(`Linting QML: ${targetPath}`);
-            const output = execSync(`"${qmllintPath}" "${targetPath}"`, {
+            const output = execFileSync(qmllintPath, [targetPath], {
                 encoding: 'utf-8',
                 stdio: ['pipe', 'pipe', 'pipe']
             });

@@ -1099,17 +1099,11 @@ async function executeQtTask(taskType: 'build' | 'clean' | 'rebuild' | 'run', sp
     }
     
     // Create and execute task
-    const taskDef: vscode.TaskDefinition = {
-        type: 'qt',
-        task: taskType,
-        file: projectFile,
-        quickBuild: quickBuild
-    };
-    
     const tasks = await vscode.tasks.fetchTasks({ type: 'qt' });
     const matchingTask = tasks.find(t => 
         t.definition.task === taskType && 
-        t.definition.file === projectFile
+        t.definition.file === projectFile &&
+        (taskType !== 'build' || t.definition.quickBuild === undefined || t.definition.quickBuild === quickBuild)
     );
     
     if (matchingTask) {
@@ -1126,9 +1120,9 @@ async function configureQtPath(): Promise<void> {
         canSelectFiles: true,
         canSelectFolders: false,
         canSelectMany: false,
-        filters: {
-            'Executable': ['exe']
-        },
+        filters: process.platform === 'win32'
+            ? { 'Executable': ['exe'] }
+            : { 'All files': ['*'] },
         title: 'Select qmake executable'
     });
     

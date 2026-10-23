@@ -23,9 +23,22 @@ export function exe(name: string): string {
     return isWindows() ? `${name}.exe` : name;
 }
 
+/**
+ * Quote a single argument for the current shell.
+ * Uses single-quote escaping, which is safe for both POSIX sh and PowerShell.
+ */
+export function shellQuote(arg: string): string {
+    if (isWindows()) {
+        // PowerShell single-quoted literal: ' must be doubled
+        return `'${arg.replace(/'/g, "''")}'`;
+    }
+    // POSIX sh single-quoted literal: ' must be escaped as '\''
+    return `'${arg.replace(/'/g, "'\\''")}'`;
+}
+
 /** Quote a path for the current shell */
 export function quotePath(p: string): string {
-    return `"${p}"`;
+    return shellQuote(p);
 }
 
 /** Build a mkdir -p command */
@@ -68,7 +81,7 @@ export function ifDirExistsCmd(dir: string, thenCmd: string): string {
 /** Build a remove-directory command */
 export function rmDirCmd(dir: string): string {
     if (isWindows()) {
-        return `Remove-Item -Recurse -Force ${quotePath(dir)}`;
+        return `if (Test-Path ${quotePath(dir)}) { Remove-Item -Recurse -Force ${quotePath(dir)} -ErrorAction Stop }`;
     }
     return `rm -rf ${quotePath(dir)}`;
 }
@@ -92,6 +105,12 @@ export function cmdSep(): string {
 /** Join multiple shell commands for the current platform */
 export function joinCmds(...commands: string[]): string {
     const valid = commands.filter(c => c.length > 0);
+    if (isWindows()) {
+        // Windows PowerShell 5 has no &&. Stop after either a native or shell failure.
+        return valid.map(command =>
+            `$global:LASTEXITCODE = 0; ${command}; if (-not $?) { exit 1 }; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }`
+        ).join('; ');
+    }
     return valid.join(cmdSep());
 }
 

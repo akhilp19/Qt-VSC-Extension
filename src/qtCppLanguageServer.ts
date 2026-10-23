@@ -20,11 +20,9 @@ import {
     Diagnostic,
     DiagnosticSeverity,
     Range,
-    Position,
     TextDocumentPositionParams,
     TextDocumentChangeEvent,
     DidChangeConfigurationNotification,
-    TextDocumentIdentifier,
     OptionalVersionedTextDocumentIdentifier,
     CodeActionParams,
     DidChangeConfigurationParams
@@ -32,7 +30,8 @@ import {
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import * as path from 'path';
 import * as fs from 'fs';
-import { execSync } from 'child_process';
+import { fileURLToPath } from 'url';
+import { execFileSync } from 'child_process';
 import { findQtClass, searchQtMethods, QtMethod } from './qtApiData';
 
 // ─────────────────────────────────────────────────────────────
@@ -98,7 +97,6 @@ const connection = createConnection(ProposedFeatures.all);
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 
 const workspaceIndexes = new Map<string, DocumentIndex>();
-let workspaceFolders: string[] = [];
 let qtIncludePath: string | undefined;
 let diagnosticsEnabled = true;
 let mocIntelliSenseV2Enabled = true;
@@ -108,7 +106,6 @@ let mocIntelliSenseV2Enabled = true;
 // ─────────────────────────────────────────────────────────────
 
 connection.onInitialize((params: InitializeParams): InitializeResult => {
-    workspaceFolders = (params.workspaceFolders || []).map((f: { uri: string }) => f.uri.replace('file://', ''));
     const initOptions = params.initializationOptions as Record<string, unknown> | undefined;
     qtIncludePath = typeof initOptions?.qtIncludePath === 'string' ? initOptions.qtIncludePath : undefined;
     diagnosticsEnabled = initOptions?.diagnosticsEnabled !== false;
@@ -137,6 +134,22 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
 connection.onInitialized(() => {
     void connection.client.register(DidChangeConfigurationNotification.type, undefined);
 });
+
+// ─────────────────────────────────────────────────────────────
+// URI / path helpers
+// ─────────────────────────────────────────────────────────────
+
+function uriToFilePath(uri: string): string | undefined {
+    if (uri.startsWith('file://')) {
+        try {
+            return fileURLToPath(uri);
+        } catch {
+            return undefined;
+        }
+    }
+    // If it's already a plain path, return as-is.
+    return uri;
+}
 
 // ─────────────────────────────────────────────────────────────
 // Parsing helpers
@@ -217,7 +230,7 @@ function indexDocument(uri: string, text: string): DocumentIndex {
         emits: []
     };
 
-    const filePath = uri.replace('file://', '');
+    const filePath = uriToFilePath(uri);
     const code = stripComments(text);
     const lines = code.split('\n');
 
@@ -386,7 +399,7 @@ function indexDocument(uri: string, text: string): DocumentIndex {
     }
 
     // Optional: run moc to validate and enrich
-    if (filePath.endsWith('.h') || filePath.endsWith('.hpp')) {
+    if (filePath && (filePath.endsWith('.h') || filePath.endsWith('.hpp'))) {
         enrichWithMoc(index, filePath, text);
     }
 
@@ -405,7 +418,7 @@ function extractMacroName(macroText: string): string | undefined {
     return match ? match[1] : undefined;
 }
 
-function enrichWithMoc(index: DocumentIndex, filePath: string, text: string): void {
+function enrichWithMoc(index: DocumentIndex, filePath: string, _text: string): void {
     try {
         const tmpDir = path.join(process.cwd(), '.qt-lsp-tmp');
         if (!fs.existsSync(tmpDir)) { fs.mkdirSync(tmpDir, { recursive: true }); }
@@ -418,7 +431,7 @@ function enrichWithMoc(index: DocumentIndex, filePath: string, text: string): vo
             if (fs.existsSync(candidate)) { mocPath = candidate; }
         }
 
-        execSync(`"${mocPath}" "${filePath}" -o "${mocOut}"`, { encoding: 'utf-8', stdio: 'pipe' });
+        execFileSync(mocPath, [filePath, '-o', mocOut], { encoding: 'utf-8', stdio: 'pipe' });
         if (fs.existsSync(mocOut)) {
             const mocText = fs.readFileSync(mocOut, 'utf-8');
             // If moc fails to generate because Q_OBJECT is missing, the output will be mostly empty
@@ -480,11 +493,6 @@ function findClass(name: string): QtClass | undefined {
         if (cls) { return cls; }
     }
     return undefined;
-}
-
-function findSymbolInClass(className: string, name: string): QtSymbol | undefined {
-    const cls = findClass(className);
-    return cls?.symbols.get(name);
 }
 
 function resolveClassOfVariable(text: string, line: number, variable: string): string | undefined {
@@ -576,7 +584,7 @@ function isInsideConnect(text: string, line: number, character: number): boolean
 // Diagnostics
 // ─────────────────────────────────────────────────────────────
 
-function sendDiagnostics(uri: string, index: DocumentIndex, text: string): void {
+function sendDiagnostics(uri: string, index: DocumentIndex, _text: string): void {
     const diagnostics: Diagnostic[] = [];
 
     for (const cls of index.classes.values()) {
@@ -702,7 +710,7 @@ connection.onCompletion((params: TextDocumentPositionParams): CompletionItem[] =
             const propName = propAccessMatch[2];
             const prefix = propAccessMatch[3] || '';
 
-            let className = resolveVariableDeclarationType(text, line, varName)
+            const className = resolveVariableDeclarationType(text, line, varName)
                 || resolveClassOfVariable(text, line, varName)
                 || (varName === 'this' ? getEnclosingClassAtLine(text, line) : undefined)
                 || varName;

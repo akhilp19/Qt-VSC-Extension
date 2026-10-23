@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 
 export interface IOSSigningIdentity {
     id: string;
@@ -25,7 +25,7 @@ const PROVISIONING_PROFILES_DIR = path.join(os.homedir(), 'Library/MobileDevice/
  */
 export function listSigningIdentities(): IOSSigningIdentity[] {
     try {
-        const output = execSync('security find-identity -v -p codesigning', {
+        const output = execFileSync('security', ['find-identity', '-v', '-p', 'codesigning'], {
             encoding: 'utf-8',
             stdio: ['pipe', 'pipe', 'pipe']
         });
@@ -67,8 +67,13 @@ export function listProvisioningProfiles(): IOSProvisioningProfile[] {
 
 function parseProvisioningProfile(filePath: string): IOSProvisioningProfile | undefined {
     try {
-        const decoded = execSync(`security cms -D -i "${filePath}" | plutil -p -`, {
+        const cmsOutput = execFileSync('security', ['cms', '-D', '-i', filePath], {
             encoding: 'utf-8',
+            stdio: ['pipe', 'pipe', 'pipe']
+        });
+        const decoded = execFileSync('plutil', ['-p', '-'], {
+            encoding: 'utf-8',
+            input: cmsOutput,
             stdio: ['pipe', 'pipe', 'pipe']
         });
 
@@ -191,17 +196,17 @@ export async function selectProvisioningProfile(): Promise<void> {
 /**
  * Build xcodebuild signing arguments from current settings.
  */
-export function getXcodebuildSigningArgs(): string {
+export function getXcodebuildSigningArgs(): string[] {
     const config = vscode.workspace.getConfiguration('qt');
     const identity = config.get<string>('iosSigningIdentity') || '';
     const profile = config.get<string>('iosProvisioningProfile') || '';
     const team = config.get<string>('iosTeamId') || '';
 
     const args: string[] = [];
-    if (identity) { args.push(`CODE_SIGN_IDENTITY="${identity}"`); }
-    if (profile) { args.push(`PROVISIONING_PROFILE_SPECIFIER="${profile}"`); }
-    if (team) { args.push(`DEVELOPMENT_TEAM="${team}"`); }
-    return args.join(' ');
+    if (identity) { args.push(`CODE_SIGN_IDENTITY=${identity}`); }
+    if (profile) { args.push(`PROVISIONING_PROFILE_SPECIFIER=${profile}`); }
+    if (team) { args.push(`DEVELOPMENT_TEAM=${team}`); }
+    return args;
 }
 
 /**

@@ -5,7 +5,6 @@ import { promisify } from 'util';
 
 const readFileAsync = promisify(fs.readFile);
 const readdirAsync = promisify(fs.readdir);
-const statAsync = promisify(fs.stat);
 
 export interface CppQmlSymbol {
     filePath: string;
@@ -474,7 +473,7 @@ export class QmlCppBridgeIndexer {
                     hasQObject = false;
                 }
             }
-        } catch (error) {
+        } catch {
             // Ignore unreadable files
         }
     }
@@ -568,7 +567,7 @@ export class QmlCppBridgeIndexer {
             }
 
             this.idIndex.set(filePath, fileIds);
-        } catch (error) {
+        } catch {
             // Ignore unreadable files
         }
     }
@@ -610,7 +609,7 @@ export class QmlCppBridgeIndexer {
                     });
                 }
             }
-        } catch (error) {
+        } catch {
             // Ignore unreadable qmldir files
         }
     }

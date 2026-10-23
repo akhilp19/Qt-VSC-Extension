@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { spawn, execSync } from 'child_process';
+import { spawn, execFileSync } from 'child_process';
 import { QtConfigManager, QtInstallation } from './qtConfigManager';
 import { QtProjectDetector } from './qtProjectDetector';
-import { isWindows, isMacOS, isLinux, exe, pathExeLookupCmd } from './platformUtils';
+import { isWindows, isMacOS, isLinux, exe } from './platformUtils';
 
 interface ProfilerInfo {
     name: string;
@@ -406,7 +406,7 @@ export class QtProfiling {
 
         if (isLinux()) {
             try {
-                execSync('which perf', { encoding: 'utf-8', stdio: 'pipe' });
+                execFileSync('which', ['perf'], { encoding: 'utf-8', stdio: 'pipe' });
                 profilers.push({
                     name: 'perf',
                     command: 'perf',
@@ -421,7 +421,7 @@ export class QtProfiling {
         if (isMacOS()) {
             try {
                 // Check for Instruments
-                const xcodePath = execSync('xcode-select -p', { encoding: 'utf-8', stdio: 'pipe' }).trim();
+                const xcodePath = execFileSync('xcode-select', ['-p'], { encoding: 'utf-8', stdio: 'pipe' }).trim();
                 if (xcodePath && fs.existsSync('/usr/bin/instruments')) {
                     profilers.push({
                         name: 'Instruments',
@@ -445,7 +445,8 @@ export class QtProfiling {
 
         if (isWindows() || isLinux()) {
             try {
-                execSync('which vtune', { encoding: 'utf-8', stdio: 'pipe' });
+                const whichProgram = isWindows() ? 'where' : 'which';
+                execFileSync(whichProgram, ['vtune'], { encoding: 'utf-8', stdio: 'pipe' });
                 profilers.push({
                     name: 'VTune',
                     command: 'vtune',
@@ -465,7 +466,7 @@ export class QtProfiling {
 
         if (isLinux()) {
             try {
-                execSync('which valgrind', { encoding: 'utf-8', stdio: 'pipe' });
+                execFileSync('which', ['valgrind'], { encoding: 'utf-8', stdio: 'pipe' });
                 tools.push({
                     name: 'valgrind',
                     command: 'valgrind',
@@ -479,7 +480,7 @@ export class QtProfiling {
 
         if (isWindows()) {
             try {
-                execSync('where drmemory', { encoding: 'utf-8', stdio: 'pipe' });
+                execFileSync('where', ['drmemory'], { encoding: 'utf-8', stdio: 'pipe' });
                 tools.push({
                     name: 'Dr. Memory',
                     command: 'drmemory',

@@ -51,9 +51,9 @@ export class QtDesignerIntegration {
 
         this.outputChannel.appendLine(`Launching Qt Designer: "${designerPath}" "${targetFile}"`);
 
-        // Spawn designer.exe detached so it doesn't block VS Code
-        const child = spawn(`"${designerPath}"`, [`"${targetFile}"`], {
-            shell: true,
+        // Spawn designer detached so it doesn't block VS Code
+        const child = spawn(designerPath, [targetFile], {
+            shell: false,
             detached: true,
             stdio: 'ignore'
         });
@@ -84,9 +84,9 @@ export class QtDesignerIntegration {
 
         // Fallback: search PATH for designer
         try {
-            const { execSync } = await import('child_process');
-            const lookupCmd = process.platform === 'win32' ? 'where designer' : 'which designer';
-            const designerInPath = execSync(lookupCmd, { encoding: 'utf-8' }).trim().split('\n')[0];
+            const { execFileSync } = await import('child_process');
+            const lookupProgram = process.platform === 'win32' ? 'where' : 'which';
+            const designerInPath = execFileSync(lookupProgram, ['designer'], { encoding: 'utf-8' }).trim().split('\n')[0];
             if (designerInPath && fs.existsSync(designerInPath)) {
                 return designerInPath;
             }

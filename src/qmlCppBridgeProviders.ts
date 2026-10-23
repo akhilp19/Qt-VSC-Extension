@@ -289,7 +289,7 @@ ${symbol.signature || symbol.name}
 
         // Check if after the word we have a brace or id (type instantiation pattern)
         const afterWord = lineText.substring(position.character + word.length);
-        if (/^\s*[\{\:]/.test(afterWord)) {
+        if (/^\s*[{:]/.test(afterWord)) {
             return true;
         }
 

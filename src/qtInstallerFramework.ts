@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { QtConfigManager } from './qtConfigManager';
-import { exe, pathExeLookupCmd } from './platformUtils';
+import { exe } from './platformUtils';
 
 export class QtInstallerFramework {
     private outputChannel: vscode.OutputChannel;
@@ -161,7 +161,7 @@ export class QtInstallerFramework {
         void vscode.window.setStatusBarMessage(`$(sync~spin) Building installer...`, 10000);
 
         try {
-            execSync(`"${binaryCreator}" -c "${configPath}" -p "${packagesDir}" "${outputPath}"`, {
+            execFileSync(binaryCreator, ['-c', configPath, '-p', packagesDir, outputPath], {
                 encoding: 'utf-8',
                 cwd: workspaceFolder.uri.fsPath,
                 stdio: 'pipe'
@@ -219,8 +219,8 @@ export class QtInstallerFramework {
 
         // 2. Check PATH
         try {
-            const lookupCmd = pathExeLookupCmd('binarycreator');
-            const result = execSync(lookupCmd, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+            const lookupProgram = process.platform === 'win32' ? 'where' : 'which';
+            const result = execFileSync(lookupProgram, ['binarycreator'], { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
             const firstLine = result.split('\n')[0].trim();
             if (firstLine && fs.existsSync(firstLine)) {
                 return firstLine;

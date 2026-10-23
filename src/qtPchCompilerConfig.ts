@@ -239,8 +239,8 @@ export class QtPchCompilerConfig {
         // Fallback: check qmake spec
         if (qtInstallation?.qmakePath) {
             try {
-                const { execSync } = await import('child_process');
-                const spec = execSync(`"${qtInstallation.qmakePath}" -query QMAKE_XSPEC`, { encoding: 'utf-8' }).trim();
+                const { execFileSync } = await import('child_process');
+                const spec = execFileSync(qtInstallation.qmakePath, ['-query', 'QMAKE_XSPEC'], { encoding: 'utf-8' }).trim();
                 if (spec.includes('msvc')) { return 'msvc'; }
                 if (spec.includes('clang')) { return 'clang'; }
                 if (spec.includes('g++') || spec.includes('gcc')) { return 'gcc'; }

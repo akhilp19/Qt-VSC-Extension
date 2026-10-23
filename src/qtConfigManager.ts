@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { execSync } from 'child_process';
-import { isWindows, getQtSearchPaths, pathExeLookupCmd, exe } from './platformUtils';
+import * as os from 'os';
+import { execFileSync } from 'child_process';
+import { isWindows, getQtSearchPaths, exe } from './platformUtils';
 import { detectAllPackageManagers, sourceDisplayName } from './packageManagerDetector';
 
 export interface QtInstallation {
@@ -80,8 +81,8 @@ export class QtConfigManager {
         
         // 3. Check PATH environment variable
         try {
-            const lookupCmd = pathExeLookupCmd('qmake');
-            const qmakeInPath = execSync(lookupCmd, { encoding: 'utf-8' }).trim().split('\n')[0];
+            const lookupProgram = isWindows() ? 'where' : 'which';
+            const qmakeInPath = execFileSync(lookupProgram, ['qmake'], { encoding: 'utf-8' }).trim().split('\n')[0];
             if (qmakeInPath && fs.existsSync(qmakeInPath)) {
                 this.outputChannel.appendLine(`Found qmake in PATH: ${qmakeInPath}`);
                 const installation = await this.createInstallationFromQMake(qmakeInPath);
@@ -226,8 +227,8 @@ export class QtConfigManager {
     private async createInstallationFromQMake(qmakePath: string, source?: string): Promise<QtInstallation | undefined> {
         try {
             // Get Qt version and paths from qmake
-            const versionOutput = execSync(`"${qmakePath}" -query QT_VERSION`, { encoding: 'utf-8' }).trim();
-            const installPrefixOutput = execSync(`"${qmakePath}" -query QT_INSTALL_PREFIX`, { encoding: 'utf-8' }).trim();
+            const versionOutput = execFileSync(qmakePath, ['-query', 'QT_VERSION'], { encoding: 'utf-8' }).trim();
+            const installPrefixOutput = execFileSync(qmakePath, ['-query', 'QT_INSTALL_PREFIX'], { encoding: 'utf-8' }).trim();
             
             // Detect compiler type from path
             const compiler = this.detectCompiler(qmakePath);
@@ -272,7 +273,7 @@ export class QtConfigManager {
         if (!isWindows()) {
             // On Unix, try to detect from qmake spec
             try {
-                const spec = execSync(`"${qmakePath}" -query QMAKE_XSPEC`, { encoding: 'utf-8' }).trim();
+                const spec = execFileSync(qmakePath, ['-query', 'QMAKE_XSPEC'], { encoding: 'utf-8' }).trim();
                 if (spec.includes('clang')) { return 'clang'; }
                 if (spec.includes('gcc') || spec.includes('g++')) { return 'gcc'; }
                 if (spec.includes('macx')) { return 'apple-clang'; }
@@ -355,7 +356,7 @@ export class QtConfigManager {
             return jobs;
         }
         // Auto-detect: use CPU count, capped at reasonable limits
-        const cpus = require('os').cpus().length;
+        const cpus = os.cpus().length;
         return Math.max(1, Math.min(cpus, 16));
     }
 

@@ -137,7 +137,7 @@ function matchCompileLine(line: string): string | undefined {
 
     // Direct compiler invocation containing an absolute/relative .cpp file
     for (const ext of SOURCE_EXTS) {
-        const regex = new RegExp(`(["']?[\\/\\.\w\-]+${ext.replace('.', '\\.')})["']?`, 'i');
+        const regex = new RegExp(`(["']?[\\/\\.\\w-]+${ext.replace('.', '\\.')})["']?`, 'i');
         const match = line.match(regex);
         if (match) {
             return match[1].replace(/["']/g, '');

@@ -178,7 +178,7 @@ export function generateGitHubReleaseYml(options: CiOptions): string {
     lines.push('        run: |');
     lines.push('          mkdir -p dist');
     if (options.projectType === 'qmake') {
-        lines.push('          cp $(find . -maxdepth 1 -type f \( -name "*.exe" -o -name "*.app" \) 2>/dev/null) dist/ 2>/dev/null || true');
+        lines.push('          cp $(find . -maxdepth 1 -type f \\( -name "*.exe" -o -name "*.app" \\) 2>/dev/null) dist/ 2>/dev/null || true');
     } else {
         lines.push('          cp -r build/* dist/ 2>/dev/null || true');
     }

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { QtConfigManager } from './qtConfigManager';
 import { listSigningIdentities, listProvisioningProfiles } from './qtIOSSigning';
 
@@ -31,7 +31,7 @@ export class QtHealthCheck {
         const qtInstallation = await this.qtConfigManager.getQtInstallation();
         if (qtInstallation) {
             try {
-                execSync(`"${qtInstallation.qmakePath}" -query QT_VERSION`, { encoding: 'utf-8', stdio: 'pipe' });
+                execFileSync(qtInstallation.qmakePath, ['-query', 'QT_VERSION'], { encoding: 'utf-8', stdio: 'pipe' });
                 results.push({ name: 'Qt Installation', status: 'pass', message: `${qtInstallation.version} at ${qtInstallation.path}` });
             } catch {
                 results.push({ name: 'Qt Installation', status: 'fail', message: 'qmake found but not executable' });
@@ -44,7 +44,7 @@ export class QtHealthCheck {
         const makeCmd = this.qtConfigManager.getMakeCommand(qtInstallation || undefined);
         try {
             const compiler = process.platform === 'win32' ? 'cl' : 'g++';
-            execSync(`${compiler} --version`, { encoding: 'utf-8', stdio: 'pipe' });
+            execFileSync(compiler, ['--version'], { encoding: 'utf-8', stdio: 'pipe' });
             results.push({ name: 'Compiler', status: 'pass', message: `${compiler} available` });
         } catch {
             results.push({ name: 'Compiler', status: 'warn', message: 'Could not verify compiler in PATH' });
@@ -53,7 +53,7 @@ export class QtHealthCheck {
         // 3. Debugger
         const debuggers = process.platform === 'win32' ? ['cppvsdbg'] : process.platform === 'darwin' ? ['lldb'] : ['gdb'];
         const dbgFound = debuggers.some(d => {
-            try { execSync(`which ${d}`, { encoding: 'utf-8', stdio: 'pipe' }); return true; } catch { return false; }
+            try { execFileSync('which', [d], { encoding: 'utf-8', stdio: 'pipe' }); return true; } catch { return false; }
         });
         results.push({ name: 'Debugger', status: dbgFound ? 'pass' : 'warn', message: dbgFound ? `${debuggers[0]} available` : 'Debugger not found in PATH' });
 
@@ -86,7 +86,7 @@ export class QtHealthCheck {
         // 7. iOS tools (macOS only)
         if (process.platform === 'darwin') {
             try {
-                execSync('which xcodebuild', { encoding: 'utf-8', stdio: 'pipe' });
+                execFileSync('which', ['xcodebuild'], { encoding: 'utf-8', stdio: 'pipe' });
                 results.push({ name: 'iOS Tools', status: 'pass', message: 'xcodebuild available' });
             } catch {
                 results.push({ name: 'iOS Tools', status: 'warn', message: 'xcodebuild not found' });

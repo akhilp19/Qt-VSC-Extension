@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { LanguageClient, TransportKind } from 'vscode-languageclient/node';
 import { QtConfigManager } from './qtConfigManager';
 
@@ -120,8 +120,8 @@ export class QtQmlLanguageServer {
 
         // Fallback to PATH
         try {
-            const cmd = process.platform === 'win32' ? 'where qmlls' : 'which qmlls';
-            const result = execSync(cmd, { encoding: 'utf-8', stdio: 'pipe' }).trim();
+            const program = process.platform === 'win32' ? 'where' : 'which';
+            const result = execFileSync(program, ['qmlls'], { encoding: 'utf-8', stdio: 'pipe' }).trim();
             const first = result.split('\n')[0].trim();
             if (first && fs.existsSync(first)) {
                 return first;

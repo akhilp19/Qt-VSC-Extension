@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { QtConfigManager, QtInstallation } from './qtConfigManager';
 import {
     extractCrossPrefixFromEnvScript,
@@ -231,6 +231,7 @@ export class QtBuildKitManager {
 
     private async editEnvVars(current: Record<string, string>): Promise<Record<string, string>> {
         const envVars = { ...current };
+        // eslint-disable-next-line no-constant-condition
         while (true) {
             const items = Object.entries(envVars).map(([key, value]) => ({
                 label: `${key}=${value}`,
@@ -519,7 +520,7 @@ export class QtBuildKitManager {
             issues.push(`qmake does not exist: ${kit.qmakePath}`);
         } else {
             try {
-                const version = execSync(`"${kit.qmakePath}" -query QT_VERSION`, { encoding: 'utf-8', stdio: 'pipe' }).trim();
+                const version = execFileSync(kit.qmakePath, ['-query', 'QT_VERSION'], { encoding: 'utf-8', stdio: 'pipe' }).trim();
                 if (version !== kit.qtVersion) {
                     issues.push(`Qt version mismatch: kit says ${kit.qtVersion}, qmake reports ${version}`);
                 }

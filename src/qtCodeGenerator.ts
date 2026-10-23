@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { QtConfigManager } from './qtConfigManager';
-import { exe, pathExeLookupCmd } from './platformUtils';
+import { exe } from './platformUtils';
 
 export class QtCodeGenerator implements vscode.Disposable {
     private qtConfigManager: QtConfigManager;
@@ -150,7 +150,7 @@ export class QtCodeGenerator implements vscode.Disposable {
 
         try {
             this.ensureOutputDir(outputPath);
-            execSync(`"${toolPath}" "${inputPath}" -o "${outputPath}"`, { encoding: 'utf-8' });
+            execFileSync(toolPath, [inputPath, '-o', outputPath], { encoding: 'utf-8' });
             this.outputChannel.appendLine(`[MOC] Generated: ${outputPath}`);
             this.showStatus(`moc: ${baseName} → ${path.basename(outputPath)}`);
             if (!auto) {
@@ -191,7 +191,7 @@ export class QtCodeGenerator implements vscode.Disposable {
 
         try {
             this.ensureOutputDir(outputPath);
-            execSync(`"${toolPath}" "${inputPath}" -o "${outputPath}"`, { encoding: 'utf-8' });
+            execFileSync(toolPath, [inputPath, '-o', outputPath], { encoding: 'utf-8' });
             this.outputChannel.appendLine(`[UIC] Generated: ${outputPath}`);
             this.showStatus(`uic: ${baseName} → ${path.basename(outputPath)}`);
             if (!auto) {
@@ -232,7 +232,7 @@ export class QtCodeGenerator implements vscode.Disposable {
 
         try {
             this.ensureOutputDir(outputPath);
-            execSync(`"${toolPath}" "${inputPath}" -o "${outputPath}"`, { encoding: 'utf-8' });
+            execFileSync(toolPath, [inputPath, '-o', outputPath], { encoding: 'utf-8' });
             this.outputChannel.appendLine(`[RCC] Generated: ${outputPath}`);
             this.showStatus(`rcc: ${baseName} → ${path.basename(outputPath)}`);
             if (!auto) {
@@ -273,8 +273,8 @@ export class QtCodeGenerator implements vscode.Disposable {
 
         // 2. Fallback: search PATH
         try {
-            const lookupCmd = pathExeLookupCmd(toolName);
-            const result = execSync(lookupCmd, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+            const lookupProgram = process.platform === 'win32' ? 'where' : 'which';
+            const result = execFileSync(lookupProgram, [toolName], { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
             const firstLine = result.split('\n')[0].trim();
             if (firstLine && fs.existsSync(firstLine)) {
                 return firstLine;

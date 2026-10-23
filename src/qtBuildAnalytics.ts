@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { execSync } from 'child_process';
-import { pathExeLookupCmd, isWindows } from './platformUtils';
+import { execFileSync } from 'child_process';
+import { isWindows } from './platformUtils';
 
 export interface PersistedBuildRecord {
     projectFile: string;
@@ -259,14 +259,14 @@ export class QtBuildAnalytics {
 
     async detectCcache(): Promise<CcacheInfo | undefined> {
         try {
-            const lookupCmd = pathExeLookupCmd('ccache');
-            const ccachePath = execSync(lookupCmd, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim().split('\n')[0];
+            const lookupProgram = isWindows() ? 'where' : 'which';
+            const ccachePath = execFileSync(lookupProgram, ['ccache'], { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim().split('\n')[0];
             if (!ccachePath || !fs.existsSync(ccachePath)) {
                 return undefined;
             }
 
-            const versionOutput = execSync(`"${ccachePath}" --version`, { encoding: 'utf-8' }).split('\n')[0];
-            const statsOutput = execSync(`"${ccachePath}" -s`, { encoding: 'utf-8' });
+            const versionOutput = execFileSync(ccachePath, ['--version'], { encoding: 'utf-8' }).split('\n')[0];
+            const statsOutput = execFileSync(ccachePath, ['-s'], { encoding: 'utf-8' });
 
             const cacheSizeMatch = statsOutput.match(/cache size\s+([\d.]+\s*\w+)/i);
             const hitsMatch = statsOutput.match(/cache hit.*\n?.*\n?.*\n?\s*(?:direct|preprocessed)\s+(\d+)/i) || statsOutput.match(/hits:\s*(\d+)/i);
@@ -286,14 +286,14 @@ export class QtBuildAnalytics {
 
     async detectSccache(): Promise<CcacheInfo | undefined> {
         try {
-            const lookupCmd = pathExeLookupCmd('sccache');
-            const sccachePath = execSync(lookupCmd, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim().split('\n')[0];
+            const lookupProgram = isWindows() ? 'where' : 'which';
+            const sccachePath = execFileSync(lookupProgram, ['sccache'], { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim().split('\n')[0];
             if (!sccachePath || !fs.existsSync(sccachePath)) {
                 return undefined;
             }
 
-            const versionOutput = execSync(`"${sccachePath}" --version`, { encoding: 'utf-8' }).split('\n')[0];
-            const statsOutput = execSync(`"${sccachePath}" --show-stats`, { encoding: 'utf-8' });
+            const versionOutput = execFileSync(sccachePath, ['--version'], { encoding: 'utf-8' }).split('\n')[0];
+            const statsOutput = execFileSync(sccachePath, ['--show-stats'], { encoding: 'utf-8' });
 
             const cacheSizeMatch = statsOutput.match(/Cache size\s+([\d.]+\s*\w+)/i);
             const hitsMatch = statsOutput.match(/Cache hits\s+(\d+)/i);

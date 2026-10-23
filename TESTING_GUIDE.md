@@ -1,5 +1,14 @@
 # Qt C++ Tools Extension - Complete Testing Guide
 
+## Automated build flow regression checks
+
+Run `npm run compile && node --test scripts/test-build-flow.cjs`.
+These checks require CMake and make on PATH. They exercise real CMake normal,
+quick, and rebuild tasks with presets; check clean/run directory selection;
+and cover task outcomes, command failure guards, and QMake rebuild ordering.
+VS Code task events are mocked. Windows command generation is checked, but
+native Windows execution and a full Qt application still need platform testing.
+
 ## 🎯 Verify Installation
 
 ### Step 1: Check Extension is Installed

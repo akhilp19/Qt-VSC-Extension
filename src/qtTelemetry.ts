@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import * as http from 'http';
 import * as https from 'https';
+
+const PACKAGE_JSON_PATH = path.join(__dirname, '..', '..', 'package.json');
 
 const TELEMETRY_FILE = 'qt-telemetry.json';
 const MAX_QUEUE_SIZE = 1000;
@@ -188,6 +189,11 @@ export class QtTelemetry implements vscode.Disposable {
         const endpoint = config.get<string>('telemetryEndpoint') ?? '';
         if (!endpoint) { return; }
 
+        if (!endpoint.startsWith('https://')) {
+            this.outputChannel.appendLine('[Telemetry] Refusing to flush to non-HTTPS endpoint. Only https:// endpoints are allowed.');
+            return;
+        }
+
         const events = [...this.queue];
         if (events.length === 0) { return; }
 
@@ -261,9 +267,12 @@ export class QtTelemetry implements vscode.Disposable {
     }
 
     private getExtensionVersion(): string {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const pkg = require('../package.json');
-        return pkg.version as string;
+        try {
+            const pkg = JSON.parse(fs.readFileSync(PACKAGE_JSON_PATH, 'utf-8')) as { version?: string };
+            return pkg.version ?? '0.0.0';
+        } catch {
+            return '0.0.0';
+        }
     }
 
     private postEvents(endpoint: string, events: TelemetryEvent[]): Promise<void> {
@@ -281,21 +290,13 @@ export class QtTelemetry implements vscode.Disposable {
                 }
             };
 
-            const request = endpoint.startsWith('https')
-                ? https.request(options, res => {
-                    if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
-                        resolve();
-                    } else {
-                        reject(new Error(`HTTP ${res.statusCode}`));
-                    }
-                })
-                : http.request(options, res => {
-                    if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
-                        resolve();
-                    } else {
-                        reject(new Error(`HTTP ${res.statusCode}`));
-                    }
-                });
+            const request = https.request(options, res => {
+                if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+                    resolve();
+                } else {
+                    reject(new Error(`HTTP ${res.statusCode}`));
+                }
+            });
 
             request.on('error', reject);
             request.write(data);

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { execSync, spawn } from 'child_process';
+import { execFileSync, spawn } from 'child_process';
 
 /**
  * Integrates clazy and clang-tidy static analysis for Qt C++ code.
@@ -153,8 +153,8 @@ export class QtClazyIntegration implements vscode.Disposable {
 
     private findInPath(name: string): string | undefined {
         try {
-            const cmd = process.platform === 'win32' ? `where ${name}` : `which ${name}`;
-            const result = execSync(cmd, { encoding: 'utf-8', stdio: 'pipe' }).trim();
+            const program = process.platform === 'win32' ? 'where' : 'which';
+            const result = execFileSync(program, [name], { encoding: 'utf-8', stdio: 'pipe' }).trim();
             const first = result.split('\n')[0].trim();
             if (first && fs.existsSync(first)) { return first; }
         } catch {

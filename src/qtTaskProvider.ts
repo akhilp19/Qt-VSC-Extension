@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { randomUUID } from 'crypto';
 import { QtConfigManager } from './qtConfigManager';
 import { QtProjectDetector } from './qtProjectDetector';
 import { QtCMakePresets } from './qtCMakePresets';
@@ -13,8 +14,6 @@ import {
     execCmd,
     simpleExecCmd,
     ifDirExistsCmd,
-    rmDirCmd,
-    nullRedirect,
     joinCmds,
     quotePath
 } from './platformUtils';
@@ -192,6 +191,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
         workspaceFolder: vscode.WorkspaceFolder,
         quickBuild: boolean = false
     ): Promise<vscode.Task> {
+        const buildId = randomUUID();
         const qtInstallation = await this.qtConfigManager.getQtInstallation();
         const buildType = this.qtConfigManager.getProjectBuildType(projectFile);
         const buildDir = this.getBuildDir(projectFile, buildType);
@@ -228,9 +228,9 @@ export class QtTaskProvider implements vscode.TaskProvider {
                 commands.push(preBuildCommand);
             }
             if (useCcache) {
-                commands.push(isWindows() ? `set QMAKE_CXX=${ccachePath} g++` : `export QMAKE_CXX="${ccachePath} g++"`);
+                commands.push(isWindows() ? `$env:QMAKE_CXX = ${quotePath(ccachePath + " g++")}` : `export QMAKE_CXX="${ccachePath} g++"`);
             }
-            if (quickBuild && fs.existsSync(buildDir)) {
+            if (quickBuild && fs.existsSync(path.join(buildDir, 'Makefile'))) {
                 // Quick build: skip qmake, just run make
                 commands.push(
                     cdCmd(buildDir),
@@ -251,7 +251,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
             const logPath = path.join(buildDir, '.qt-build-output.log');
             const buildCommand = joinCmds(...commands);
             execution = new vscode.CustomExecution(async () => {
-                return new QtBuildPseudoterminal(buildCommand, workspaceFolder.uri.fsPath, kitEnv, logPath, this.outputChannel);
+                return new QtBuildPseudoterminal(buildCommand, workspaceFolder.uri.fsPath, kitEnv, logPath, this.outputChannel, buildId);
             });
         } else {
             // CMake build
@@ -265,7 +265,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
             const sysrootArg = sysroot ? `-DCMAKE_SYSROOT=${quotePath(sysroot)}` : '';
             const additionalArgs = [config.get<string>('additionalCMakeArguments') || '', kitExtraArgs, toolchainArg, crossCompileArg, sysrootArg].filter(Boolean).join(' ');
             const cmakeBuildArgs = parallelFlag ? `--parallel ${jobs}` : '';
-            const presetArg = this.qtCMakePresets.getPresetArgs(projectFile);
+            const preset = this.qtCMakePresets.getPresetForProject(projectFile);
             const verboseEnv = { ...kitEnv, VERBOSE: '1' };
             
             const commands: string[] = [];
@@ -273,19 +273,13 @@ export class QtTaskProvider implements vscode.TaskProvider {
                 commands.push(preBuildCommand);
             }
             const ccacheArg = useCcache ? `-DCMAKE_CXX_COMPILER_LAUNCHER=${ccachePath}` : '';
-            if (presetArg) {
-                // Use CMake preset
-                if (quickBuild && fs.existsSync(buildDir)) {
-                    commands.push(
-                        `cmake --build ${quotePath(buildDir)} --preset ${this.qtCMakePresets.getPresetForProject(projectFile)?.build || this.qtCMakePresets.getPresetForProject(projectFile)?.configure || ''}`
-                    );
-                } else {
-                    commands.push(
-                        `cmake --preset ${this.qtCMakePresets.getPresetForProject(projectFile)?.configure || ''}`,
-                        `cmake --build ${quotePath(buildDir)} ${cmakeBuildArgs}`
-                    );
+            if (preset) {
+                commands.push(cdCmd(path.dirname(projectFile)));
+                if (!quickBuild || !fs.existsSync(path.join(buildDir, 'CMakeCache.txt'))) {
+                    commands.push(`cmake --preset ${quotePath(preset.configure)} -B ${quotePath(buildDir)} ${additionalArgs} ${ccacheArg}`);
                 }
-            } else if (quickBuild && fs.existsSync(buildDir)) {
+                commands.push(`cmake --build ${quotePath(buildDir)}${preset.build ? ` --preset ${quotePath(preset.build)}` : ''} ${cmakeBuildArgs}`);
+            } else if (quickBuild && fs.existsSync(path.join(buildDir, 'CMakeCache.txt'))) {
                 // Quick build: skip cmake configure
                 commands.push(
                     `cmake --build ${quotePath(buildDir)} ${cmakeBuildArgs}`
@@ -304,7 +298,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
             const logPath = path.join(buildDir, '.qt-build-output.log');
             const buildCommand = joinCmds(...commands);
             execution = new vscode.CustomExecution(async () => {
-                return new QtBuildPseudoterminal(buildCommand, workspaceFolder.uri.fsPath, verboseEnv, logPath, this.outputChannel);
+                return new QtBuildPseudoterminal(buildCommand, workspaceFolder.uri.fsPath, verboseEnv, logPath, this.outputChannel, buildId);
             });
         }
         
@@ -313,10 +307,12 @@ export class QtTaskProvider implements vscode.TaskProvider {
                 type: 'qt',
                 task: 'build',
                 file: projectFile,
-                buildDir: buildDir
+                buildId,
+                buildDir: buildDir,
+                quickBuild
             },
             workspaceFolder,
-            `Build ${projectName}`,
+            `${quickBuild ? 'Quick Build' : 'Build'} ${projectName}`,
             'qt',
             execution,
             ['$msCompile', '$gcc', 'qt-qmake']
@@ -394,6 +390,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
         projectType: 'qmake' | 'cmake' | 'python' | 'raw',
         workspaceFolder: vscode.WorkspaceFolder
     ): Promise<vscode.Task> {
+        const buildId = randomUUID();
         const qtInstallation = await this.qtConfigManager.getQtInstallation();
         const buildType = this.qtConfigManager.getProjectBuildType(projectFile);
         const buildDir = this.getBuildDir(projectFile, buildType);
@@ -415,7 +412,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
             const sysroot = this.getSysroot(projectFile);
             const crossCompileArg = crossPrefix ? `-device-option CROSS_COMPILE=${crossPrefix}` : '';
             const sysrootArg = sysroot ? `-sysroot ${quotePath(sysroot)}` : '';
-            const additionalArgs = [config.get<string>('additionalQMakeArguments') || '', crossCompileArg, sysrootArg].filter(Boolean).join(' ');
+            const additionalArgs = [config.get<string>('additionalQMakeArguments') || '', this.getKitExtraArgs(projectFile, projectType), crossCompileArg, sysrootArg].filter(Boolean).join(' ');
             const buildTypeArg = buildType === 'release' ? 'CONFIG+=release' : 'CONFIG+=debug';
             const makeArgs = parallelFlag ? `${makeCmd} ${parallelFlag} V=1` : `${makeCmd} V=1`;
             const kitEnv = this.getKitEnvVars(projectFile);
@@ -427,8 +424,8 @@ export class QtTaskProvider implements vscode.TaskProvider {
             commands.push(
                 mkdirCmd(buildDir),
                 cdCmd(buildDir),
-                simpleExecCmd(`${makeCmd} clean ${nullRedirect()}`),
                 execCmd(qmakePath, `${quotePath(projectFile)} ${buildTypeArg} ${additionalArgs}`),
+                simpleExecCmd(`${makeCmd} clean`),
                 simpleExecCmd(makeArgs)
             );
             if (postBuildCommand) {
@@ -438,7 +435,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
             const logPath = path.join(buildDir, '.qt-build-output.log');
             const buildCommand = joinCmds(...commands);
             execution = new vscode.CustomExecution(async () => {
-                return new QtBuildPseudoterminal(buildCommand, workspaceFolder.uri.fsPath, kitEnv, logPath, this.outputChannel);
+                return new QtBuildPseudoterminal(buildCommand, workspaceFolder.uri.fsPath, kitEnv, logPath, this.outputChannel, buildId);
             });
         } else {
             // CMake rebuild
@@ -450,7 +447,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
                 ? `-DCMAKE_C_COMPILER=${quotePath(crossPrefix + 'gcc')} -DCMAKE_CXX_COMPILER=${quotePath(crossPrefix + 'g++')}`
                 : '';
             const sysrootArg = sysroot ? `-DCMAKE_SYSROOT=${quotePath(sysroot)}` : '';
-            const additionalArgs = [config.get<string>('additionalCMakeArguments') || '', toolchainArg, crossCompileArg, sysrootArg].filter(Boolean).join(' ');
+            const additionalArgs = [config.get<string>('additionalCMakeArguments') || '', this.getKitExtraArgs(projectFile, projectType), toolchainArg, crossCompileArg, sysrootArg].filter(Boolean).join(' ');
             const cmakeBuildArgs = parallelFlag ? `--parallel ${jobs}` : '';
             const preset = this.qtCMakePresets.getPresetForProject(projectFile);
             const kitEnv = this.getKitEnvVars(projectFile);
@@ -462,15 +459,14 @@ export class QtTaskProvider implements vscode.TaskProvider {
             }
             if (preset) {
                 commands.push(
-                    rmDirCmd(buildDir),
-                    `cmake --preset ${preset.configure}`,
-                    `cmake --build ${quotePath(buildDir)} ${cmakeBuildArgs}`
+                    cdCmd(path.dirname(projectFile)),
+                    `cmake --preset ${quotePath(preset.configure)} -B ${quotePath(buildDir)} ${additionalArgs}`,
+                    `cmake --build ${quotePath(buildDir)}${preset.build ? ` --preset ${quotePath(preset.build)}` : ''} --clean-first ${cmakeBuildArgs}`
                 );
             } else {
                 commands.push(
-                    rmDirCmd(buildDir),
                     `cmake -B ${quotePath(buildDir)} -S ${quotePath(path.dirname(projectFile))} -DCMAKE_BUILD_TYPE=${buildType} ${additionalArgs}`,
-                    `cmake --build ${quotePath(buildDir)} ${cmakeBuildArgs}`
+                    `cmake --build ${quotePath(buildDir)} --clean-first ${cmakeBuildArgs}`
                 );
             }
             if (postBuildCommand) {
@@ -480,7 +476,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
             const logPath = path.join(buildDir, '.qt-build-output.log');
             const buildCommand = joinCmds(...commands);
             execution = new vscode.CustomExecution(async () => {
-                return new QtBuildPseudoterminal(buildCommand, workspaceFolder.uri.fsPath, verboseEnv, logPath, this.outputChannel);
+                return new QtBuildPseudoterminal(buildCommand, workspaceFolder.uri.fsPath, verboseEnv, logPath, this.outputChannel, buildId);
             });
         }
         
@@ -489,6 +485,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
                 type: 'qt',
                 task: 'rebuild',
                 file: projectFile,
+                buildId,
                 buildDir: buildDir
             },
             workspaceFolder,
@@ -541,8 +538,8 @@ export class QtTaskProvider implements vscode.TaskProvider {
         } else {
             // Executable not found, show error
             const errorCmd = isWindows()
-                ? `Write-Host "Error: Executable not found. Please build the project first." -ForegroundColor Red`
-                : `echo "Error: Executable not found. Please build the project first."`;
+                ? `Write-Host "Error: Executable not found. Please build the project first." -ForegroundColor Red; exit 1`
+                : `echo "Error: Executable not found. Please build the project first."; exit 1`;
             execution = new vscode.ShellExecution(errorCmd, {
                 cwd: workspaceFolder.uri.fsPath
             });
@@ -637,8 +634,8 @@ export class QtTaskProvider implements vscode.TaskProvider {
             command = `"${exePath}"`;
         } else {
             command = isWindows()
-                ? `Write-Host "Error: Executable not found at ${exePath}. Please build first." -ForegroundColor Red`
-                : `echo "Error: Executable not found at ${exePath}. Please build first."`;
+                ? `Write-Host "Error: Executable not found at ${exePath}. Please build first." -ForegroundColor Red; exit 1`
+                : `echo "Error: Executable not found at ${exePath}. Please build first."; exit 1`;
         }
 
         const execution = new vscode.ShellExecution(command, { cwd: projectDir });

@@ -1,10 +1,11 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { spawn, execSync } from 'child_process';
+import { spawn, execFileSync } from 'child_process';
 import { createServer } from 'http';
 import { QtConfigManager } from './qtConfigManager';
 import { QtProjectDetector } from './qtProjectDetector';
+
 
 export class QtWebAssembly {
     private qtConfigManager: QtConfigManager;
@@ -76,10 +77,9 @@ export class QtWebAssembly {
 
         // Fallback: check PATH
         try {
-            const result = execSync(
-                process.platform === 'win32' ? 'where emcc' : 'which emcc',
-                { encoding: 'utf-8', stdio: 'pipe' }
-            ).trim().split('\n')[0];
+            const lookupProgram = process.platform === 'win32' ? 'where' : 'which';
+            const result = execFileSync(lookupProgram, ['emcc'], { encoding: 'utf-8', stdio: 'pipe' })
+                .trim().split('\n')[0];
             if (result && fs.existsSync(result)) {
                 const emDir = path.dirname(result);
                 return {
@@ -144,7 +144,7 @@ export class QtWebAssembly {
         // Check version
         try {
             const emccPath = fs.existsSync(emcc) ? emcc : emccExe;
-            const version = execSync(`"${emccPath}" --version`, { encoding: 'utf-8', stdio: 'pipe' }).split('\n')[0].trim();
+            const version = execFileSync(emccPath, ['--version'], { encoding: 'utf-8', stdio: 'pipe' }).split('\n')[0].trim();
             this.outputChannel.appendLine(`[WASM] Emscripten: ${version}`);
         } catch {
             void vscode.window.showWarningMessage('Could not verify Emscripten version.');
@@ -174,7 +174,8 @@ export class QtWebAssembly {
         }
 
         const qtWasm = await this.detectQtWasm();
-        if (!qtWasm) {
+        const qmakePath = qtWasm?.qmakePath;
+        if (!qmakePath) {
             void vscode.window.showErrorMessage('No Qt for WebAssembly installation found.');
             return;
         }
@@ -226,58 +227,61 @@ export class QtWebAssembly {
             title: `Building WebAssembly: ${projectName}...`,
             cancellable: false
         }, async () => {
-            return new Promise<void>((resolve, reject) => {
-                const commands: string[] = [];
+            const extraFlags: string[] = [];
+            if (buildType === 'debug') {
+                extraFlags.push('-g', '-gsource-map');
+            }
+            if (this.detectWasmThreading(qtWasm.qmakePath)) {
+                extraFlags.push('-sUSE_PTHREADS', '-pthread');
+            }
 
-                const extraFlags: string[] = [];
-                if (buildType === 'debug') {
-                    extraFlags.push('-g', '-gsource-map');
-                }
-                if (this.detectWasmThreading(qtWasm.qmakePath)) {
-                    extraFlags.push('-sUSE_PTHREADS', '-pthread');
-                }
+            if (isCMake && emscripten.emcmakePath) {
+                const extraCmake = extraFlags.length > 0 ? `-DCMAKE_CXX_FLAGS=${extraFlags.join(' ')}` : '';
+                await this.runCommand(
+                    emscripten.emcmakePath,
+                    ['cmake', '-B', '.', '-S', path.dirname(targetProject), `-DCMAKE_BUILD_TYPE=${buildType}`, ...(extraCmake ? [extraCmake] : [])],
+                    wasmBuildDir
+                );
+            } else {
+                const buildTypeArg = buildType === 'release' ? 'CONFIG+=release' : 'CONFIG+=debug';
+                const extraQmake = extraFlags.length > 0 ? `QMAKE_CXXFLAGS+=${extraFlags.join(' ')}` : '';
+                await this.runCommand(
+                    qmakePath,
+                    ['-spec', 'wasm-emscripten', targetProject, buildTypeArg, ...(extraQmake ? [extraQmake] : [])],
+                    wasmBuildDir
+                );
+            }
 
-                if (isCMake && emscripten.emcmakePath) {
-                    const extraCmake = extraFlags.length > 0 ? `-DCMAKE_CXX_FLAGS="${extraFlags.join(' ')}"` : '';
-                    commands.push(
-                        `cd "${wasmBuildDir}"`,
-                        `"${emscripten.emcmakePath}" cmake -B . -S "${path.dirname(targetProject)}" -DCMAKE_BUILD_TYPE=${buildType} ${extraCmake}`,
-                        `"${emscripten.emmakePath || 'make'}" make`
-                    );
-                } else {
-                    const buildTypeArg = buildType === 'release' ? 'CONFIG+=release' : 'CONFIG+=debug';
-                    const extraQmake = extraFlags.length > 0 ? `QMAKE_CXXFLAGS+="${extraFlags.join(' ')}"` : '';
-                    commands.push(
-                        `cd "${wasmBuildDir}"`,
-                        `"${qtWasm.qmakePath}" -spec wasm-emscripten "${targetProject}" ${buildTypeArg} ${extraQmake}`,
-                        `${emscripten.emmakePath || 'make'} make`
-                    );
-                }
+            const makePath = emscripten.emmakePath || 'make';
+            await this.runCommand(makePath, ['make'], wasmBuildDir);
 
-                const shellCmd = commands.join(' && ');
-                const child = spawn(shellCmd, { shell: true });
+            void vscode.window.showInformationMessage(`WebAssembly build successful: ${projectName}`);
+            this.outputChannel.appendLine('[WASM] Build successful');
+        });
+    }
 
-                child.stdout?.on('data', (data: Buffer) => {
-                    this.outputChannel.append(data.toString('utf-8'));
-                });
-                child.stderr?.on('data', (data: Buffer) => {
-                    this.outputChannel.append(data.toString('utf-8'));
-                });
-                child.on('close', (code) => {
-                    if (code === 0) {
-                        void vscode.window.showInformationMessage(`WebAssembly build successful: ${projectName}`);
-                        this.outputChannel.appendLine('[WASM] Build successful');
-                        resolve();
-                    } else {
-                        void vscode.window.showErrorMessage(`WASM build failed (code ${code})`);
-                        reject(new Error(`WASM build exited with code ${code}`));
-                    }
-                });
-                child.on('error', (err) => {
-                    void vscode.window.showErrorMessage(`WASM build error: ${err.message}`);
-                    reject(err);
-                });
+    /**
+     * Run a command without shell interpolation and stream output to the channel.
+     */
+    private runCommand(command: string, args: string[], cwd: string): Promise<void> {
+        return new Promise((resolve, reject) => {
+            this.outputChannel.appendLine(`[WASM] Running: ${command} ${args.join(' ')}`);
+            const child = spawn(command, args, { shell: false, cwd });
+
+            child.stdout?.on('data', (data: Buffer) => {
+                this.outputChannel.append(data.toString('utf-8'));
             });
+            child.stderr?.on('data', (data: Buffer) => {
+                this.outputChannel.append(data.toString('utf-8'));
+            });
+            child.on('close', (code) => {
+                if (code === 0) {
+                    resolve();
+                } else {
+                    reject(new Error(`Command "${command}" exited with code ${code}`));
+                }
+            });
+            child.on('error', (err) => reject(err));
         });
     }
 
@@ -285,7 +289,7 @@ export class QtWebAssembly {
     // Serve WebAssembly Preview
     // ─────────────────────────────────────────────────────────────
 
-    async serveWebAssembly(projectFile?: string): Promise<void> {
+    async serveWebAssembly(_projectFile?: string): Promise<void> {
         const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
         if (!workspaceFolder) {
             void vscode.window.showErrorMessage('No workspace folder open');

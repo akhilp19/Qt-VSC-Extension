@@ -410,9 +410,9 @@ export class QtQmlTestFramework implements vscode.Disposable {
             }
         }
         try {
-            const cmd = process.platform === 'win32' ? 'where qmltestrunner' : 'which qmltestrunner';
-            const { execSync } = await import('child_process');
-            const result = execSync(cmd, { encoding: 'utf-8', stdio: 'pipe' }).trim();
+            const program = process.platform === 'win32' ? 'where' : 'which';
+            const { execFileSync } = await import('child_process');
+            const result = execFileSync(program, ['qmltestrunner'], { encoding: 'utf-8', stdio: 'pipe' }).trim();
             const first = result.split('\n')[0].trim();
             if (first && fs.existsSync(first)) { return first; }
         } catch {

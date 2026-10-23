@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { QtBuildAnalytics, PersistedBuildRecord } from './qtBuildAnalytics';
 import { QtTelemetry } from './qtTelemetry';
+import { buildExitCodes } from './qtBuildTerminal';
 import { parseBuildLog } from './qtBuildTimingParser';
 
 export interface BuildRecord {
@@ -16,7 +17,8 @@ export class QtBuildTracker {
     private records: BuildRecord[] = [];
     private buildAnalytics?: QtBuildAnalytics;
     private telemetry?: QtTelemetry;
-    private activeBuilds = new Map<string, BuildRecord>();
+    private activeBuilds = new Map<vscode.TaskExecution, BuildRecord>();
+    private disposables: vscode.Disposable[] = [];
     private _onDidUpdate = new vscode.EventEmitter<void>();
     readonly onDidUpdate = this._onDidUpdate.event;
 
@@ -28,7 +30,7 @@ export class QtBuildTracker {
     }
 
     private setupTaskListeners(): void {
-        vscode.tasks.onDidStartTask(e => {
+        this.disposables.push(vscode.tasks.onDidStartTask(e => {
             const task = e.execution.task;
             if (task.definition.type !== 'qt') { return; }
 
@@ -42,12 +44,17 @@ export class QtBuildTracker {
                 startTime: Date.now()
             };
 
-            this.activeBuilds.set(`${projectFile}:${taskType}`, record);
+            this.activeBuilds.set(e.execution, record);
             this.outputChannel.appendLine(`[BuildTracker] Started ${taskType} for ${projectFile}`);
             this._onDidUpdate.fire();
-        });
+        }));
 
-        vscode.tasks.onDidEndTask(e => {
+        this.disposables.push(vscode.tasks.onDidEndTaskProcess(e => {
+            const record = this.activeBuilds.get(e.execution);
+            if (record) { record.success = e.exitCode === 0; }
+        }));
+
+        this.disposables.push(vscode.tasks.onDidEndTask(e => {
             const task = e.execution.task;
             if (task.definition.type !== 'qt') { return; }
 
@@ -55,12 +62,13 @@ export class QtBuildTracker {
             const taskType = task.definition.task as BuildRecord['taskType'];
             if (!projectFile || !taskType) { return; }
 
-            const key = `${projectFile}:${taskType}`;
-            const record = this.activeBuilds.get(key);
+            const record = this.activeBuilds.get(e.execution);
             if (record) {
                 record.endTime = Date.now();
-                record.success = true;
-                this.activeBuilds.delete(key);
+                const buildId = task.definition.buildId as string | undefined;
+                record.success = buildId ? buildExitCodes.get(buildId) === 0 : record.success === true;
+                if (buildId) { buildExitCodes.delete(buildId); }
+                this.activeBuilds.delete(e.execution);
                 this.records.push(record);
                 this.outputChannel.appendLine(`[BuildTracker] Finished ${taskType} for ${projectFile}`);
 
@@ -102,7 +110,7 @@ export class QtBuildTracker {
 
                 this._onDidUpdate.fire();
             }
-        });
+        }));
     }
 
     getLastBuild(projectFile: string): BuildRecord | undefined {
@@ -112,8 +120,8 @@ export class QtBuildTracker {
     }
 
     isBuilding(projectFile: string): boolean {
-        for (const key of this.activeBuilds.keys()) {
-            if (key.startsWith(`${projectFile}:`)) {
+        for (const record of this.activeBuilds.values()) {
+            if (record.projectFile === projectFile) {
                 return true;
             }
         }
@@ -140,6 +148,8 @@ export class QtBuildTracker {
     }
 
     dispose(): void {
+        this.disposables.forEach(d => d.dispose());
+        this.activeBuilds.clear();
         this._onDidUpdate.dispose();
     }
 }

@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { isWindows, isMacOS, isLinux, exe } from './platformUtils';
 
 export type PackageManagerSource =
@@ -21,24 +21,22 @@ export interface PackageManagerResult {
 }
 
 /**
- * Run a shell command and return stdout, or undefined on error.
+ * Run a command with arguments and return stdout, or undefined on error.
  */
 function runCommand(command: string, args?: string[]): string | undefined {
     try {
-        const fullCmd = args ? `${command} ${args.join(' ')}` : command;
-        return execSync(fullCmd, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+        return execFileSync(command, args || [], { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
     } catch {
         return undefined;
     }
 }
 
 /**
- * Run a shell command with a timeout and return stdout, or undefined on error.
+ * Run a command with arguments and a timeout and return stdout, or undefined on error.
  */
 function runCommandWithTimeout(command: string, args?: string[], timeoutMs = 5000): string | undefined {
     try {
-        const fullCmd = args ? `${command} ${args.join(' ')}` : command;
-        return execSync(fullCmd, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], timeout: timeoutMs }).trim();
+        return execFileSync(command, args || [], { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], timeout: timeoutMs }).trim();
     } catch {
         return undefined;
     }
@@ -48,7 +46,7 @@ function runCommandWithTimeout(command: string, args?: string[], timeoutMs = 500
  * Query qmake for its version string.
  */
 function queryQMakeVersion(qmakePath: string): string | undefined {
-    const output = runCommand(`"${qmakePath}"`, ['-query', 'QT_VERSION']);
+    const output = runCommand(qmakePath, ['-query', 'QT_VERSION']);
     return output || undefined;
 }
 
@@ -56,7 +54,7 @@ function queryQMakeVersion(qmakePath: string): string | undefined {
  * Query qmake for its install prefix.
  */
 function queryQMakePrefix(qmakePath: string): string | undefined {
-    const output = runCommand(`"${qmakePath}"`, ['-query', 'QT_INSTALL_PREFIX']);
+    const output = runCommand(qmakePath, ['-query', 'QT_INSTALL_PREFIX']);
     return output || undefined;
 }
 

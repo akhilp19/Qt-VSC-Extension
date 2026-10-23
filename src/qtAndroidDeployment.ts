@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { spawn, execSync, ChildProcess } from 'child_process';
+import { spawn, execFileSync, ChildProcess } from 'child_process';
 import { QtConfigManager } from './qtConfigManager';
 import { QtProjectDetector } from './qtProjectDetector';
 
@@ -444,7 +444,7 @@ export class QtAndroidDeployment {
         this.outputChannel.appendLine(`[Android] Installing ${path.basename(apkPath)} to ${deviceId}...`);
 
         try {
-            execSync(`"${adbPath}" -s ${deviceId} install -r "${apkPath}"`, {
+            execFileSync(adbPath, ['-s', deviceId, 'install', '-r', apkPath], {
                 encoding: 'utf-8',
                 stdio: 'pipe'
             });
@@ -508,11 +508,9 @@ export class QtAndroidDeployment {
 
         const apksPath = aabPath.replace(/\.aab$/i, '.apks');
 
-        let cmd: string;
+        const args = ['-jar', bundletool, 'build-apks', '--bundle', aabPath, '--output', apksPath];
         if (keystorePath && fs.existsSync(keystorePath)) {
-            cmd = `java -jar "${bundletool}" build-apks --bundle="${aabPath}" --output="${apksPath}" --ks="${keystorePath}" --ks-pass=pass:${keystorePassword} --ks-key-alias="${keyAlias}"`;
-        } else {
-            cmd = `java -jar "${bundletool}" build-apks --bundle="${aabPath}" --output="${apksPath}"`;
+            args.push('--ks', keystorePath, '--ks-pass', `pass:${keystorePassword}`, '--ks-key-alias', keyAlias);
         }
 
         this.outputChannel.appendLine(`[Android] Building APKS from ${path.basename(aabPath)}...`);
@@ -523,7 +521,7 @@ export class QtAndroidDeployment {
             cancellable: false
         }, async () => {
             return new Promise<void>((resolve, reject) => {
-                const child = spawn(cmd, { shell: true });
+                const child = spawn('java', args, { stdio: 'pipe' });
                 child.stdout?.on('data', (data: Buffer) => this.outputChannel.append(data.toString('utf-8')));
                 child.stderr?.on('data', (data: Buffer) => this.outputChannel.append(data.toString('utf-8')));
                 child.on('close', (code) => {
@@ -575,7 +573,7 @@ export class QtAndroidDeployment {
         }
 
         const adbPath = this.findAdb();
-        let deviceArg = '';
+        let deviceId: string | undefined;
         if (adbPath) {
             const devices = this.listDevices(adbPath);
             if (devices.length > 1) {
@@ -584,14 +582,18 @@ export class QtAndroidDeployment {
                     { placeHolder: 'Select Android device' }
                 );
                 if (selected) {
-                    deviceArg = ` --device-id=${selected.id}`;
+                    deviceId = selected.id;
                 }
             } else if (devices.length === 1) {
-                deviceArg = ` --device-id=${devices[0].id}`;
+                deviceId = devices[0].id;
             }
         }
 
-        const cmd = `java -jar "${bundletool}" install-apks --apks="${apksPath}"${deviceArg}`;
+        const args = ['-jar', bundletool, 'install-apks', '--apks', apksPath];
+        if (deviceId) {
+            args.push('--device-id', deviceId);
+        }
+
         this.outputChannel.appendLine(`[Android] Installing APKS ${path.basename(apksPath)}...`);
 
         await vscode.window.withProgress({
@@ -600,7 +602,7 @@ export class QtAndroidDeployment {
             cancellable: false
         }, async () => {
             return new Promise<void>((resolve, reject) => {
-                const child = spawn(cmd, { shell: true });
+                const child = spawn('java', args, { stdio: 'pipe' });
                 child.stdout?.on('data', (data: Buffer) => this.outputChannel.append(data.toString('utf-8')));
                 child.stderr?.on('data', (data: Buffer) => this.outputChannel.append(data.toString('utf-8')));
                 child.on('close', (code) => {
@@ -653,12 +655,15 @@ export class QtAndroidDeployment {
             placeHolder: 'leave empty for all messages'
         });
 
-        const cmd = filter
-            ? `"${adbPath}" -s ${deviceId} logcat ${filter}`
-            : `"${adbPath}" -s ${deviceId} logcat`;
+        const args = ['-s', deviceId, 'logcat'];
+        if (filter) {
+            // adb logcat expects the filter as a single shell token; split on whitespace is safe
+            // because adb treats remaining positional args as a single filter expression.
+            args.push(...filter.split(/\s+/).filter(Boolean));
+        }
 
         this.outputChannel.appendLine(`[Android] Starting logcat for ${deviceId}...`);
-        this.logcatProcess = spawn(cmd, { shell: true });
+        this.logcatProcess = spawn(adbPath, args, { stdio: 'pipe' });
         this.logcatProcess.stdout?.on('data', (data: Buffer) => {
             this.outputChannel.append('[Logcat] ' + data.toString('utf-8'));
         });
@@ -731,10 +736,8 @@ export class QtAndroidDeployment {
         }
 
         try {
-            const result = execSync(
-                process.platform === 'win32' ? 'where bundletool' : 'which bundletool',
-                { encoding: 'utf-8', stdio: 'pipe' }
-            ).trim();
+            const program = process.platform === 'win32' ? 'where' : 'which';
+            const result = execFileSync(program, ['bundletool'], { encoding: 'utf-8', stdio: 'pipe' }).trim();
             const first = result.split('\n')[0].trim();
             if (first && fs.existsSync(first)) { return first; }
         } catch {
@@ -763,9 +766,7 @@ export class QtAndroidDeployment {
 
     private async runGradleWrapper(gradlew: string, buildDir: string, projectName: string, task: 'assembleDebug' | 'bundleDebug'): Promise<void> {
         const cwd = path.dirname(gradlew);
-        const isWindows = process.platform === 'win32';
-        const cmd = isWindows ? `"${gradlew}" ${task}` : `"${gradlew}" ${task}`;
-        this.outputChannel.appendLine(`[Android] Running Gradle wrapper: ${cmd}`);
+        this.outputChannel.appendLine(`[Android] Running Gradle wrapper: ${gradlew} ${task}`);
 
         await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
@@ -773,7 +774,7 @@ export class QtAndroidDeployment {
             cancellable: false
         }, async () => {
             return new Promise<void>((resolve, reject) => {
-                const child = spawn(cmd, { shell: true, cwd });
+                const child = spawn(gradlew, [task], { stdio: 'pipe', cwd });
                 child.stdout?.on('data', (data: Buffer) => this.outputChannel.append(data.toString('utf-8')));
                 child.stderr?.on('data', (data: Buffer) => this.outputChannel.append(data.toString('utf-8')));
                 child.on('close', (code) => {
@@ -802,10 +803,8 @@ export class QtAndroidDeployment {
         }
 
         try {
-            const result = execSync(
-                process.platform === 'win32' ? 'where androiddeployqt' : 'which androiddeployqt',
-                { encoding: 'utf-8', stdio: 'pipe' }
-            ).trim();
+            const program = process.platform === 'win32' ? 'where' : 'which';
+            const result = execFileSync(program, ['androiddeployqt'], { encoding: 'utf-8', stdio: 'pipe' }).trim();
             const first = result.split('\n')[0].trim();
             if (first && fs.existsSync(first)) { return first; }
         } catch {
@@ -896,10 +895,8 @@ export class QtAndroidDeployment {
         }
 
         try {
-            const result = execSync(
-                process.platform === 'win32' ? 'where adb' : 'which adb',
-                { encoding: 'utf-8', stdio: 'pipe' }
-            ).trim();
+            const program = process.platform === 'win32' ? 'where' : 'which';
+            const result = execFileSync(program, ['adb'], { encoding: 'utf-8', stdio: 'pipe' }).trim();
             const first = result.split('\n')[0].trim();
             if (first && fs.existsSync(first)) { return first; }
         } catch {
@@ -911,7 +908,7 @@ export class QtAndroidDeployment {
 
     private listDevices(adbPath: string): AndroidDevice[] {
         try {
-            const output = execSync(`"${adbPath}" devices -l`, { encoding: 'utf-8', stdio: 'pipe' });
+            const output = execFileSync(adbPath, ['devices', '-l'], { encoding: 'utf-8', stdio: 'pipe' });
             const devices: AndroidDevice[] = [];
             const lines = output.split('\n');
             for (const line of lines) {
@@ -996,7 +993,7 @@ export class QtAndroidDeployment {
         outputDir: string
     ): Promise<void> {
         return new Promise((resolve, reject) => {
-            const child = spawn(executable, args, { shell: true });
+            const child = spawn(executable, args, { stdio: 'pipe' });
             let stdout = '';
             let stderr = '';
 

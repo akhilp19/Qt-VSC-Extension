@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { spawn } from 'child_process';
 import { QtConfigManager } from './qtConfigManager';
-import { exe, quotePath } from './platformUtils';
+import { exe } from './platformUtils';
 
 export class QrcSupport {
     private qtConfigManager: QtConfigManager;
@@ -100,8 +100,8 @@ export class QrcSupport {
 
         this.outputChannel.appendLine(`Running rcc: "${rccPath}" "${targetFile}" -o "${outputFile}"`);
 
-        const child = spawn(`"${rccPath}"`, [`"${targetFile}"`, '-o', `"${outputFile}"`], {
-            shell: true,
+        const child = spawn(rccPath, [targetFile, '-o', outputFile], {
+            shell: false,
             cwd: qrcDir
         });
 
@@ -157,9 +157,9 @@ export class QrcSupport {
 
         // Fallback: search PATH for rcc
         try {
-            const { execSync } = await import('child_process');
-            const lookupCmd = process.platform === 'win32' ? 'where rcc' : 'which rcc';
-            const rccInPath = execSync(lookupCmd, { encoding: 'utf-8' }).trim().split('\n')[0];
+            const { execFileSync } = await import('child_process');
+            const lookupProgram = process.platform === 'win32' ? 'where' : 'which';
+            const rccInPath = execFileSync(lookupProgram, ['rcc'], { encoding: 'utf-8' }).trim().split('\n')[0];
             if (rccInPath && fs.existsSync(rccInPath)) {
                 return rccInPath;
             }

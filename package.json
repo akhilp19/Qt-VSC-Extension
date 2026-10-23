@@ -2,7 +2,7 @@
   "name": "qt-vsc-extension",
   "displayName": "Qt C++ Tools",
   "description": "Build, run and manage Qt C++ projects in VS Code",
-  "version": "2.8.0",
+  "version": "2.9.0",
   "publisher": "akhilp19",
   "author": {
     "name": "Akhil Pawar"
@@ -859,7 +859,12 @@
         },
         "qt.iosExportMethod": {
           "type": "string",
-          "enum": ["development", "app-store", "ad-hoc", "enterprise"],
+          "enum": [
+            "development",
+            "app-store",
+            "ad-hoc",
+            "enterprise"
+          ],
           "default": "development",
           "description": "iOS IPA export method."
         },
@@ -1506,21 +1511,31 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile",
+    "test": "node ./out/test/runTest.js",
     "lint": "eslint src --ext ts",
     "package": "vsce package"
   },
   "devDependencies": {
+    "@types/glob": "^8.1.0",
+    "@types/mocha": "^10.0.10",
     "@types/node": "^18.19.0",
     "@types/vscode": "^1.85.0",
-    "@typescript-eslint/eslint-plugin": "^6.15.0",
-    "@typescript-eslint/parser": "^6.15.0",
-    "@vscode/vsce": "^2.22.0",
-    "eslint": "^8.56.0",
+    "@typescript-eslint/eslint-plugin": "^8.64.0",
+    "@typescript-eslint/parser": "^8.64.0",
+    "@vscode/test-electron": "^3.0.0",
+    "@vscode/vsce": "^3.9.2",
+    "eslint": "^8.57.1",
+    "glob": "^13.0.6",
+    "mocha": "^11.7.6",
     "typescript": "^5.3.3"
   },
   "dependencies": {
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver": "^10.0.0",
     "vscode-languageserver-textdocument": "^1.0.12"
+  },
+  "overrides": {
+    "diff": "^8.0.0",
+    "serialize-javascript": "^7.0.0"
   }
 }

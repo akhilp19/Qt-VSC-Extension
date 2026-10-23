@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { execSync } from 'child_process';
+import { execFileSync, spawn } from 'child_process';
 import { QtConfigManager } from './qtConfigManager';
 import { QtProjectDetector } from './qtProjectDetector';
 
@@ -31,8 +31,8 @@ export class QtRemoteDeployment {
     detectRemoteTools(): { ssh?: string; scp?: string; rsync?: string; gdb?: string; lldb?: string } {
         const find = (name: string): string | undefined => {
             try {
-                const cmd = process.platform === 'win32' ? `where ${name}` : `which ${name}`;
-                const result = execSync(cmd, { encoding: 'utf-8', stdio: 'pipe' }).trim();
+                const program = process.platform === 'win32' ? 'where' : 'which';
+                const result = execFileSync(program, [name], { encoding: 'utf-8', stdio: 'pipe' }).trim();
                 const first = result.split('\n')[0].trim();
                 return first && fs.existsSync(first) ? first : undefined;
             } catch {
@@ -149,11 +149,14 @@ export class QtRemoteDeployment {
             void vscode.window.showWarningMessage('rsync not found. Falling back to scp.');
         }
         const useRsync = mode === 'rsync' && tools.rsync;
-        const deployCmd = useRsync
-            ? `"${tools.rsync}" -avz --delete "${path.dirname(exePath)}/" "${user}@${host}:${remotePath}/"`
-            : `"${tools.scp || 'scp'}" -r "${path.dirname(exePath)}" "${user}@${host}:${remotePath}"`;
+        const sourceDir = path.dirname(exePath);
+        const remoteTarget = `${user}@${host}:${remotePath}`;
+        const program = useRsync ? tools.rsync! : (tools.scp || 'scp');
+        const args = useRsync
+            ? ['-avz', '--delete', `${sourceDir}/`, `${remoteTarget}/`]
+            : ['-r', sourceDir, remoteTarget];
 
-        this.outputChannel.appendLine(`[Remote] Deploying ${path.basename(exePath)} to ${user}@${host}:${remotePath}...`);
+        this.outputChannel.appendLine(`[Remote] Deploying ${path.basename(exePath)} to ${remoteTarget}...`);
 
         await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
@@ -161,17 +164,26 @@ export class QtRemoteDeployment {
             cancellable: false
         }, async () => {
             return new Promise<void>((resolve, reject) => {
-                try {
-                    execSync(deployCmd, { encoding: 'utf-8', stdio: 'pipe' });
-                    void vscode.window.showInformationMessage(`Deployed to ${user}@${host}:${remotePath}`);
-                    this.outputChannel.appendLine('[Remote] Deployment successful');
-                    resolve();
-                } catch (error) {
-                    const err = error as { stderr?: string; stdout?: string };
-                    const msg = err.stderr || err.stdout || String(error);
-                    void vscode.window.showErrorMessage(`Remote deploy failed: ${msg}`);
-                    reject(new Error(msg));
-                }
+                let stdout = '';
+                let stderr = '';
+                const child = spawn(program, args, { stdio: 'pipe' });
+                child.stdout?.on('data', (data: Buffer) => { stdout += data.toString('utf-8'); });
+                child.stderr?.on('data', (data: Buffer) => { stderr += data.toString('utf-8'); });
+                child.on('error', (err) => {
+                    void vscode.window.showErrorMessage(`Remote deploy failed: ${err.message}`);
+                    reject(err);
+                });
+                child.on('close', (code) => {
+                    if (code === 0) {
+                        void vscode.window.showInformationMessage(`Deployed to ${user}@${host}:${remotePath}`);
+                        this.outputChannel.appendLine('[Remote] Deployment successful');
+                        resolve();
+                    } else {
+                        const msg = stderr || stdout || `exited with code ${code}`;
+                        void vscode.window.showErrorMessage(`Remote deploy failed: ${msg}`);
+                        reject(new Error(msg));
+                    }
+                });
             });
         });
     }

@@ -1,6 +1,6 @@
 # Qt C++ Tools for VS Code
 
-A comprehensive VS Code extension that brings Qt Creator's essential features to Visual Studio Code, making it Qt C++ developer-friendly on Windows.
+A comprehensive VS Code extension that brings Qt Creator's essential features to Visual Studio Code, making it Qt C++ developer-friendly on Windows, macOS, and Linux.
 
 ## Features
 
@@ -142,6 +142,7 @@ Access these commands via Command Palette (`Ctrl+Shift+P`):
 - `Qt: Detect Slow Compilation Targets` — Identify slowest `.cpp` files by complexity
 - `Qt: Select CMake Preset` — Use `CMakePresets.json` configure/build presets in tasks
 - `Qt: Clear CMake Preset` — Revert to default CMake behavior
+- Preset builds use the extension/kit build directory (`-B` overrides the preset `binaryDir`), keeping build, clean, rebuild, and run in the same location. Selected build presets retain their target and build options.
 
 **Code Quality**
 - `Qt: Run Health Check` — Validate Qt, compiler, debugger, kits, Android/iOS/WASM configs, IntelliSense
@@ -266,7 +267,7 @@ The extension automatically searches for Qt in:
 
 4. **Install VSIX**:
    ```powershell
-   code --install-extension qt-vsc-extension-1.16.0.vsix --force
+   code --install-extension qt-vsc-extension-2.9.0.vsix --force
    ```
 
 ### Method 3: Development Mode
@@ -405,7 +406,25 @@ See **[ROADMAP.md](ROADMAP.md)** for a detailed, versioned breakdown of complete
 - ✅ **v2.0.0 (Shipped)** — Completeness & Polish
 - ✅ **v2.1.0 (Shipped)** — Advanced Mobile & Embedded (TestFlight, bundletool, logcat, remote deploy/debug, Yocto, sysroot)
 - ✅ **v2.2.0 (Shipped)** — LSP & Deep Code Intelligence (custom Qt C++ LSP server, signal/slot rename, cross-reference)
-- ✅ **v2.3.0 (Current)** — Extension icon and branding
+- ✅ **v2.3.0 (Shipped)** — Extension icon and branding
+- ✅ **v2.8.0** — Security hardening, dependency updates, and cross-platform polish
+
+- ✅ **v2.9.0 (Current)** — Build workflow fixes, accurate build outcomes, security hardening, and regression checks
+
+### v2.9.0 release notes
+
+This version includes the current workspace changes:
+
+- Fix Quick Build task selection and configure projects when no Makefile or CMake cache exists.
+- Correct fresh-project rebuild ordering and retain kit arguments during rebuilds.
+- Keep CMake preset build, clean, rebuild, and run tasks aligned to the extension/kit build directory, while applying selected build presets.
+- Record actual build outcomes, including failures and cancellations, and track overlapping task executions separately.
+- Stop Windows command chains after failures and return a failure when a run target is missing.
+- Flush captured build logs before task completion and clean up task event listeners.
+- Include command execution and path handling hardening across Qt tools and deployment integrations, plus dependency updates.
+- Add lint configuration, CI/test infrastructure, and seven build flow regression checks, including real CMake builds.
+
+Validation: TypeScript compilation and all seven build flow checks pass. Lint reports no errors and 46 existing warnings. Native Windows execution and full Qt/VS Code workflows still require end-to-end testing.
 
 ## Contributing
 

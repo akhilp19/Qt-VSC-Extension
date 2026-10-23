@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { QtConfigManager, QtInstallation } from './qtConfigManager';
 
 interface CppConfiguration {
@@ -152,9 +152,9 @@ export class IntelliSenseHelper {
      */
     private async queryQtPaths(qtInstallation: QtInstallation): Promise<{ headers?: string; libs?: string; bins?: string } | undefined> {
         try {
-            const headers = execSync(`"${qtInstallation.qmakePath}" -query QT_INSTALL_HEADERS`, { encoding: 'utf-8' }).trim();
-            const libs = execSync(`"${qtInstallation.qmakePath}" -query QT_INSTALL_LIBS`, { encoding: 'utf-8' }).trim();
-            const bins = execSync(`"${qtInstallation.qmakePath}" -query QT_INSTALL_BINS`, { encoding: 'utf-8' }).trim();
+            const headers = execFileSync(qtInstallation.qmakePath, ['-query', 'QT_INSTALL_HEADERS'], { encoding: 'utf-8' }).trim();
+            const libs = execFileSync(qtInstallation.qmakePath, ['-query', 'QT_INSTALL_LIBS'], { encoding: 'utf-8' }).trim();
+            const bins = execFileSync(qtInstallation.qmakePath, ['-query', 'QT_INSTALL_BINS'], { encoding: 'utf-8' }).trim();
 
             return {
                 headers: headers || undefined,
@@ -181,8 +181,9 @@ export class IntelliSenseHelper {
 
                 for (const vsWhere of vsWherePaths) {
                     if (fs.existsSync(vsWhere)) {
-                        const result = execSync(
-                            `"${vsWhere}" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`,
+                        const result = execFileSync(
+                            vsWhere,
+                            ['-latest', '-products', '*', '-requires', 'Microsoft.VisualStudio.Component.VC.Tools.x86.x64', '-property', 'installationPath'],
                             { encoding: 'utf-8' }
                         ).trim();
                         if (result) {

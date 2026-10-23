@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { spawn, execSync } from 'child_process';
+import { spawn, execFileSync } from 'child_process';
 import { QtConfigManager } from './qtConfigManager';
 import { isWindows, exe } from './platformUtils';
 
@@ -232,8 +232,8 @@ export class QtTranslationProvider implements vscode.TreeDataProvider<vscode.Tre
         }
 
         try {
-            const lookupCmd = isWindows() ? `where ${toolName}` : `which ${toolName}`;
-            const result = execSync(lookupCmd, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+            const lookupProgram = isWindows() ? 'where' : 'which';
+            const result = execFileSync(lookupProgram, [toolName], { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
             const firstLine = result.split('\n')[0].trim();
             if (firstLine && fs.existsSync(firstLine)) {
                 return firstLine;

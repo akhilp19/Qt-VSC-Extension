@@ -2,8 +2,8 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 
 suite('Extension Test Suite', () => {
-    test('extension is present and active', async () => {
-        const extension = vscode.extensions.getExtension('akhilpawar.qt-vsc-extension');
+    suiteSetup(async () => {
+        const extension = vscode.extensions.getExtension('akhilp19.qt-vsc-extension');
         assert.ok(extension, 'Extension should be present');
         if (!extension.isActive) {
             await extension.activate();

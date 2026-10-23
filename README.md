@@ -217,7 +217,7 @@ Qt C++ Tools includes an **opt-in, disabled-by-default** telemetry feature to he
 
 ### Software Requirements
 - **VS Code**: Version 1.85.0 or higher
-- **Node.js**: Version 18.x or higher (for development only)
+- **Node.js**: Version 22.x or higher (for development only)
 - **Qt**: Qt 5.x or Qt 6.x installation
 - **Compiler**: 
   - MSVC (Visual Studio 2017/2019/2022) or

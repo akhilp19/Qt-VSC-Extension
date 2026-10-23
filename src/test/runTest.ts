@@ -22,7 +22,9 @@ async function main(): Promise<void> {
         await runTests({
             vscodeExecutablePath,
             extensionDevelopmentPath,
-            extensionTestsPath
+            extensionTestsPath,
+            // IDE terminals can inherit this flag; Electron must launch as VS Code.
+            extensionTestsEnv: { ELECTRON_RUN_AS_NODE: undefined }
         });
     } catch (err) {
         console.error('Failed to run tests:', err);

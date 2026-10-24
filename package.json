@@ -1625,6 +1625,9 @@
   },
   "overrides": {
     "diff": "^8.0.0",
-    "serialize-javascript": "^7.0.0"
+    "serialize-javascript": "^7.1.4",
+    "@azure/identity": {
+      "@azure/msal-node": "^7.1.1"
+    }
   }
 }

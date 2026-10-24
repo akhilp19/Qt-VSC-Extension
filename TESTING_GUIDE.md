@@ -5,7 +5,8 @@
 Run `npm run compile && node --test scripts/test-build-flow.cjs`.
 These checks require CMake and make on PATH. They exercise real CMake normal,
 quick, and rebuild tasks with presets; check clean/run directory selection;
-and cover task outcomes, command failure guards, and QMake rebuild ordering.
+and cover task outcomes, command failure guards, QMake rebuild ordering,
+Run/Debug sequencing, unsaved files, workspace trust, and executable discovery.
 VS Code task events are mocked. Windows command generation is checked, but
 native Windows execution and a full Qt application still need platform testing.
 

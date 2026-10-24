@@ -18,7 +18,7 @@ export class QtPythonSupport {
      */
     detectPythonQtProjects(workspacePath: string): string[] {
         const results: string[] = [];
-        const bindingPattern = /^(?:from\s+(PySide6|PyQt6|PySide2|PyQt5)\s+import|import\s+(PySide6|PyQt6|PySide2|PyQt5))/;
+        const bindingPattern = /^(?:from\s+(PySide6|PyQt6|PySide2|PyQt5)(?:\.\w+)*\s+import|import\s+(PySide6|PyQt6|PySide2|PyQt5))/;
 
         try {
             this.scanPythonFiles(workspacePath, results, bindingPattern);

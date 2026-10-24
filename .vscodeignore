@@ -2,7 +2,11 @@ src
 tsconfig.json
 vsc-extension-quickstart.md
 .gitignore
-node_modules
 .vscode-test
 *.vsix
 test
+out/test/**
+scripts/test-build-flow.cjs
+.github/**
+.vscode/**
+.eslintrc.json

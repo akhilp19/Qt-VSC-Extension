@@ -110,6 +110,12 @@ export class QtTaskProvider implements vscode.TaskProvider {
             return undefined;
         }
         
+        if (projectInfo.type === 'raw') {
+            if (definition.task === 'build') { return this.createRawBuildTask(projectInfo.directory, workspaceFolder); }
+            if (definition.task === 'clean') { return this.createRawCleanTask(projectInfo.directory, workspaceFolder); }
+            if (definition.task === 'run') { return this.createRawRunTask(projectInfo.directory, workspaceFolder); }
+            return undefined;
+        }
         switch (definition.task) {
             case 'build':
                 return await this.createBuildTask(projectFile, projectInfo.type, workspaceFolder, definition.quickBuild === true);
@@ -192,7 +198,8 @@ export class QtTaskProvider implements vscode.TaskProvider {
         quickBuild: boolean = false
     ): Promise<vscode.Task> {
         const buildId = randomUUID();
-        const qtInstallation = await this.qtConfigManager.getQtInstallation();
+        const kit = this.qtBuildKitManager?.getActiveKit(projectFile);
+        const qtInstallation = kit ? { path: kit.qtPath, qmakePath: kit.qmakePath, version: kit.qtVersion, compiler: kit.compiler } : await this.qtConfigManager.getQtInstallation();
         const buildType = this.qtConfigManager.getProjectBuildType(projectFile);
         const buildDir = this.getBuildDir(projectFile, buildType);
         const kitEnv = this.getKitEnvVars(projectFile);
@@ -263,8 +270,8 @@ export class QtTaskProvider implements vscode.TaskProvider {
                 ? `-DCMAKE_C_COMPILER=${quotePath(crossPrefix + 'gcc')} -DCMAKE_CXX_COMPILER=${quotePath(crossPrefix + 'g++')}`
                 : '';
             const sysrootArg = sysroot ? `-DCMAKE_SYSROOT=${quotePath(sysroot)}` : '';
-            const additionalArgs = [config.get<string>('additionalCMakeArguments') || '', kitExtraArgs, toolchainArg, crossCompileArg, sysrootArg].filter(Boolean).join(' ');
-            const cmakeBuildArgs = parallelFlag ? `--parallel ${jobs}` : '';
+            const additionalArgs = [qtInstallation ? `-DCMAKE_PREFIX_PATH=${quotePath(qtInstallation.path)}` : '', config.get<string>('additionalCMakeArguments') || '', kitExtraArgs, toolchainArg, crossCompileArg, sysrootArg].filter(Boolean).join(' ');
+            const cmakeBuildArgs = `--config ${buildType === 'release' ? 'Release' : 'Debug'} ${parallelFlag ? `--parallel ${jobs}` : ''}`;
             const preset = this.qtCMakePresets.getPresetForProject(projectFile);
             const verboseEnv = { ...kitEnv, VERBOSE: '1' };
             
@@ -287,7 +294,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
             } else {
                 commands.push(
                     mkdirCmd(buildDir),
-                    `cmake -B ${quotePath(buildDir)} -S ${quotePath(path.dirname(projectFile))} -DCMAKE_BUILD_TYPE=${buildType} ${additionalArgs} ${ccacheArg}`,
+                    `cmake -B ${quotePath(buildDir)} -S ${quotePath(path.dirname(projectFile))} -DCMAKE_BUILD_TYPE=${buildType === 'release' ? 'Release' : 'Debug'} ${additionalArgs} ${ccacheArg}`,
                     `cmake --build ${quotePath(buildDir)} ${cmakeBuildArgs}`
                 );
             }
@@ -315,7 +322,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
             `${quickBuild ? 'Quick Build' : 'Build'} ${projectName}`,
             'qt',
             execution,
-            ['$msCompile', '$gcc', 'qt-qmake']
+            ['$msCompile', '$gcc', '$qt-qmake']
         );
         
         task.group = vscode.TaskGroup.Build;
@@ -338,7 +345,8 @@ export class QtTaskProvider implements vscode.TaskProvider {
     ): Promise<vscode.Task> {
         const buildType = this.qtConfigManager.getProjectBuildType(projectFile);
         const buildDir = this.getBuildDir(projectFile, buildType);
-        const makeCmd = this.qtConfigManager.getMakeCommand();
+        const kit = this.qtBuildKitManager?.getActiveKit(projectFile);
+        const makeCmd = this.qtConfigManager.getMakeCommand(kit ? { path: kit.qtPath, qmakePath: kit.qmakePath, compiler: kit.compiler } : undefined);
         const projectName = path.basename(projectFile, path.extname(projectFile));
         
         let execution: vscode.ShellExecution | vscode.CustomExecution;
@@ -391,7 +399,8 @@ export class QtTaskProvider implements vscode.TaskProvider {
         workspaceFolder: vscode.WorkspaceFolder
     ): Promise<vscode.Task> {
         const buildId = randomUUID();
-        const qtInstallation = await this.qtConfigManager.getQtInstallation();
+        const kit = this.qtBuildKitManager?.getActiveKit(projectFile);
+        const qtInstallation = kit ? { path: kit.qtPath, qmakePath: kit.qmakePath, version: kit.qtVersion, compiler: kit.compiler } : await this.qtConfigManager.getQtInstallation();
         const buildType = this.qtConfigManager.getProjectBuildType(projectFile);
         const buildDir = this.getBuildDir(projectFile, buildType);
         const makeCmd = this.qtConfigManager.getMakeCommand(qtInstallation);
@@ -447,8 +456,8 @@ export class QtTaskProvider implements vscode.TaskProvider {
                 ? `-DCMAKE_C_COMPILER=${quotePath(crossPrefix + 'gcc')} -DCMAKE_CXX_COMPILER=${quotePath(crossPrefix + 'g++')}`
                 : '';
             const sysrootArg = sysroot ? `-DCMAKE_SYSROOT=${quotePath(sysroot)}` : '';
-            const additionalArgs = [config.get<string>('additionalCMakeArguments') || '', this.getKitExtraArgs(projectFile, projectType), toolchainArg, crossCompileArg, sysrootArg].filter(Boolean).join(' ');
-            const cmakeBuildArgs = parallelFlag ? `--parallel ${jobs}` : '';
+            const additionalArgs = [qtInstallation ? `-DCMAKE_PREFIX_PATH=${quotePath(qtInstallation.path)}` : '', config.get<string>('additionalCMakeArguments') || '', this.getKitExtraArgs(projectFile, projectType), toolchainArg, crossCompileArg, sysrootArg].filter(Boolean).join(' ');
+            const cmakeBuildArgs = `--config ${buildType === 'release' ? 'Release' : 'Debug'} ${parallelFlag ? `--parallel ${jobs}` : ''}`;
             const preset = this.qtCMakePresets.getPresetForProject(projectFile);
             const kitEnv = this.getKitEnvVars(projectFile);
             const verboseEnv = { ...kitEnv, VERBOSE: '1' };
@@ -465,7 +474,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
                 );
             } else {
                 commands.push(
-                    `cmake -B ${quotePath(buildDir)} -S ${quotePath(path.dirname(projectFile))} -DCMAKE_BUILD_TYPE=${buildType} ${additionalArgs}`,
+                    `cmake -B ${quotePath(buildDir)} -S ${quotePath(path.dirname(projectFile))} -DCMAKE_BUILD_TYPE=${buildType === 'release' ? 'Release' : 'Debug'} ${additionalArgs}`,
                     `cmake --build ${quotePath(buildDir)} --clean-first ${cmakeBuildArgs}`
                 );
             }
@@ -492,7 +501,7 @@ export class QtTaskProvider implements vscode.TaskProvider {
             `Rebuild ${projectName}`,
             'qt',
             execution,
-            ['$msCompile', '$gcc', 'qt-qmake']
+            ['$msCompile', '$gcc', '$qt-qmake']
         );
         
         task.group = vscode.TaskGroup.Build;
@@ -521,19 +530,23 @@ export class QtTaskProvider implements vscode.TaskProvider {
         const projectName = path.basename(projectFile, path.extname(projectFile));
         
         // Try to find the executable
-        const exePath = await this.qtProjectDetector.findExecutable(projectFile, buildDir);
+        const exePath = await this.qtProjectDetector.findExecutable(projectFile, buildDir, buildType);
+        const run = vscode.workspace.getConfiguration('qt').get<Record<string, { args?: string[]; env?: Record<string, string>; cwd?: string }>>('runSettings', {})[projectFile] || {};
+        const args = (run.args || []).map(quotePath).join(' ');
+        const runEnv = { ...this.getKitEnvVars(projectFile), ...run.env };
+        const cwd = run.cwd ? path.resolve(path.dirname(projectFile), run.cwd) : undefined;
         
         let execution: vscode.ShellExecution | vscode.CustomExecution;
         
         if (projectType === 'python') {
             // Python project: run with python interpreter
-            const pythonCmd = isWindows() ? 'python' : 'python3';
-            execution = new vscode.ShellExecution(`${pythonCmd} "${projectFile}"`, {
-                cwd: workspaceFolder.uri.fsPath
+            const pythonCmd = vscode.workspace.getConfiguration('qt').get<string>('pythonExecutable') || (isWindows() ? 'python' : 'python3');
+            execution = new vscode.ShellExecution(`${execCmd(pythonCmd, `${quotePath(projectFile)} ${args}`)}`, {
+                cwd: cwd || path.dirname(projectFile), env: runEnv
             });
         } else if (exePath && fs.existsSync(exePath)) {
-            execution = new vscode.ShellExecution(execCmd(exePath), {
-                cwd: path.dirname(exePath)
+            execution = new vscode.ShellExecution(execCmd(exePath, args), {
+                cwd: cwd || path.dirname(exePath), env: runEnv
             });
         } else {
             // Executable not found, show error

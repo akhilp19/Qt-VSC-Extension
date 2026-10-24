@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { QtConfigManager } from './qtConfigManager';
+import { BuildKit } from './qtBuildKit';
 import { QtProjectDetector } from './qtProjectDetector';
 import { isWindows, isMacOS, exe } from './platformUtils';
 
@@ -18,6 +19,53 @@ export class QtDebuggerIntegration {
         this.qtConfigManager = qtConfigManager;
         this.qtProjectDetector = qtProjectDetector;
         this.outputChannel = outputChannel;
+    }
+
+    async startProject(projectFile: string, buildDir: string, kit?: BuildKit): Promise<boolean> {
+        const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(projectFile));
+        const info = await this.qtProjectDetector.getProjectInfo(projectFile);
+        if (!folder || !info) { return false; }
+        if (info.type === 'python') {
+            if (!vscode.extensions.getExtension('ms-python.debugpy')) {
+                await vscode.commands.executeCommand('workbench.extensions.search', '@id:ms-python.debugpy');
+                return false;
+            }
+        }
+        const program = info.type === 'python' ? projectFile : await this.qtProjectDetector.findExecutable(projectFile, buildDir, this.qtConfigManager.getProjectBuildType(projectFile));
+        if (!program) {
+            void vscode.window.showErrorMessage('No application executable found. Select an application target and build it before debugging.');
+            return false;
+        }
+        const debuggerInfo = await this.getDebuggerType(kit?.compiler);
+        const type = info.type === 'python' ? 'debugpy' : debuggerInfo.miMode === 'lldb' ? 'lldb' : debuggerInfo.type;
+        const adapter = type === 'debugpy' ? 'ms-python.debugpy' : type === 'lldb' ? 'vadimcn.vscode-lldb' : 'ms-vscode.cpptools';
+        if (!vscode.extensions.getExtension(adapter)) {
+            void vscode.window.showInformationMessage(`Install ${adapter} to debug this project.`);
+            await vscode.commands.executeCommand('workbench.extensions.search', `@id:${adapter}`);
+            return false;
+        }
+        const run = vscode.workspace.getConfiguration('qt').get<Record<string, { args?: string[]; env?: Record<string, string>; cwd?: string }>>('runSettings', {})[projectFile] || {};
+        const env = { ...kit?.envVars, ...run.env };
+        const launch: vscode.DebugConfiguration = {
+            name: `Debug ${info.name}`, type, request: 'launch', program,
+            cwd: run.cwd ? path.resolve(path.dirname(projectFile), run.cwd) : path.dirname(program),
+            args: run.args || []
+        };
+        if (type === 'cppdbg' || type === 'cppvsdbg') {
+            launch.environment = Object.entries(env).map(([name, value]) => ({ name, value }));
+            if (debuggerInfo.miMode) { launch.MIMode = debuggerInfo.miMode; }
+            if (debuggerInfo.miMode === 'gdb') {
+                const printer = vscode.extensions.getExtension('akhilp19.qt-vsc-extension')?.extensionPath;
+                launch.setupCommands = [{ text: '-enable-pretty-printing', ignoreFailures: true }];
+                if (printer) { launch.setupCommands.push({ text: `source ${JSON.stringify(path.join(printer, 'scripts', 'qt_pretty_printers.py'))}`, ignoreFailures: true }); }
+            }
+        } else { launch.env = env; }
+        if (type === 'debugpy') {
+            const python = vscode.workspace.getConfiguration('qt').get<string>('pythonExecutable');
+            if (python) { launch.python = python; }
+        }
+        // The workflow already built successfully; no launch.json or second build is needed.
+        return vscode.debug.startDebugging(folder, launch);
     }
 
     /**
@@ -78,11 +126,11 @@ export class QtDebuggerIntegration {
             cwd: '${workspaceFolder}',
             environment: [],
             externalConsole: false,
-            preLaunchTask: 'qt: build'
+            preLaunchTask: `qt: Build ${projectName}`
         };
 
         if (debuggerInfo.miMode) {
-            standardConfig.miMode = debuggerInfo.miMode;
+            standardConfig.MIMode = debuggerInfo.miMode;
             standardConfig.setupCommands = [
                 {
                     description: 'Enable pretty-printing for gdb',
@@ -108,11 +156,11 @@ export class QtDebuggerIntegration {
             cwd: '${workspaceFolder}',
             environment: [],
             externalConsole: false,
-            preLaunchTask: 'qt: build'
+            preLaunchTask: `qt: Build ${projectName}`
         };
 
         if (debuggerInfo.miMode) {
-            qmlConfig.miMode = debuggerInfo.miMode;
+            qmlConfig.MIMode = debuggerInfo.miMode;
             qmlConfig.setupCommands = [
                 {
                     description: 'Enable pretty-printing for gdb',
@@ -353,7 +401,7 @@ export class QtDebuggerIntegration {
         return candidates[0]; // Most likely path even if not built yet
     }
 
-    private async getDebuggerType(): Promise<{ type: string; miMode?: string }> {
+    private async getDebuggerType(compilerOverride?: string): Promise<{ type: string; miMode?: string }> {
         const config = vscode.workspace.getConfiguration('qt');
         const override = config.get<string>('debuggerType') || 'auto';
 
@@ -366,8 +414,8 @@ export class QtDebuggerIntegration {
 
         // Auto-detect from compiler
         const qtInstallation = await this.qtConfigManager.getQtInstallation();
-        if (qtInstallation?.compiler) {
-            const compiler = qtInstallation.compiler.toLowerCase();
+        if (compilerOverride || qtInstallation?.compiler) {
+            const compiler = (compilerOverride || qtInstallation?.compiler || '').toLowerCase();
             if (compiler.includes('msvc')) {
                 return { type: 'cppvsdbg' };
             } else if (compiler.includes('mingw') || compiler.includes('gcc')) {

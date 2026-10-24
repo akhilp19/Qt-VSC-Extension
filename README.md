@@ -2,6 +2,21 @@
 
 A comprehensive VS Code extension that brings Qt Creator's essential features to Visual Studio Code, making it Qt C++ developer-friendly on Windows, macOS, and Linux.
 
+## Start a project and run it
+
+1. Open a Qt project folder, then choose **Set Up Qt** in the first-run notification (or run **Qt: Set Up Project**).
+2. Review detected tools and select a build kit. The kit is saved per project. Missing tools have setup or installation actions.
+3. Use the status bar to select the active project, kit, and Debug/Release configuration.
+4. Press **Run** or **Debug**. Files are saved and the project is built first; failed or cancelled builds prevent launch. Debug opens a session without modifying your existing `launch.json`.
+
+Use **Qt: New Qt Project** for a three-step Widgets, Qt Quick, or console application wizard with CMake, QMake, or PySide6. For Python, install the generated `requirements.txt` and set `qt.pythonExecutable` to your environment's interpreter when needed.
+
+**Qt: Configure Run Arguments and Environment** saves an argument array, environment variables, and an optional working directory per project. Relative working directories resolve from the project directory. Set `qt.buildBeforeRun` to `false` to launch an existing build.
+
+Debug requires Microsoft C/C++ for GDB/MSVC, CodeLLDB for LLDB, or Python Debugger for Python. If the adapter is missing, Debug opens its extension search. GDB sessions load the bundled Qt pretty printers; LLDB uses its own formatters. Click the Designer action in a `.ui` editor to launch the external Qt Designer application.
+
+The guided workflow requires a trusted workspace. It does not install system tools automatically. Executable discovery supports common build/configuration directories and macOS bundles; projects with custom output paths or multiple application targets may still need a manual debug configuration.
+
 ## Features
 
 ### 🔨 Build System Integration

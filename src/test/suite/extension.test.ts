@@ -15,5 +15,14 @@ suite('Extension Test Suite', () => {
         const commands = await vscode.commands.getCommands(true);
         assert.ok(commands.includes('qt.buildProject'), 'qt.buildProject command should be registered');
         assert.ok(commands.includes('qt.runProject'), 'qt.runProject command should be registered');
+        for (const command of ['qt.setupProject', 'qt.newProject', 'qt.selectProject', 'qt.configureRun', 'qt.debugProject']) {
+            assert.ok(commands.includes(command), `${command} should be registered`);
+        }
+    });
+
+    test('run builds first by default and run settings are contributed', () => {
+        const config = vscode.workspace.getConfiguration('qt');
+        assert.strictEqual(config.get('buildBeforeRun'), true);
+        assert.deepStrictEqual(config.get('runSettings'), {});
     });
 });

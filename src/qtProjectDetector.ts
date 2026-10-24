@@ -254,12 +254,15 @@ export class QtProjectDetector {
             const content = fs.readFileSync(cmakeFile, 'utf-8');
             
             // Find add_executable and add_library commands
-            const executableMatches = content.matchAll(/add_executable\s*\(\s*([a-zA-Z0-9_]+)/gi);
+            const executableMatches = content.matchAll(/(?:qt[56]?_)?add_executable\s*\(\s*([a-zA-Z0-9_]+|\$\{PROJECT_NAME\})/gi);
             const libraryMatches = content.matchAll(/add_library\s*\(\s*([a-zA-Z0-9_]+)/gi);
             
             for (const match of executableMatches) {
                 if (match[1]) {
-                    result.targets.push(match[1]);
+                    const projectName = content.match(/project\s*\(\s*([a-zA-Z0-9_]+)/i)?.[1];
+                    if (match[1] === '${PROJECT_NAME}') {
+                        if (projectName) { result.targets.push(projectName); }
+                    } else { result.targets.push(match[1]); }
                 }
             }
             
@@ -278,7 +281,7 @@ export class QtProjectDetector {
     /**
      * Find the executable to run for a project
      */
-    async findExecutable(projectFile: string, buildDir: string): Promise<string | undefined> {
+    async findExecutable(projectFile: string, buildDir: string, buildType = 'debug'): Promise<string | undefined> {
         const projectInfo = await this.getProjectInfo(projectFile);
         if (!projectInfo) {
             return undefined;
@@ -301,14 +304,13 @@ export class QtProjectDetector {
         }
         
         // Look for executable in build directory
-        const possiblePaths = [
-            path.join(buildDir, `${exeName}.exe`),
-            path.join(buildDir, 'debug', `${exeName}.exe`),
-            path.join(buildDir, 'release', `${exeName}.exe`),
-            path.join(buildDir, 'Debug', `${exeName}.exe`),
-            path.join(buildDir, 'Release', `${exeName}.exe`)
-        ];
-        
+        const suffix = process.platform === 'win32' ? '.exe' : '';
+        const configuration = buildType === 'release' ? 'Release' : 'Debug';
+        const possiblePaths = [configuration, configuration.toLowerCase(), '', 'bin'].flatMap(dir => [
+            path.join(buildDir, dir, `${exeName}${suffix}`),
+            path.join(buildDir, dir, `${exeName}.app`, 'Contents', 'MacOS', exeName)
+        ]);
+
         for (const exePath of possiblePaths) {
             if (fs.existsSync(exePath)) {
                 return exePath;

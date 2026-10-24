@@ -18,6 +18,7 @@ export class QtBuildTracker {
     private buildAnalytics?: QtBuildAnalytics;
     private telemetry?: QtTelemetry;
     private activeBuilds = new Map<vscode.TaskExecution, BuildRecord>();
+    private outcomes = new WeakMap<vscode.TaskExecution, boolean>();
     private disposables: vscode.Disposable[] = [];
     private _onDidUpdate = new vscode.EventEmitter<void>();
     readonly onDidUpdate = this._onDidUpdate.event;
@@ -68,6 +69,7 @@ export class QtBuildTracker {
                 const buildId = task.definition.buildId as string | undefined;
                 record.success = buildId ? buildExitCodes.get(buildId) === 0 : record.success === true;
                 if (buildId) { buildExitCodes.delete(buildId); }
+                this.outcomes.set(e.execution, record.success);
                 this.activeBuilds.delete(e.execution);
                 this.records.push(record);
                 this.outputChannel.appendLine(`[BuildTracker] Finished ${taskType} for ${projectFile}`);
@@ -111,6 +113,10 @@ export class QtBuildTracker {
                 this._onDidUpdate.fire();
             }
         }));
+    }
+
+    getExecutionResult(execution: vscode.TaskExecution): boolean | undefined {
+        return this.outcomes.get(execution);
     }
 
     getLastBuild(projectFile: string): BuildRecord | undefined {

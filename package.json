@@ -504,6 +504,36 @@
         "command": "qt.generateRemoteDebugConfig",
         "title": "Qt: Generate Remote Debug Config",
         "icon": "$(debug)"
+      },
+      {
+        "command": "qt.setupProject",
+        "title": "Qt: Set Up Project",
+        "category": "Qt"
+      },
+      {
+        "command": "qt.selectProject",
+        "title": "Qt: Select Active Project",
+        "category": "Qt"
+      },
+      {
+        "command": "qt.configureRun",
+        "title": "Qt: Configure Run Arguments and Environment",
+        "category": "Qt"
+      },
+      {
+        "command": "qt.debugProject",
+        "title": "Qt: Debug Project",
+        "category": "Qt"
+      },
+      {
+        "command": "qt.newProject",
+        "title": "Qt: New Qt Project",
+        "category": "Qt"
+      },
+      {
+        "command": "qt.openDebuggerExtension",
+        "title": "Qt: Find Debugger Extension",
+        "category": "Qt"
       }
     ],
     "taskDefinitions": [
@@ -1006,6 +1036,41 @@
           "type": "boolean",
           "default": true,
           "description": "Enable MOC-aware IntelliSense v2: type-specific completions on Q_PROPERTY member access via the Qt C++ Language Server."
+        },
+        "qt.buildBeforeRun": {
+          "type": "boolean",
+          "default": true,
+          "description": "Save files and build the active project before Run or Debug. Launch is cancelled if the build fails."
+        },
+        "qt.runSettings": {
+          "type": "object",
+          "default": {},
+          "description": "Run settings keyed by absolute project file path. Configure with Qt: Configure Run Arguments and Environment.",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "args": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "env": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "cwd": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "qt.pythonExecutable": {
+          "type": "string",
+          "default": "",
+          "description": "Python interpreter path for Qt Python applications. Empty uses python on Windows and python3 elsewhere."
         }
       }
     },
@@ -1381,6 +1446,16 @@
           "command": "qt.refreshProjects",
           "when": "view == qt-projects",
           "group": "navigation@5"
+        },
+        {
+          "command": "qt.setupProject",
+          "when": "view == qt-projects",
+          "group": "navigation@6"
+        },
+        {
+          "command": "qt.newProject",
+          "when": "view == qt-projects",
+          "group": "navigation@7"
         }
       ],
       "view/item/context": [
@@ -1491,6 +1566,13 @@
           "when": "resourceExtname == .qrc",
           "group": "2_qt@6"
         }
+      ],
+      "editor/title": [
+        {
+          "command": "qt.openInDesigner",
+          "when": "resourceExtname == .ui",
+          "group": "navigation"
+        }
       ]
     },
     "keybindings": [
@@ -1503,6 +1585,12 @@
         "command": "qt.peekGeneratedCode",
         "key": "alt+shift+g",
         "when": "editorTextFocus && (resourceExtname == .h || resourceExtname == .hpp || resourceExtname == .ui || resourceExtname == .qrc)"
+      }
+    ],
+    "viewsWelcome": [
+      {
+        "view": "qt-projects",
+        "contents": "[Set Up Project](command:qt.setupProject)\n[New Qt Project](command:qt.newProject)"
       }
     ]
   },

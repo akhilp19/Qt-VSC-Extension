@@ -127,6 +127,7 @@ export class QtBuildKitManager {
             );
             if (choice === 'Detect Kits') {
                 await this.saveDetectedKits();
+                if ((config.get<BuildKit[]>('buildKits') || []).length) { await this.selectKit(projectFile); }
             }
             return;
         }
@@ -405,7 +406,8 @@ export class QtBuildKitManager {
         const kitName = activeKits[projectFile];
         if (kitName) {
             const kits = config.get<BuildKit[]>('buildKits') || [];
-            return kits.find(k => k.name === kitName);
+            const selected = kits.find(k => k.name === kitName);
+            if (selected) { return selected; }
         }
         // Fall back to workspace default kit
         const defaultKitName = config.get<string>('defaultKit');
@@ -418,7 +420,7 @@ export class QtBuildKitManager {
 
     getBuildDirForProject(projectFile: string, buildType: string): string {
         const kit = this.getActiveKit(projectFile);
-        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        const workspaceFolder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(projectFile));
         const workspacePath = workspaceFolder?.uri.fsPath || '';
 
         if (kit) {
@@ -436,7 +438,12 @@ export class QtBuildKitManager {
 
     getKitEnvVars(projectFile: string): Record<string, string> {
         const kit = this.getActiveKit(projectFile);
-        return kit?.envVars || {};
+        if (!kit) { return {}; }
+        const env = { ...kit.envVars };
+        const pathKey = Object.keys(env).find(key => key.toLowerCase() === 'path') || 'PATH';
+        const inheritedPath = Object.entries(process.env).find(([key]) => key.toLowerCase() === 'path')?.[1] || '';
+        env[pathKey] = path.dirname(kit.qmakePath) + path.delimiter + (env[pathKey] || inheritedPath);
+        return env;
     }
 
     getKitQMakeArgs(projectFile: string): string {
@@ -466,7 +473,7 @@ export class QtBuildKitManager {
 
     getDeployDirForProject(projectFile: string): string {
         const kit = this.getActiveKit(projectFile);
-        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        const workspaceFolder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(projectFile));
         const workspacePath = workspaceFolder?.uri.fsPath || '';
         const config = vscode.workspace.getConfiguration('qt');
         const deployDir = config.get<string>('deployDirectory') || '${workspaceFolder}/deploy';

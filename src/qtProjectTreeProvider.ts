@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import { QtBuildKitManager } from './qtBuildKit';
 import { QtProjectDetector } from './qtProjectDetector';
 import { QtConfigManager } from './qtConfigManager';
 import { QtBuildTracker } from './qtBuildTracker';
@@ -123,7 +124,8 @@ export class QtProjectTreeProvider implements vscode.TreeDataProvider<vscode.Tre
         qtProjectDetector: QtProjectDetector,
         qtConfigManager: QtConfigManager,
         buildTracker: QtBuildTracker,
-        outputChannel: vscode.OutputChannel
+        outputChannel: vscode.OutputChannel,
+        private kits?: QtBuildKitManager
     ) {
         this.qtProjectDetector = qtProjectDetector;
         this.qtConfigManager = qtConfigManager;
@@ -197,7 +199,7 @@ export class QtProjectTreeProvider implements vscode.TreeDataProvider<vscode.Tre
             if (children.length === 0) {
                 const noProjectsItem = new vscode.TreeItem('No Qt projects found');
                 noProjectsItem.iconPath = new vscode.ThemeIcon('info');
-                return [noProjectsItem];
+                return [noProjectsItem, new QtActionItem('New Qt Project', 'qt.newProject', 'add'), new QtActionItem('Set Up Project', 'qt.setupProject', 'tools')];
             }
             
             return children;
@@ -205,6 +207,7 @@ export class QtProjectTreeProvider implements vscode.TreeDataProvider<vscode.Tre
         
         if (element instanceof QtProjectTreeItem) {
             return [
+                new QtActionItem(`Kit: ${this.kits?.getActiveKit(element.projectFile)?.name || 'Select a build kit'}`, 'qt.selectBuildKit', 'tools', element.projectFile),
                 new QtConfigItem(element.projectFile, this.qtConfigManager.getProjectBuildType(element.projectFile)),
                 new QtPropertyGroupItem(element.projectFile),
                 new QtStatusGroupItem(element.projectFile),
@@ -225,7 +228,9 @@ export class QtProjectTreeProvider implements vscode.TreeDataProvider<vscode.Tre
                 new QtActionItem('Build', 'qt.buildProject', 'tools', element.projectFile),
                 new QtActionItem('Clean', 'qt.cleanProject', 'trash', element.projectFile),
                 new QtActionItem('Rebuild', 'qt.rebuildProject', 'refresh', element.projectFile),
-                new QtActionItem('Run', 'qt.runProject', 'run', element.projectFile)
+                new QtActionItem('Run', 'qt.runProject', 'run', element.projectFile),
+                new QtActionItem('Debug', 'qt.debugProject', 'debug-alt', element.projectFile),
+                new QtActionItem('Set Up Project', 'qt.setupProject', 'gear')
             ];
         }
         
@@ -244,7 +249,7 @@ export class QtProjectTreeProvider implements vscode.TreeDataProvider<vscode.Tre
             items.push(new QtPropertyItem('Qt', 'Not detected'));
         }
         
-        items.push(new QtPropertyItem('Build Directory', this.qtConfigManager.getBuildDirectory()));
+        items.push(new QtPropertyItem('Build Directory', this.kits?.getBuildDirForProject(projectFile, this.qtConfigManager.getProjectBuildType(projectFile)) || this.qtConfigManager.getBuildDirectory()));
         
         const makeCmd = this.qtConfigManager.getMakeCommand(qtInstallation || undefined);
         items.push(new QtPropertyItem('Make Command', makeCmd));

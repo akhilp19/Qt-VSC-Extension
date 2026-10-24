@@ -39,7 +39,7 @@ export class QtDesignerIntegration {
         const designerPath = await this.findDesignerExe();
         if (!designerPath) {
             void vscode.window.showErrorMessage(
-                'Qt Designer (designer.exe) not found. Make sure Qt is installed and detected.'
+                'Qt Designer not found. Use Qt: Set Up Project to configure a Qt installation that includes Designer.'
             );
             return;
         }
@@ -77,8 +77,11 @@ export class QtDesignerIntegration {
         if (qtInstallation?.qmakePath) {
             const binDir = path.dirname(qtInstallation.qmakePath);
             const designerPath = path.join(binDir, exe('designer'));
-            if (fs.existsSync(designerPath)) {
-                return designerPath;
+            const candidates = [designerPath,
+                path.join(binDir, 'Designer.app', 'Contents', 'MacOS', 'Designer'),
+                path.join(qtInstallation.path, 'libexec', 'Designer.app', 'Contents', 'MacOS', 'Designer')];
+            for (const candidate of candidates) {
+                if (fs.existsSync(candidate)) { return candidate; }
             }
         }
 

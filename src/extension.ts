@@ -53,11 +53,13 @@ import { QtIOSDeployment } from './qtIOSDeployment';
 import { selectSigningIdentity, selectProvisioningProfile } from './qtIOSSigning';
 import { QtWebAssembly } from './qtWebAssembly';
 import { QtHealthCheck } from './qtHealthCheck';
+import { QtWorkflow } from './qtWorkflow';
 import { QtSettingsMigration } from './qtSettingsMigration';
 import { QtRemoteDeployment } from './qtRemoteDeployment';
 import { QtCppLanguageClient } from './qtCppLanguageClient';
 import { QtTelemetry } from './qtTelemetry';
 
+let qtWorkflow: QtWorkflow;
 let taskProvider: vscode.Disposable | undefined;
 let outputChannel: vscode.OutputChannel;
 let qtConfigManager: QtConfigManager;
@@ -97,8 +99,10 @@ export function activate(context: vscode.ExtensionContext): void {
     const buildTracker = new QtBuildTracker(outputChannel, buildAnalytics, telemetry);
     context.subscriptions.push(buildTracker);
     
+    const qtBuildKitManager = new QtBuildKitManager(qtConfigManager, outputChannel);
+
     // Create tree provider
-    treeProvider = new QtProjectTreeProvider(qtProjectDetector, qtConfigManager, buildTracker, outputChannel);
+    treeProvider = new QtProjectTreeProvider(qtProjectDetector, qtConfigManager, buildTracker, outputChannel, qtBuildKitManager);
     
     // Register tree data provider
     const treeDisposable = vscode.window.registerTreeDataProvider('qt-projects', treeProvider);
@@ -168,8 +172,7 @@ export function activate(context: vscode.ExtensionContext): void {
         )
     );
     
-    // Build Kit Manager
-    const qtBuildKitManager = new QtBuildKitManager(qtConfigManager, outputChannel);
+    // Build kits are shared by the project tree and task provider.
     
     // Register task provider
     const qtTaskProviderInstance = new QtTaskProvider(qtConfigManager, qtProjectDetector, outputChannel, qtBuildKitManager);
@@ -502,7 +505,8 @@ export function activate(context: vscode.ExtensionContext): void {
     // Build Kit commands
     context.subscriptions.push(
         registerQtCommand('qt.selectBuildKit', async (uri?: vscode.Uri) => {
-            await qtBuildKitManager.selectKit(uri?.fsPath);
+            const project = await qtWorkflow.selectProject(false, uri?.fsPath);
+            if (project) { await qtBuildKitManager.selectKit(project); await qtWorkflow.refresh(); }
         })
     );
     
@@ -680,6 +684,24 @@ export function activate(context: vscode.ExtensionContext): void {
     
     // Debugger integration
     const qtDebugger = new QtDebuggerIntegration(qtConfigManager, qtProjectDetector, outputChannel);
+    qtWorkflow = new QtWorkflow(context, qtConfigManager, qtProjectDetector, qtBuildKitManager, qtTaskProviderInstance, buildTracker, qtDebugger, outputChannel);
+    context.subscriptions.push(qtWorkflow,
+        registerQtCommand('qt.setupProject', () => qtWorkflow.setup()),
+        registerQtCommand('qt.selectProject', () => qtWorkflow.selectProject(true)),
+        registerQtCommand('qt.configureRun', () => qtWorkflow.configureRun()),
+        registerQtCommand('qt.debugProject', (uri?: vscode.Uri) => qtWorkflow.execute('debug', uri?.fsPath)),
+        registerQtCommand('qt.openDebuggerExtension', () => vscode.commands.executeCommand('workbench.extensions.search', process.platform === 'darwin' ? '@id:vadimcn.vscode-lldb' : '@id:ms-vscode.cpptools')),
+        registerQtCommand('qt.openPythonSettings', () => vscode.commands.executeCommand('workbench.action.openSettings', 'qt.pythonExecutable')),
+        registerQtCommand('qt.openPythonDebugger', () => vscode.commands.executeCommand('workbench.extensions.search', '@id:ms-python.debugpy')),
+        registerQtCommand('qt.newProject', () => createProjectWizard())
+    );
+    const debugBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 97);
+    debugBar.text = '$(debug-alt) Debug';
+    debugBar.command = 'qt.debugProject';
+    debugBar.tooltip = 'Build successfully, then debug the active Qt project';
+    debugBar.show();
+    context.subscriptions.push(debugBar);
+
     
     context.subscriptions.push(
         registerQtCommand('qt.generateLaunchJson', async (uri?: vscode.Uri) => {
@@ -1059,58 +1081,12 @@ export function activate(context: vscode.ExtensionContext): void {
     }, 5000);
 
     
+    void qtWorkflow.offerSetup();
     outputChannel.appendLine('Qt C++ Tools extension initialized successfully');
 }
 
-async function executeQtTask(taskType: 'build' | 'clean' | 'rebuild' | 'run', specificProject?: string, quickBuild: boolean = false): Promise<void> {
-    let projectFile: string | undefined = specificProject;
-    
-    if (!projectFile) {
-        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-        if (!workspaceFolder) {
-            void vscode.window.showErrorMessage('No workspace folder open');
-            return;
-        }
-        
-        // Find Qt projects in workspace
-        const projects = await qtProjectDetector.detectProjects(workspaceFolder.uri.fsPath);
-        if (projects.length === 0) {
-            void vscode.window.showErrorMessage('No Qt project found in workspace. Looking for .pro or CMakeLists.txt files.');
-            return;
-        }
-        
-        // If multiple projects, let user select
-        if (projects.length === 1) {
-            projectFile = projects[0];
-        } else {
-            const selected = await vscode.window.showQuickPick(
-                projects.map(p => ({ label: p, description: p })),
-                { placeHolder: `Select Qt project to ${taskType}` }
-            );
-            if (!selected) {
-                return;
-            }
-            projectFile = selected.label;
-        }
-    }
-    
-    if (!projectFile) {
-        return;
-    }
-    
-    // Create and execute task
-    const tasks = await vscode.tasks.fetchTasks({ type: 'qt' });
-    const matchingTask = tasks.find(t => 
-        t.definition.task === taskType && 
-        t.definition.file === projectFile &&
-        (taskType !== 'build' || t.definition.quickBuild === undefined || t.definition.quickBuild === quickBuild)
-    );
-    
-    if (matchingTask) {
-        await vscode.tasks.executeTask(matchingTask);
-    } else {
-        void vscode.window.showErrorMessage(`Failed to create ${taskType} task`);
-    }
+async function executeQtTask(taskType: 'build' | 'clean' | 'rebuild' | 'run', specificProject?: string, quickBuild = false): Promise<void> {
+    await qtWorkflow.execute(taskType, specificProject, quickBuild);
 }
 
 async function configureQtPath(): Promise<void> {
@@ -1242,6 +1218,50 @@ async function showInstallQtInstructions(): Promise<void> {
         });
         outputChannel.appendLine(`User selected Qt install method: ${selected.label}`);
     }
+}
+
+async function createProjectWizard(): Promise<void> {
+    if (!vscode.workspace.isTrusted) { void vscode.window.showWarningMessage('Trust the workspace before creating a project.'); return; }
+    const folders = vscode.workspace.workspaceFolders;
+    if (!folders?.length) { void vscode.window.showInformationMessage('Open a folder to create a Qt project.'); return; }
+    const folder = folders.length === 1 ? folders[0] : await vscode.window.showWorkspaceFolderPick();
+    if (!folder) { return; }
+    const type = await vscode.window.showQuickPick(PROJECT_TYPES.filter(t => !t.value.endsWith('-lib')).map(t => ({ label: t.label, value: t.value })), { placeHolder: '1/3 — Application type' });
+    if (!type) { return; }
+    const system = await vscode.window.showQuickPick([
+        { label: 'CMake', value: 'cmake' }, { label: 'QMake', value: 'qmake' }, { label: 'Python (PySide6)', value: 'python' }
+    ], { placeHolder: '2/3 — Build system or Python binding' });
+    if (!system) { return; }
+    const name = await vscode.window.showInputBox({ prompt: '3/3 — Project name', value: 'MyQtApp', validateInput: value => /^[A-Za-z][A-Za-z0-9_]*$/.test(value) ? undefined : 'Use a letter followed by letters, numbers or underscores.' });
+    if (!name) { return; }
+    const target = path.join(folder.uri.fsPath, name);
+    const modules = type.value === 'widgets-app' ? ['core', 'gui', 'widgets'] : type.value === 'quick-app' ? ['core', 'gui', 'qml', 'quick', 'quickcontrols2'] : ['core'];
+    let project: string;
+    try {
+        if (system.value === 'python') {
+            const content = type.value === 'widgets-app'
+                ? 'import sys\nfrom PySide6.QtWidgets import QApplication, QLabel\napp = QApplication(sys.argv)\nwindow = QLabel("Hello Qt")\nwindow.resize(400, 240)\nwindow.show()\nsys.exit(app.exec())\n'
+                : type.value === 'quick-app'
+                    ? 'import sys\nfrom pathlib import Path\nfrom PySide6.QtGui import QGuiApplication\nfrom PySide6.QtQml import QQmlApplicationEngine\napp = QGuiApplication(sys.argv)\nengine = QQmlApplicationEngine()\nengine.load(str(Path(__file__).with_name("Main.qml")))\nif not engine.rootObjects():\n    sys.exit(1)\nsys.exit(app.exec())\n'
+                    : 'import sys\nfrom PySide6.QtCore import QCoreApplication, QTimer\napp = QCoreApplication(sys.argv)\nQTimer.singleShot(0, app.quit)\nprint("Hello Qt")\nsys.exit(app.exec())\n';
+            const files = [{ fileName: 'main.py', content }, { fileName: 'requirements.txt', content: 'PySide6>=6.2,<7\n' }];
+            if (type.value === 'quick-app') { files.push({ fileName: 'Main.qml', content: 'import QtQuick\nimport QtQuick.Controls\nApplicationWindow { visible: true; width: 640; height: 480; title: "Hello Qt" }\n' }); }
+            await writeProjectFiles(target, files, outputChannel);
+            project = path.join(target, 'main.py');
+        } else {
+            const installation = await qtConfigManager.getQtInstallation();
+            const options: ProjectTemplateOptions = { projectName: name, projectType: type.value, modules, qtVersion: installation?.version?.startsWith('5.') ? 'qt5' : 'qt6', includeWindowClass: type.value === 'widgets-app' };
+            await writeProjectFiles(target, system.value === 'cmake' ? generateCMakeProject(options) : generateQMakeProject(options), outputChannel);
+            project = path.join(target, system.value === 'cmake' ? 'CMakeLists.txt' : `${name}.pro`);
+        }
+        await treeProvider.refresh();
+        await qtWorkflow.selectProject(false, project);
+        if (system.value === 'python') {
+            void vscode.window.showInformationMessage('Project created. Install requirements.txt in your Python environment before running.');
+        } else if (await vscode.window.showInformationMessage(`Created ${name}. Choose a Qt kit to build it.`, 'Set Up Project') === 'Set Up Project') {
+            await qtWorkflow.setup();
+        }
+    } catch (error) { void vscode.window.showErrorMessage(`Could not create project: ${String(error)}`); }
 }
 
 async function createQMakeProject(): Promise<void> {
@@ -1416,10 +1436,8 @@ async function createCMakeProject(): Promise<void> {
 }
 
 async function selectBuildConfig(projectFile?: string): Promise<void> {
-    if (!projectFile) {
-        void vscode.window.showErrorMessage('No project selected');
-        return;
-    }
+    projectFile = projectFile || await qtWorkflow.selectProject();
+    if (!projectFile) { return; }
     
     const currentType = qtConfigManager.getProjectBuildType(projectFile);
     const selected = await vscode.window.showQuickPick(

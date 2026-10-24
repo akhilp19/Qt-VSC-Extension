@@ -63,6 +63,7 @@ function getModuleCMakeName(module: string): string {
         'gui': 'Gui',
         'widgets': 'Widgets',
         'quick': 'Quick',
+        'qml': 'Qml',
         'quickcontrols2': 'QuickControls2',
         'network': 'Network',
         'sql': 'Sql',
@@ -107,7 +108,7 @@ TARGET = ${projectName}
 TEMPLATE = ${template}
 
 SOURCES += \\
-    ${getMainSourceFile(projectType, includeWindowClass)}${targetType === 'lib' ? ` \\
+    ${getMainSourceFile(projectType, includeWindowClass)}${targetType === 'lib' || (projectType === 'widgets-app' && includeWindowClass) ? ` \\
     ${projectName.toLowerCase()}.cpp` : ''}
 ${targetType === 'app' && projectType === 'widgets-app' && includeWindowClass ? `
 HEADERS += \\
@@ -116,6 +117,8 @@ HEADERS += \\
 FORMS += \\
     ${projectName.toLowerCase()}.ui
 ` : ''}${projectType === 'quick-app' ? `
+RESOURCES += qml.qrc
+
 DISTFILES += \\
     main.qml
 ` : ''}
@@ -137,6 +140,7 @@ else: unix:!android: target.path = /opt/$$TARGET/bin
         }
         if (projectType === 'quick-app') {
             files.push({ fileName: 'main.qml', content: generateMainQml() });
+            files.push({ fileName: 'qml.qrc', content: '<RCC><qresource prefix="/"><file>main.qml</file></qresource></RCC>\n' });
         }
     } else {
         // Library
@@ -152,7 +156,7 @@ else: unix:!android: target.path = /opt/$$TARGET/bin
  */
 export function generateCMakeProject(options: ProjectTemplateOptions): GeneratedFile[] {
     const files: GeneratedFile[] = [];
-    const { projectName, projectType, modules, qtVersion } = options;
+    const { projectName, projectType, modules, qtVersion, includeWindowClass } = options;
 
     const cmakeModules = modules.map(getModuleCMakeName);
     const qtPackage = qtVersion === 'qt6' ? 'Qt6' : 'Qt5';
@@ -174,6 +178,10 @@ export function generateCMakeProject(options: ProjectTemplateOptions): Generated
 
     const mainFile = getMainSourceFile(projectType, false);
     const sourceFiles = [mainFile];
+    if (isQuick) { sourceFiles.push('qml.qrc'); }
+    if (projectType === 'widgets-app' && includeWindowClass) {
+        sourceFiles.push(`${projectName.toLowerCase()}.cpp`, `${projectName.toLowerCase()}.h`, `${projectName.toLowerCase()}.ui`);
+    }
     if (!isApp) {
         sourceFiles.push(`${projectName.toLowerCase()}.cpp`);
     }
@@ -219,9 +227,15 @@ install(TARGETS ${projectName}
 
     // Generate source files
     if (isApp) {
-        files.push({ fileName: mainFile, content: generateMainCpp(projectName, projectType, false) });
+        files.push({ fileName: mainFile, content: generateMainCpp(projectName, projectType, includeWindowClass) });
+        if (isWidgets && includeWindowClass) {
+            files.push({ fileName: `${projectName.toLowerCase()}.h`, content: generateWindowHeader(projectName) });
+            files.push({ fileName: `${projectName.toLowerCase()}.cpp`, content: generateWindowCpp(projectName) });
+            files.push({ fileName: `${projectName.toLowerCase()}.ui`, content: generateWindowUi(projectName) });
+        }
         if (isQuick) {
             files.push({ fileName: 'main.qml', content: generateMainQml() });
+            files.push({ fileName: 'qml.qrc', content: '<RCC><qresource prefix="/"><file>main.qml</file></qresource></RCC>\n' });
         }
     } else {
         files.push({ fileName: `${projectName.toLowerCase()}.h`, content: generateLibHeader(projectName) });
@@ -292,8 +306,7 @@ int main(int argc, char *argv[])
     QGuiApplication app(argc, argv);
 
     QQmlApplicationEngine engine;
-    const QString qmlPath = QCoreApplication::applicationDirPath() + QStringLiteral("/main.qml");
-    engine.load(QUrl::fromLocalFile(qmlPath));
+    engine.load(QUrl(QStringLiteral("qrc:/main.qml")));
     if (engine.rootObjects().isEmpty())
         return -1;
 
@@ -462,7 +475,7 @@ export async function writeProjectFiles(
                 `File already exists: ${file.fileName}. Overwrite?`,
                 'Yes', 'No', 'Yes to All'
             );
-            if (answer === 'No') {
+            if (answer !== 'Yes' && answer !== 'Yes to All') {
                 outputChannel.appendLine(`Skipped existing file: ${filePath}`);
                 continue;
             }
